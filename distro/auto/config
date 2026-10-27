@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+lb config noauto \
+  --distribution trixie \
+  --architectures amd64 \
+  --archive-areas "main contrib non-free-firmware" \
+  --binary-images iso-hybrid \
+  --debian-installer none \
+  --apt-recommends false \
+  --memtest none \
+  --iso-application "SilkOS" \
+  --iso-volume "SILKOS" \
+  --bootappend-live "boot=live components quiet loglevel=3 username=silk hostname=silkos" \
+  "${@}"

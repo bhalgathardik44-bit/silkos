@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+# Make sure SilkOS's dependencies are satisfied and the Chromium sandbox helper is usable.
+apt-get install -y -f || true
+[ -f /opt/SilkOS/chrome-sandbox ] && chmod 4755 /opt/SilkOS/chrome-sandbox || true
+# Wi-Fi/Ethernet management through NetworkManager
+systemctl enable NetworkManager || true

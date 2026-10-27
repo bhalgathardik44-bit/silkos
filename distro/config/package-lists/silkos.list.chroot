@@ -1,0 +1,60 @@
+# --- live system basics ---
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
+sudo
+locales
+# --- display: Xorg + tiny window manager ---
+xserver-xorg-core
+xserver-xorg-input-libinput
+xserver-xorg-video-vmware
+xserver-xorg-video-fbdev
+xinit
+x11-xserver-utils
+openbox
+libgl1-mesa-dri
+libglx-mesa0
+# --- login/session plumbing (needed for poweroff/reboot/suspend from the app) ---
+dbus-user-session
+libpam-systemd
+polkitd
+# --- real hardware hooks used by SilkOS ---
+network-manager
+brightnessctl
+upower
+pipewire
+pipewire-pulse
+wireplumber
+alsa-utils
+# --- VMware guest integration (auto screen resize, clipboard) ---
+open-vm-tools
+# --- fonts (incl. emoji used in Spotlight/dock) ---
+fonts-noto-core
+fonts-noto-color-emoji
+fonts-liberation
+fonts-dejavu-core
+# --- Electron runtime libraries (Debian 13 / trixie names) ---
+libgtk-3-0t64
+libnss3
+libxss1
+libasound2t64
+libgbm1
+libxtst6
+libatspi2.0-0t64
+libatk-bridge2.0-0t64
+libatk1.0-0t64
+libcups2t64
+libdrm2
+libxkbcommon0
+libxcomposite1
+libxdamage1
+libxfixes3
+libxrandr2
+libpango-1.0-0
+libcairo2
+libnotify4
+libsecret-1-0
+libuuid1
+xdg-utils
+ca-certificates

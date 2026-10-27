@@ -1,0 +1,26 @@
+{
+  "name": "silkos",
+  "version": "1.0.0",
+  "description": "SilkOS desktop",
+  "author": "SilkOS <silkos@example.com>",
+  "homepage": "https://example.com/silkos",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable",
+    "build:linux": "electron-builder --linux deb --x64"
+  },
+  "devDependencies": { "electron": "^33.0.0", "electron-builder": "^25.0.0" },
+  "build": {
+    "appId": "com.silkos.app",
+    "productName": "SilkOS",
+    "files": ["main.js", "preload.js", "app/**"],
+    "linux": {
+      "target": ["deb"],
+      "category": "Utility",
+      "executableName": "silkos",
+      "maintainer": "SilkOS <silkos@example.com>",
+      "synopsis": "SilkOS desktop"
+    }
+  }
+}

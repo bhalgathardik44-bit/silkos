@@ -1,0 +1,23 @@
+#!/bin/sh
+# X session for the SilkOS live image. Starts a tiny window manager, then SilkOS fullscreen.
+# Boot options (press Tab/e at the boot menu and append):
+#   silkos.gpu        use GPU acceleration even inside a VM (default in VMs: software rendering)
+#   silkos.nosandbox  start Electron with --no-sandbox (debug only)
+export SILKOS_KIOSK=1
+CMDLINE="$(cat /proc/cmdline)"
+case "$CMDLINE" in
+  *silkos.gpu*) ;;
+  *) if systemd-detect-virt -q 2>/dev/null; then export SILKOS_SOFTWARE=1; fi ;;
+esac
+FLAGS=""
+case "$CMDLINE" in *silkos.nosandbox*) FLAGS="--no-sandbox" ;; esac
+
+xset s off; xset -dpms; xset s noblank
+openbox >/tmp/openbox.log 2>&1 &
+
+APP="$(command -v silkos || echo /opt/SilkOS/silkos)"
+# Restart SilkOS if it ever exits or crashes, so you never end up on a black screen.
+while :; do
+  "$APP" $FLAGS >>/tmp/silkos.log 2>&1
+  sleep 1
+done
