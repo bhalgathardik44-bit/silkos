@@ -233,7 +233,7 @@ function addIcon(id){const a=apps[id];
  d.innerHTML=`<i>${a.svg}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);dock.appendChild(d)}
 Object.keys(apps).forEach(addIcon);
 function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>(r.apps||[]).forEach(a=>{if(apps[a.id])return;
- apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain;background:#fff">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)}))}
+ apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id).then(r=>r&&r.error&&alert('Could not open '+(a.name||a.id)+':\n'+r.error)),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain;background:#fff">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)}))}
 const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#b4bac6"/></linearGradient></defs><rect width="100" height="100" fill="url(#glp)"/>'+[['#ff5f57','#febc2e','#28c840'],['#5ac8fa','#0a84ff','#af52de'],['#ff2d92','#ff9500','#34c759']].map((r,y)=>r.map((c,x)=>`<rect x="${20+x*22}" y="${20+y*22}" width="16" height="16" rx="4.500" fill="${c}"/>`).join('')).join('')+'</svg>';
 {const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();dock.prepend(d)}
 function launch(id){
@@ -310,7 +310,7 @@ function storeInit(el){const b=el.querySelector('.body');b.innerHTML='<div class
  async function find(){const v=q.value.trim();if(!v||!S)return home();msg('Searching…');const r=await S.search(v);if(q.value.trim()!==v)return;
   if(r.error)return msg(r.error);r.apps.length?draw(r.apps,'Results'):msg('No apps found for “'+v+'”.')}
  q.oninput=()=>{clearTimeout(t);t=setTimeout(find,350)};
- L.onclick=async e=>{const x=e.target.closest('.stb');if(!x||x.disabled)return;const id=x.dataset.id;if(inst.has(id))return S.run(id);
+ L.onclick=async e=>{const x=e.target.closest('.stb');if(!x||x.disabled)return;const id=x.dataset.id;if(inst.has(id)){x.disabled=true;x.textContent='Opening…';const r=await S.run(id);x.disabled=false;x.textContent='Open';if(r&&r.error)alert('Could not open the app:\n'+r.error);return}
   busy[id]=1;x.disabled=true;x.textContent='Installing…';const r=await S.install(id);delete busy[id];if(r.ok){inst.add(id);syncFlatpaks()}
   const n=L.querySelector(`.stb[data-id="${CSS.escape(id)}"]`);if(n){n.disabled=false;n.textContent=r.ok?'Open':'Retry';n.title=r.error||''}};
  home()}
