@@ -16,6 +16,7 @@ xserver-xorg-video-fbdev
 xinit
 x11-xserver-utils
 openbox
+picom
 libgl1-mesa-dri
 libglx-mesa0
 # --- login/session plumbing (needed for poweroff/reboot/suspend from the app) ---

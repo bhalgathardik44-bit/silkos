@@ -7,9 +7,12 @@ apt-get install -y -f || true
 systemctl enable NetworkManager || true
 # Match native app windows to SilkOS and place their controls on the left.
 OPENBOX_RC=/etc/xdg/openbox/rc.xml
-if [ -f "$OPENBOX_RC" ]; then
-  sed -i '/<theme>/,/<\/theme>/ {
-    s|<name>Clearlooks</name>|<name>SilkOS</name>|
-    s|<titleLayout>[^<]*</titleLayout>|<titleLayout>CIML</titleLayout>|
-  }' "$OPENBOX_RC"
-fi
+OPENBOX_THEME=/usr/share/themes/SilkOS/openbox-3/themerc
+test -f "$OPENBOX_RC"
+test -f "$OPENBOX_THEME"
+sed -i '/<theme>/,/<\/theme>/ {
+  s|<name>[^<]*</name>|<name>SilkOS</name>|
+  s|<titleLayout>[^<]*</titleLayout>|<titleLayout>CIML</titleLayout>|
+}' "$OPENBOX_RC"
+grep -q '<name>SilkOS</name>' "$OPENBOX_RC"
+grep -q '<titleLayout>CIML</titleLayout>' "$OPENBOX_RC"
