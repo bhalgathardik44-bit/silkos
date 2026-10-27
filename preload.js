@@ -4,6 +4,12 @@ contextBridge.exposeInMainWorld('silk', {
   suggest: q => ipcRenderer.invoke('suggest', q),
   onShortcut: cb => ipcRenderer.on('shortcut', (_, k) => cb(k)),
   platform: process.platform,
+  lock: {
+    status: () => ipcRenderer.invoke('lock:status'),
+    setPassword: (password, currentPassword) => ipcRenderer.invoke('lock:set-password', password, currentPassword),
+    verify: password => ipcRenderer.invoke('lock:verify', password),
+    setWindowLocked: locked => ipcRenderer.invoke('lock:window', locked)
+  },
   power: k => ipcRenderer.invoke('sys:power', k),
   battery: () => ipcRenderer.invoke('sys:battery'),
   wifi: () => ipcRenderer.invoke('sys:wifi'),

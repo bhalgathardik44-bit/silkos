@@ -39,6 +39,7 @@ alsa-utils
 # --- VMware guest integration (auto screen resize, clipboard) ---
 open-vm-tools
 # --- fonts (incl. emoji used in Spotlight/dock) ---
+fonts-inter
 fonts-noto-core
 fonts-noto-color-emoji
 fonts-liberation

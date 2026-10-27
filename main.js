@@ -2,9 +2,34 @@ const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const { promisify } = require('util');
 const { execFile, spawn } = require('child_process');
 const IS_LINUX = process.platform === 'linux';
+const scrypt = promisify(crypto.scrypt);
 const run = (cmd, args, ms = 4000) => new Promise(res => execFile(cmd, args, { timeout: ms }, (e, out) => res(e ? null : String(out))));
+let mainWindow = null;
+let screenLocked = false;
+let lockFailures = 0;
+let lockRetryAt = 0;
+const lockFile = () => path.join(app.getPath('userData'), 'screen-lock.json');
+const readLock = async () => {
+  try {
+    const data = JSON.parse(await fs.promises.readFile(lockFile(), 'utf8'));
+    if (data.version !== 1 || typeof data.salt !== 'string' || typeof data.hash !== 'string') throw new Error('Invalid screen lock data.');
+    const salt = Buffer.from(data.salt, 'base64'), hash = Buffer.from(data.hash, 'base64');
+    if (salt.length !== 16 || hash.length !== 64) throw new Error('Invalid screen lock data.');
+    return { salt, hash };
+  } catch (e) {
+    if (e.code === 'ENOENT') return null;
+    throw e;
+  }
+};
+const checkPassword = async (data, password) => {
+  const expected = data.hash;
+  const actual = await scrypt(password, data.salt, expected.length);
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+};
 let previousCpuTotal = null;
 let previousProcessCpu = new Map();
 const cpuTimes = () => os.cpus().reduce((sum, cpu) => {
@@ -85,6 +110,51 @@ ipcMain.handle('suggest', async (_, q) => {
     clearTimeout(t); const j = await r.json();
     return Array.isArray(j[1]) ? j[1].slice(0, 8) : [];
   } catch (e) { return []; }
+});
+ipcMain.handle('lock:status', async () => {
+  try { return { ok: true, configured: !!(await readLock()) }; }
+  catch (e) { return { ok: false, error: `Could not read the screen lock settings: ${e.message}` }; }
+});
+ipcMain.handle('lock:set-password', async (_, password, currentPassword) => {
+  if (typeof password !== 'string' || !password.length || Buffer.byteLength(password, 'utf8') > 4096) {
+    return { ok: false, error: 'Use a non-empty password of at most 4096 bytes.' };
+  }
+  try {
+    const existing = await readLock();
+    if (existing && (typeof currentPassword !== 'string' || !(await checkPassword(existing, currentPassword)))) {
+      return { ok: false, error: 'The current screen-lock password is incorrect.' };
+    }
+    const salt = crypto.randomBytes(16);
+    const hash = await scrypt(password, salt, 64);
+    const file = lockFile(), temp = `${file}.${process.pid}.${crypto.randomBytes(6).toString('hex')}.tmp`;
+    await fs.promises.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+    try {
+      await fs.promises.writeFile(temp, JSON.stringify({ version: 1, salt: salt.toString('base64'), hash: hash.toString('base64') }), { mode: 0o600 });
+      await fs.promises.rename(temp, file);
+    } finally {
+      await fs.promises.unlink(temp).catch(e => { if (e.code !== 'ENOENT') throw e; });
+    }
+    return { ok: true };
+  } catch (e) { return { ok: false, error: `Could not save the screen-lock password: ${e.message}` }; }
+});
+ipcMain.handle('lock:verify', async (_, password) => {
+  const now = Date.now();
+  if (now < lockRetryAt) return { ok: false, error: `Try again in ${Math.ceil((lockRetryAt - now) / 1000)} seconds.` };
+  if (typeof password !== 'string' || Buffer.byteLength(password, 'utf8') > 4096) return { ok: true, valid: false };
+  try {
+    const data = await readLock();
+    if (!data) return { ok: false, error: 'No screen-lock password has been set.' };
+    const valid = await checkPassword(data, password);
+    if (valid) { lockFailures = 0; lockRetryAt = 0; }
+    else if (++lockFailures >= 5) { lockFailures = 0; lockRetryAt = Date.now() + 30000; }
+    return { ok: true, valid };
+  } catch (e) { return { ok: false, error: `Could not verify the screen-lock password: ${e.message}` }; }
+});
+ipcMain.handle('lock:window', (_, locked) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  screenLocked = Boolean(locked);
+  mainWindow.setAlwaysOnTop(screenLocked);
+  return true;
 });
 
 /* ---- Real Linux system hooks (no-ops elsewhere; every call fails soft) ---- */
@@ -271,7 +341,7 @@ if (IS_LINUX) {
 }
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
-  const win = new BrowserWindow({
+  const win = mainWindow = new BrowserWindow({
     width: 1280, height: 800, show: false, backgroundColor: '#3b3b8f', autoHideMenuBar: true,
     webPreferences: { webviewTag: true, contextIsolation: true, preload: path.join(__dirname, 'preload.js') }
   });
@@ -280,6 +350,12 @@ app.whenReady().then(() => {
   win.loadFile(path.join(__dirname, 'app', 'index.html'));
   win.once('ready-to-show', () => win.show());
   win.webContents.on('before-input-event', (e, i) => {
+    if (screenLocked && i.type === 'keyDown' && (
+      (i.alt && i.key === 'F4') ||
+      ((i.control || i.meta) && ['q', 'w', 'r'].includes(i.key.toLowerCase())) ||
+      (i.control && i.shift && i.key.toLowerCase() === 'i') ||
+      i.key === 'F11'
+    )) { e.preventDefault(); return; }
     if (i.type === 'keyDown' && i.key === 'F11') { win.setFullScreen(!win.isFullScreen()); e.preventDefault(); }
   });
 });

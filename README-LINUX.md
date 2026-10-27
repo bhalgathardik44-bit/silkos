@@ -28,4 +28,5 @@ Finder browses files (double-click an .exe to run it with Wine). Terminal opens 
 Saving (persistence): add a second empty virtual disk to the VM, then Settings > Storage > Set up, and restart. Everything is kept after that. Installed Store apps appear in the dock and Launchpad.
 All Openbox-managed desktop app windows (including Flatpak, Wine, and terminal apps) use the shared SilkOS dark title bar, with centered titles and controls on the left. Picom adds rounded corners and soft shadows to normal app windows while leaving the fullscreen SilkOS desktop square.
 Store app: searches and installs Flathub apps with flatpak (per-user, needs internet). On the live ISO, installed apps live in RAM and are gone after a reboot.
-Volume has a hook (`silk.volume`) but no slider in the UI yet. Still fake: Wi-Fi picker, Files app.
+Control Center includes brightness and volume sliders on Linux. Still fake: Wi-Fi picker, Files app.
+The Apple menu includes a SilkOS screen lock. Set a separate password in Settings > Security; any non-empty password is accepted (there is no 8-character minimum). The password is stored as a salted hash in the app's user data. This locks the SilkOS app window and does not replace the Linux account login.
