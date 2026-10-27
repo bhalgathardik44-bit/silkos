@@ -24,4 +24,5 @@
 
 ## What is real vs fake now
 Real on Linux: Shut Down / Restart / Sleep (systemctl), battery (/sys), network status (nmcli), brightness (brightnessctl).
+Store app: searches and installs Flathub apps with flatpak (per-user, needs internet). On the live ISO, installed apps live in RAM and are gone after a reboot.
 Volume has a hook (`silk.volume`) but no slider in the UI yet. Still fake: Wi-Fi picker, Files app.

@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('silk', {
   battery: () => ipcRenderer.invoke('sys:battery'),
   wifi: () => ipcRenderer.invoke('sys:wifi'),
   volume: v => ipcRenderer.invoke('sys:volume', v),
-  brightness: v => ipcRenderer.invoke('sys:brightness', v)
+  brightness: v => ipcRenderer.invoke('sys:brightness', v),
+  store: { installed: () => ipcRenderer.invoke('store:installed'), search: q => ipcRenderer.invoke('store:search', q), install: id => ipcRenderer.invoke('store:install', id), run: id => ipcRenderer.invoke('store:run', id) }
 });
