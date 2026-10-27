@@ -1,0 +1,5 @@
+#!/bin/sh
+# Wine (run Windows .exe files). Needs 32-bit packages. Never fail the ISO build over it.
+dpkg --add-architecture i386
+apt-get update || true
+apt-get install -y --no-install-recommends wine wine32:i386 || true

@@ -25,6 +25,7 @@ polkitd
 # --- real hardware hooks used by SilkOS ---
 network-manager
 flatpak
+xterm
 brightnessctl
 upower
 pipewire
