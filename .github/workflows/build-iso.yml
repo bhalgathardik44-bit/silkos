@@ -18,7 +18,7 @@ jobs:
       - name: Build SilkOS .deb
         run: |
           npm install --no-audit --no-fund
-          npx electron-builder --linux deb --x64
+            npx electron-builder --linux deb --x64 --publish never
           mkdir -p distro/config/packages.chroot
           cp dist/*.deb distro/config/packages.chroot/
           ls -lh distro/config/packages.chroot
