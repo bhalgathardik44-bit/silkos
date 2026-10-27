@@ -1,0 +1,46 @@
+name: Build SilkOS ISO
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+jobs:
+  iso:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Restore script permissions (web upload drops them)
+        run: |
+          chmod +x distro/auto/* distro/build-local.sh linux/run.sh
+          chmod +x distro/config/hooks/normal/* distro/config/includes.chroot/usr/local/bin/*
+      - name: Build SilkOS .deb
+        run: |
+          npm install --no-audit --no-fund
+          npx electron-builder --linux deb --x64
+          mkdir -p distro/config/packages.chroot
+          cp dist/*.deb distro/config/packages.chroot/
+          ls -lh distro/config/packages.chroot
+      - name: Build ISO (Debian trixie container)
+        run: |
+          docker run --rm --privileged -v "$PWD":/work -w /work/distro debian:trixie sh -ec '
+            apt-get update
+            apt-get install -y live-build debootstrap squashfs-tools xorriso syslinux syslinux-common isolinux grub-pc-bin grub-efi-amd64-bin mtools dosfstools cpio ca-certificates
+            lb clean --purge || true
+            lb config
+            lb build
+          '
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: silkos-iso
+          path: distro/*.iso
+          if-no-files-found: error
+      - name: Upload build log (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: distro/build.log
+          if-no-files-found: ignore
