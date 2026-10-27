@@ -26,6 +26,8 @@ polkitd
 network-manager
 flatpak
 xterm
+fdisk
+e2fsprogs
 brightnessctl
 upower
 pipewire

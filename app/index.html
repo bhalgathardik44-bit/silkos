@@ -227,10 +227,13 @@ calc:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1c1c1e"/>
 about:`<svg viewBox="0 0 100 100"><defs><linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a8cff"/><stop offset="1" stop-color="#5b2bff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g3)"/><path d="M50 16c3 20 14 31 34 34-20 3-31 14-34 34-3-20-14-31-34-34 20-3 31-14 34-34z" fill="#fff"/><path d="M78 14c1 6 4 9 10 10-6 1-9 4-10 10-1-6-4-9-10-10 6-1 9-4 10-10z" fill="#fff" opacity=".8"/></svg>`};
 SVG.settings=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5aab3"/><stop offset="1" stop-color="#5d626b"/></linearGradient></defs><rect width="100" height="100" fill="url(#g4)"/><g fill="#eceef1"><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(0 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(45 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(90 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(135 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(180 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(225 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(270 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="27"/></g><circle cx="50" cy="50" r="12" fill="#6a6f78"/></svg>`;SVG.finder=`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8fd8ff"/><path d="M0 0h56q-10 25-6 52h-6q-2 22 6 48H0z" fill="#1a7cff"/><rect x="30" y="30" width="6" height="14" rx="3" fill="#123"/><rect x="64" y="30" width="6" height="14" rx="3" fill="#123"/><path d="M26 66q24 16 48 0" fill="none" stroke="#123" stroke-width="5" stroke-linecap="round"/></svg>`;SVG.terminal=`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#222"/><path d="M24 34l16 14-16 14" stroke="#e6e6e6" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M46 66h28" stroke="#e6e6e6" stroke-width="6" stroke-linecap="round"/></svg>`;SVG.store=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fc5ff"/><stop offset="1" stop-color="#1a5cff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g5)"/><path d="M39 38v-5a11 11 0 0 1 22 0v5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><rect x="25" y="37" width="50" height="42" rx="9" fill="#fff"/><path d="M50 47v19M42 59l8 8 8-8" fill="none" stroke="#1a5cff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;Object.keys(SVG).forEach(k=>apps[k]&&(apps[k].svg=SVG[k]));
 let z=10,wins={};
-function dockIcon(id){return dock.querySelector(`[data-id=${id}]`)}
-Object.entries(apps).forEach(([id,a])=>{
+function dockIcon(id){return dock.querySelector(`[data-id="${CSS.escape(id)}"]`)}
+function addIcon(id){const a=apps[id];
  const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.style.background=a.c;
- d.innerHTML=`<i>${a.svg}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);dock.appendChild(d)});
+ d.innerHTML=`<i>${a.svg}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);dock.appendChild(d)}
+Object.keys(apps).forEach(addIcon);
+function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>(r.apps||[]).forEach(a=>{if(apps[a.id])return;
+ apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain;background:#fff">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)}))}
 const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#b4bac6"/></linearGradient></defs><rect width="100" height="100" fill="url(#glp)"/>'+[['#ff5f57','#febc2e','#28c840'],['#5ac8fa','#0a84ff','#af52de'],['#ff2d92','#ff9500','#34c759']].map((r,y)=>r.map((c,x)=>`<rect x="${20+x*22}" y="${20+y*22}" width="16" height="16" rx="4.500" fill="${c}"/>`).join('')).join('')+'</svg>';
 {const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();dock.prepend(d)}
 function launch(id){
@@ -308,7 +311,7 @@ function storeInit(el){const b=el.querySelector('.body');b.innerHTML='<div class
   if(r.error)return msg(r.error);r.apps.length?draw(r.apps,'Results'):msg('No apps found for “'+v+'”.')}
  q.oninput=()=>{clearTimeout(t);t=setTimeout(find,350)};
  L.onclick=async e=>{const x=e.target.closest('.stb');if(!x||x.disabled)return;const id=x.dataset.id;if(inst.has(id))return S.run(id);
-  busy[id]=1;x.disabled=true;x.textContent='Installing…';const r=await S.install(id);delete busy[id];if(r.ok)inst.add(id);
+  busy[id]=1;x.disabled=true;x.textContent='Installing…';const r=await S.install(id);delete busy[id];if(r.ok){inst.add(id);syncFlatpaks()}
   const n=L.querySelector(`.stb[data-id="${CSS.escape(id)}"]`);if(n){n.disabled=false;n.textContent=r.ok?'Open':'Retry';n.title=r.error||''}};
  home()}
 function calcInit(el){let cur='0',acc=null,op=null,fresh=true;const s=el.querySelector('.scr');
@@ -558,7 +561,7 @@ function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=
    Object.assign(el.style,{left:L+'px',top:T+'px',width:W+'px',height:H+'px'})};
   const up=()=>{el.classList.remove('rzing');h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up)};h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up)}})}
 function settingsInit(el){
- const NAV=[['gen','General','⚙️','#8e8e93'],['app','Appearance','🎨','#0a84ff'],['desk','Desktop & Dock','🖼️','#af52de'],['disp','Displays','🖥️','#30b0c7'],['web','Browser','🧭','#34c759']];
+ const NAV=[['gen','General','⚙️','#8e8e93'],['app','Appearance','🎨','#0a84ff'],['desk','Desktop & Dock','🖼️','#af52de'],['disp','Displays','🖥️','#30b0c7'],['web','Browser','🧭','#34c759'],['stor','Storage','💾','#ff9500']];
  const body=el.querySelector('.body');body.innerHTML='<div class="set"><div class="sbn">'+NAV.map(n=>`<div class="it" data-p="${n[0]}"><b style="background:${n[3]}">${n[2]}</b>${n[1]}</div>`).join('')+'</div><div class="pane"></div></div>';
  const pane=body.querySelector('.pane');let cp='gen';
  const tg=(k,l)=>`<div class="rw"><span>${l}</span><button class="tg${cfg[k]?' on':''}" data-t="${k}"></button></div>`;
@@ -568,11 +571,15 @@ function settingsInit(el){
   gen:()=>'<h2>General</h2><div class="grp">'+rw('SilkOS','Version 1.0')+rw('Engine',(navigator.userAgent.match(/Electron\/[\d.]+/)||['Web browser'])[0])+rw('Processor cores',navigator.hardwareConcurrency||'–')+rw('Memory',navigator.deviceMemory?'≥ '+navigator.deviceMemory+' GB':'–')+rw('Display',screen.width+' × '+screen.height)+'</div><div class="grp"><div class="rw"><span>Reset all settings</span><button class="btn" data-a="reset">Reset</button></div></div>',
   app:()=>'<h2>Appearance</h2><h3>Theme</h3><div class="grp"><div class="tiles">'+[['auto','Auto'],['light','Light'],['dark','Dark']].map(t=>`<div class="tl2${cfg.theme===t[0]?' on':''}" data-th="${t[0]}"><div class="pv ${t[0]}"></div><span>${t[1]}</span></div>`).join('')+'</div></div><h3>Accent color</h3><div class="grp"><div class="acs">'+['#0a60ff','#af52de','#ff2d92','#ff3b30','#ff9500','#34c759','#8e8e93'].map(c=>`<div class="ac${cfg.accent===c?' on':''}" data-ac="${c}" style="background:${c}"></div>`).join('')+'</div></div><div class="grp">'+tg('lite','Reduce transparency (Lite Mode)')+'</div>',
   desk:()=>'<h2>Desktop & Dock</h2><h3>Wallpaper</h3><div class="grp"><div class="wps">'+WALLS.map((w,i)=>`<div class="wp${cfg.wall===i?' on':''}" data-w="${i}" style="background:${w[1]}"><span>${w[0]}</span></div>`).join('')+'</div></div><h3>Dock</h3><div class="grp">'+sl('dock','Size',40,80,cfg.dock)+tg('mag','Magnification')+sl('magAmt','Magnification amount',12,20,Math.round(cfg.magAmt*10),.1)+tg('hide','Automatically hide the Dock')+'</div>',
+  stor:()=>'<h2>Storage</h2><div class="grp">'+rw('Saving','Checking…')+'</div>',
   disp:()=>'<h2>Displays</h2><div class="grp">'+sl('bri','Brightness',25,100,cfg.bri)+`<div class="rw"><span>Full screen</span><button class="tg${document.fullscreenElement?' on':''}" data-t="fs"></button></div></div>`,
   web:()=>'<h2>Browser</h2><h3>Search engine</h3><div class="grp">'+Object.entries(ENG).map(([k,e])=>`<div class="rw pick" data-e="${k}"><span>${e.n}</span><span class="ck">${cfg.engine===k?'✓':''}</span></div>`).join('')+'</div><div class="grp">'+tg('sugg','Show live search suggestions')+'</div><h3>Data</h3><div class="grp"><div class="rw"><span>History · '+store.get('hist').length+' items</span><button class="btn" data-a="clrh">Clear</button></div><div class="rw"><span>Bookmarks · '+store.get('bm').length+' items</span><button class="btn" data-a="clrb">Clear</button></div></div>'};
- function draw(k){cp=k;body.querySelectorAll('.it').forEach(n=>n.classList.toggle('on',n.dataset.p===k));const t=pane.scrollTop;pane.innerHTML=P[k]();pane.scrollTop=t}
+ function draw(k){cp=k;body.querySelectorAll('.it').forEach(n=>n.classList.toggle('on',n.dataset.p===k));const t=pane.scrollTop;pane.innerHTML=P[k]();pane.scrollTop=t;if(k==='stor')stor()}
+ async function stor(){const g=pane.querySelector('.grp'),S=window.silk&&silk.persist;if(!S){g.innerHTML=rw('Saving','Only when SilkOS runs on Linux');return}const r=await S.status();if(cp!=='stor')return;
+  g.innerHTML=r.on?rw('Saving','On: your files, settings and apps are kept'):r.has?rw('Saving','Ready. Restart SilkOS to turn it on'):r.disk?`<div class="rw"><span>Save everything on empty disk ${esc(r.disk.name)} (${esc(r.disk.size)})</span><button class="stb" data-a="pers" data-d="${esc(r.disk.name)}">Set up</button></div>`:rw('Saving','Off')+'<div class="rw"><span class="mut">Add a second, empty virtual disk (8 GB or more) to this VM, restart, then come back here.</span></div>'}
  body.querySelector('.sbn').onclick=e=>{const n=e.target.closest('.it');if(n)draw(n.dataset.p)};
  pane.onclick=e=>{const t=e.target.closest('[data-th],[data-ac],[data-w],[data-t],[data-e],[data-a]');if(!t)return;const d=t.dataset;
+  if(d.a==='pers'){if(!confirm('Set up disk '+d.d+' for saving? Anything on it will be erased.'))return;t.disabled=true;t.textContent='Setting up…';silk.persist.setup(d.d).then(r=>{if(r.ok)stor();else{t.disabled=false;t.textContent='Retry';alert('Setup failed: '+(r.error||'unknown error'))}});return}
   if(d.th)cfg.theme=d.th;else if(d.ac)cfg.accent=d.ac;else if(d.w)cfg.wall=+d.w;else if(d.e)cfg.engine=d.e;
   else if(d.t==='fs')toggleFS();else if(d.t)cfg[d.t]=!cfg[d.t];
   else if(d.a==='reset'){Object.assign(cfg,DEF)}else if(d.a==='clrh')store.set('hist',[]);else if(d.a==='clrb')store.set('bm',[]);
@@ -585,5 +592,6 @@ document.addEventListener('contextmenu',e=>{if(e.target.closest('.win,.dd,#dockw
  ddKey='ctx';dd=el;el.classList.add('dd');document.body.appendChild(el);el.style.left=Math.min(e.clientX,innerWidth-250)+'px';el.style.top=Math.min(e.clientY,innerHeight-220)+'px';requestAnimationFrame(()=>el.classList.add('on'))});
 applyCfg();
 buildBar();
+syncFlatpaks();
 launch('browser');setTimeout(()=>wins.browser&&maxToggle(wins.browser),700);
 </script></body></html>

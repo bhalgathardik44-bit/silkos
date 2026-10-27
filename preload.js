@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('silk', {
   volume: v => ipcRenderer.invoke('sys:volume', v),
   brightness: v => ipcRenderer.invoke('sys:brightness', v),
   files: { home: () => ipcRenderer.invoke('fs:home'), list: d => ipcRenderer.invoke('fs:list', d), open: p => ipcRenderer.invoke('fs:open', p) },
+  persist: { status: () => ipcRenderer.invoke('persist:status'), setup: d => ipcRenderer.invoke('persist:setup', d) },
   terminal: () => ipcRenderer.invoke('sys:terminal'),
   store: { installed: () => ipcRenderer.invoke('store:installed'), search: q => ipcRenderer.invoke('store:search', q), install: id => ipcRenderer.invoke('store:install', id), run: id => ipcRenderer.invoke('store:run', id) }
 });

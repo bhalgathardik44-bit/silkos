@@ -10,5 +10,5 @@ lb config noauto \
   --memtest none \
   --iso-application "SilkOS" \
   --iso-volume "SILKOS" \
-  --bootappend-live "boot=live components quiet loglevel=3 username=silk hostname=silkos" \
+  --bootappend-live "boot=live components quiet loglevel=3 username=silk hostname=silkos persistence" \
   "${@}"
