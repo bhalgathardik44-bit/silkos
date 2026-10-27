@@ -117,11 +117,7 @@ ipcMain.handle('store:install', async (_, id) => {
   const r = await fp(['install', '--user', '-y', '--noninteractive', 'flathub', id], 30 * 60000);
   return { ok: r.ok, error: r.ok ? '' : r.err.trim().split('\n').pop() };
 });
-ipcMain.handle('store:run', (_, id) => {
-  if (!IS_LINUX || !okId(id)) return false;
-  spawn('flatpak', ['run', id], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
-  return true;
-});
+ipcMain.handle('store:run', (_, id) => IS_LINUX && okId(id) ? launchExt('flatpak', ['run', id], os.homedir()) : { ok: false, error: 'Not available here' });
 /* ---- Finder + Terminal ---- */
 const isDir = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
 ipcMain.handle('fs:home', () => {
@@ -135,7 +131,25 @@ ipcMain.handle('fs:list', async (_, d) => {
     return { items: ents.filter(e => !e.name.startsWith('.')).map(e => ({ name: e.name, dir: e.isDirectory() || (e.isSymbolicLink() && isDir(path.join(d, e.name))) })).sort((a, b) => b.dir - a.dir || a.name.localeCompare(b.name)) };
   } catch (e) { return { error: e.code === 'EACCES' ? 'You don\'t have permission to open this folder.' : 'Folder not found.' }; }
 });
-const detach = (cmd, args, cwd) => spawn(cmd, args, { detached: true, stdio: 'ignore', cwd }).on('error', () => {}).unref();
+/* Launch a native app, log its output, and bring its window in front of SilkOS (which is fullscreen). */
+const xWins = async () => new Set(((await run('wmctrl', ['-l'])) || '').split('\n').map(l => l.split(' ')[0]).filter(Boolean));
+const launchExt = async (cmd, args, cwd) => {
+  const before = await xWins(), log = path.join(os.homedir(), '.cache', 'silkos-apps.log');
+  let fd = 'ignore'; try { fs.mkdirSync(path.dirname(log), { recursive: true }); fd = fs.openSync(log, 'a'); } catch {}
+  let exited = null; const t0 = Date.now();
+  const p = spawn(cmd, args, { detached: true, stdio: ['ignore', fd, fd], cwd });
+  p.on('error', e => { exited = e.message; }).on('exit', c => { exited = exited || (c ? 'exit code ' + c : ''); });
+  p.unref(); if (typeof fd === 'number') fs.closeSync(fd);
+  while (Date.now() - t0 < 45000) {
+    await new Promise(r => setTimeout(r, 700));
+    const nw = [...await xWins()].filter(w => !before.has(w));
+    if (nw.length) { run('wmctrl', ['-i', '-a', nw[nw.length - 1]]); return { ok: true }; }
+    if (exited) { let t = ''; try { t = fs.readFileSync(log, 'utf8').trim().split('\n').slice(-4).join('\n'); } catch {} return { ok: false, error: (t || exited).slice(-600) }; }
+    if (exited === '') return { ok: true };
+  }
+  return { ok: true };
+};
+const detach = (cmd, args, cwd) => { launchExt(cmd, args, cwd); };
 ipcMain.handle('fs:open', (_, p) => {
   p = String(p);
   if (IS_LINUX && /\.exe$/i.test(p)) { detach('wine', [p], path.dirname(p)); return ''; }

@@ -26,6 +26,7 @@ polkitd
 network-manager
 flatpak
 xterm
+wmctrl
 fdisk
 e2fsprogs
 brightnessctl
