@@ -23,9 +23,11 @@
 - Build locally instead (Ubuntu/Debian machine with Docker): `npm install && npm run build:linux && ./distro/build-local.sh`
 
 ## What is real vs fake now
-Real on Linux: Shut Down / Restart / Sleep (systemctl), battery (/sys), network status (nmcli), brightness (brightnessctl).
+Real on Linux: Shut Down / Restart / Sleep (systemctl), battery (/sys), Wi-Fi (NetworkManager), Bluetooth (BlueZ), brightness (brightnessctl), volume (PipeWire/ALSA), and media controls for MPRIS players.
 Finder browses files (double-click an .exe to run it with Wine). Terminal opens xterm. Notes are saved automatically.
 Saving (persistence): add a second empty virtual disk to the VM, then Settings > Storage > Set up, and restart. Everything is kept after that. Installed Store apps appear in the dock and Launchpad.
 Installed desktop apps use SilkOS-style window title bars, with centered titles and controls on the left.
+Command Center groups connectivity, Focus, brightness, sound, and media controls. Focus is currently a SilkOS preference; AirDrop, keyboard backlight, and screen mirroring are not available.
+SilkOS starts at a profile sign-in screen. Manage profile names, passwords, and pictures in Settings > Users & Groups; use Settings > Desktop & Dock to choose separate desktop and lock-screen pictures from local image files. These are SilkOS-only profiles and an in-app lock screen, not Linux accounts or an OS security boundary. Profile passwords are stored as salted scrypt hashes.
 Store app: searches and installs Flathub apps with flatpak (per-user, needs internet). On the live ISO, installed apps live in RAM and are gone after a reboot.
-Volume has a hook (`silk.volume`) but no slider in the UI yet. Still fake: Wi-Fi picker, Files app.
+Still unavailable: Wi-Fi network picker, Files app, AirDrop, keyboard backlight, and screen mirroring.

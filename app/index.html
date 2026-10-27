@@ -109,7 +109,7 @@ textarea{width:100%;height:100%;border:0;outline:0;resize:none;padding:14px;font
 .dd.on{transform:none;opacity:1}body.lite .dd,body.lite #spot{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--win)}
 .di{display:flex;justify-content:space-between;gap:30px;padding:5px 11px;border-radius:7px}.di:hover:not(.dis){background:var(--accent);color:#fff}.di em{font-style:normal;opacity:.55}.dis{opacity:.4;cursor:var(--cur)}
 .sep{height:1px;background:var(--line);margin:5px 8px}
-.cc{width:300px;padding:14px}.calw{padding:14px}.cc h5,.calw h5{font-size:12px;opacity:.55;margin:0 0 10px 4px;font-weight:600}
+.cc{width:min(360px,calc(100vw - 16px));padding:10px;border-radius:20px}.calw{padding:14px}.cc h5,.calw h5{font-size:12px;opacity:.55;margin:0 0 10px 4px;font-weight:600}.cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cc-network,.cc-quick{min-width:0;border-radius:16px;background:var(--sfield);padding:6px}.cc-control{width:100%;min-height:43px;display:flex;align-items:center;gap:9px;padding:6px;border:0;border-radius:12px;background:transparent;color:inherit;text-align:left;transition:background .18s,transform .18s var(--spring)}.cc-control:hover:not(:disabled){background:rgba(128,128,128,.14)}.cc-control:active:not(:disabled){transform:scale(.97)}.cc-control:disabled{opacity:.52}.cc-symbol{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(128,128,128,.18);font-size:15px}.cc-control.on .cc-symbol{background:rgba(255,255,255,.82);color:#333}.cc-copy{display:flex;flex-direction:column;min-width:0;gap:2px}.cc-copy b{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cc-copy small{font-size:10px;opacity:.58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cc-quick{display:grid;grid-template-rows:1fr 1fr;gap:6px}.cc-quick .cc-control{height:100%;padding:8px;border-radius:13px;background:rgba(255,255,255,.55)}:root[data-theme=dark] .cc-quick .cc-control{background:rgba(255,255,255,.1)}.cc-quick .cc-control.on{background:var(--accent);color:#fff}.cc-quick .cc-control.on .cc-symbol{background:rgba(255,255,255,.22);color:#fff}.cc-quick .cc-pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cc-quick .cc-pair .cc-control{justify-content:center;flex-direction:column;gap:3px;text-align:center;padding:5px 2px}.cc-quick .cc-pair .cc-symbol{width:24px;height:24px;font-size:12px}.cc-quick .cc-pair .cc-copy b{font-size:10px}.cc-section{padding:10px 12px;border-radius:15px;background:var(--sfield);margin-top:8px}.cc-section-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:8px}.cc-section-head small{font-weight:400;opacity:.55}.cc-slider{display:flex;align-items:center;gap:8px}.cc-slider .sl{flex:1;min-width:0;height:24px;background:linear-gradient(to right,var(--accent) var(--fill,50%),var(--line) var(--fill,50%))}.cc-slider .sl::-webkit-slider-thumb{border:1px solid #fff;width:21px;height:21px}.cc-slider-icon{width:18px;text-align:center;font-size:14px;opacity:.75}.cc-media{display:flex;align-items:center;gap:10px;min-height:56px}.cc-album{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;flex:none;background:linear-gradient(145deg,#fa5,#e34);color:#fff;font-size:17px}.cc-track{min-width:0;flex:1}.cc-track b,.cc-track small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cc-track b{font-size:12px}.cc-track small{font-size:10px;opacity:.6;margin-top:3px}.cc-media-actions{display:flex;align-items:center;gap:2px}.cc-media-actions button{width:28px;height:30px;border:0;border-radius:8px;background:transparent;color:inherit;font-size:16px}.cc-media-actions button:hover:not(:disabled){background:rgba(128,128,128,.16)}.cc-media-actions button:disabled{opacity:.45}.cc-status{min-height:12px;margin:6px 4px 0;font-size:10px;opacity:.65}.cc-status:empty{display:none}
 .row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--sfield);margin-bottom:8px;font-size:13px}.row.col{flex-direction:column;align-items:stretch;gap:8px}
 .sl{width:100%;-webkit-appearance:none;appearance:none;height:22px;border-radius:11px;background:var(--line);outline:none}.sl::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 5px #0006}
 .cal{display:grid;grid-template-columns:repeat(7,34px);gap:2px;text-align:center;font-size:12px}.cal i{opacity:.5;font-style:normal;line-height:26px}.cal b{font-weight:400;line-height:32px;border-radius:50%}.cal b.today{background:var(--accent);color:#fff}
@@ -166,6 +166,7 @@ body.lite #dock{background:var(--win)}
 .sbn .it{display:flex;align-items:center;gap:10px;padding:6px 9px;margin-bottom:2px;border-radius:10px;font-size:13px;cursor:var(--curp);transition:background .15s}
 .sbn .it:hover{background:var(--sfield)}.sbn .it.on{background:var(--accent);color:#fff}
 .sbn .it b{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:13px;font-weight:400;flex:none}
+.user-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:12px}.user-card{display:flex;align-items:center;gap:10px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:13px;background:var(--win);color:inherit;text-align:left;cursor:pointer}.user-card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.user-card span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.user-avatar{width:42px;height:42px;flex:none;display:grid;place-items:center;overflow:hidden;border-radius:50%;background:linear-gradient(145deg,#8ec5fc,#5476d9);color:#fff;font-size:18px;font-weight:600}.user-avatar img{width:100%;height:100%;object-fit:cover}.user-editor{padding:14px}.user-form{display:grid;gap:10px;padding:14px}.user-form label{display:grid;gap:5px;font-size:12px;opacity:.8}.user-form input{width:100%;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--win);color:inherit;outline:0;user-select:text}.user-form input:focus{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}.user-actions{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 14px}.user-hint{margin:0 14px 12px;font-size:11px;opacity:.58;line-height:1.45}
 .pane{flex:1;overflow:auto;padding:24px 28px}.pane h2{font-size:22px;margin:0 0 18px}.pane h3{font-size:12px;opacity:.55;margin:0 0 8px 6px;font-weight:600;text-transform:uppercase}
 .grp{background:var(--sfield);border-radius:14px;margin-bottom:18px;overflow:hidden}
 .rw{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--line)}.rw:last-child{border:0}.rw .sl{width:170px}
@@ -199,6 +200,9 @@ body.lite #lp{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(
 .str>div{flex:1;min-width:0}.str h4{font-size:14px;font-weight:600}.str p{font-size:12px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stb{border:0;border-radius:14px;padding:5px 16px;font-size:13px;font-weight:600;background:var(--sfield);color:var(--accent);flex:none}.stb:disabled{opacity:.6}
 .stm{text-align:center;opacity:.6;font-size:14px;margin-top:70px;padding:0 20px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .cc-quick .cc-control{background:rgba(255,255,255,.1)}}
+@media (prefers-reduced-motion:reduce){.cc-control{transition-duration:.01s!important}}
+#lock-screen{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;overflow:auto;color:#fff;background:radial-gradient(80% 75% at 50% 20%,#748ae477,transparent),linear-gradient(145deg,#101d46,#17204b 40%,#075c39);background-position:center;background-size:cover;opacity:1;transition:opacity .55s var(--ease)}#lock-screen::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.05) 40%,rgba(0,0,0,.35));backdrop-filter:blur(1px)}#lock-screen.hidden{opacity:0;pointer-events:none}.lock-time{position:absolute;top:10%;left:0;right:0;text-align:center;text-shadow:0 2px 24px #0005}.lock-date{font-size:clamp(16px,2vw,24px);font-weight:500;opacity:.9}.lock-clock{font-size:clamp(64px,12vw,112px);font-weight:200;line-height:1;letter-spacing:-.055em;font-variant-numeric:tabular-nums}.lock-panel{position:absolute;z-index:1;left:50%;bottom:7%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;width:min(380px,calc(100vw - 32px));text-align:center;text-shadow:0 1px 5px #0006}.lock-users{display:flex;justify-content:center;flex-wrap:wrap;gap:16px;margin-bottom:12px}.lock-user{width:112px;border:0;background:transparent;color:inherit;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;font:inherit}.lock-user .user-avatar{width:68px;height:68px;border:1px solid #ffffff88;box-shadow:0 5px 18px #0004}.lock-user.selected .user-avatar{box-shadow:0 0 0 2px #fff,0 5px 18px #0004}.lock-user span:last-child{font-size:14px}.lock-form{width:100%;display:flex;gap:8px;justify-content:center;margin-top:8px}.lock-form input{width:min(270px,75vw);height:38px;padding:0 14px;border:1px solid #ffffff66;border-radius:20px;outline:0;background:#ffffff24;color:#fff;text-align:center;backdrop-filter:blur(20px);user-select:text}.lock-form input::placeholder{color:#ffffffc8}.lock-form input:focus{box-shadow:0 0 0 3px #ffffff42}.lock-form button,.lock-primary{height:38px;padding:0 16px;border:0;border-radius:20px;background:#ffffffdd;color:#20232b;font-size:13px;font-weight:600;cursor:pointer}.lock-error{min-height:18px;margin-top:8px;font-size:12px;color:#ffe1dc}.lock-setup{width:100%;padding:20px;border:1px solid #ffffff45;border-radius:22px;background:#15203966;backdrop-filter:blur(28px);box-shadow:0 18px 60px #0003;text-align:left}.lock-setup h2{margin-bottom:5px;font-size:22px}.lock-setup p{margin-bottom:14px;font-size:12px;opacity:.76}.lock-setup form{display:grid;gap:9px}.lock-setup input{height:38px;border:1px solid #ffffff5a;border-radius:11px;padding:0 12px;background:#ffffff1a;color:#fff;outline:0;user-select:text}.lock-setup input::placeholder{color:#ffffffad}.lock-setup .lock-primary{width:100%;margin-top:3px}body.locked #menubar,body.locked #desk,body.locked #dockwrap{visibility:hidden}
 .fnd{display:flex;height:100%}.fsb{width:160px;flex:none;padding:10px 8px;border-right:1px solid var(--line);font-size:13px}
 .fsb div{padding:6px 10px;border-radius:7px}.fsb div.on{background:var(--sfield);font-weight:600}
 .fmn{flex:1;display:flex;flex-direction:column;min-width:0}.ftb{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px}
@@ -210,6 +214,10 @@ body.lite #lp{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(
 <div id="menubar"><div id="mleft"></div><div id="mright"></div></div>
 <div id="desk"></div>
 <div id="dockwrap"><div id="dock" class="glass"></div></div>
+<div id="lock-screen" aria-label="SilkOS sign in">
+ <div class="lock-time"><div class="lock-date"></div><div class="lock-clock"></div></div>
+ <div class="lock-panel"></div>
+</div>
 <script>
 const $=s=>document.querySelector(s),desk=$('#desk'),dock=$('#dock');
 const apps={
@@ -229,16 +237,16 @@ calc:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1c1c1e"/>
 about:`<svg viewBox="0 0 100 100"><defs><linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a8cff"/><stop offset="1" stop-color="#5b2bff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g3)"/><path d="M50 16c3 20 14 31 34 34-20 3-31 14-34 34-3-20-14-31-34-34 20-3 31-14 34-34z" fill="#fff"/><path d="M78 14c1 6 4 9 10 10-6 1-9 4-10 10-1-6-4-9-10-10 6-1 9-4 10-10z" fill="#fff" opacity=".8"/></svg>`};
 SVG.settings=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5aab3"/><stop offset="1" stop-color="#5d626b"/></linearGradient></defs><rect width="100" height="100" fill="url(#g4)"/><g fill="#eceef1"><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(0 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(45 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(90 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(135 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(180 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(225 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(270 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="27"/></g><circle cx="50" cy="50" r="12" fill="#6a6f78"/></svg>`;SVG.finder=`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8fd8ff"/><path d="M0 0h56q-10 25-6 52h-6q-2 22 6 48H0z" fill="#1a7cff"/><rect x="30" y="30" width="6" height="14" rx="3" fill="#123"/><rect x="64" y="30" width="6" height="14" rx="3" fill="#123"/><path d="M26 66q24 16 48 0" fill="none" stroke="#123" stroke-width="5" stroke-linecap="round"/></svg>`;SVG.terminal=`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#222"/><path d="M24 34l16 14-16 14" stroke="#e6e6e6" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M46 66h28" stroke="#e6e6e6" stroke-width="6" stroke-linecap="round"/></svg>`;SVG.store=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fc5ff"/><stop offset="1" stop-color="#1a5cff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g5)"/><path d="M39 38v-5a11 11 0 0 1 22 0v5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><rect x="25" y="37" width="50" height="42" rx="9" fill="#fff"/><path d="M50 47v19M42 59l8 8 8-8" fill="none" stroke="#1a5cff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;Object.keys(SVG).forEach(k=>apps[k]&&(apps[k].svg=SVG[k]));
 apps.monitor.svg='<svg viewBox="0 0 100 100"><defs><linearGradient id="gm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34c759"/><stop offset="1" stop-color="#168c43"/></linearGradient></defs><rect width="100" height="100" fill="url(#gm)"/><rect x="17" y="20" width="66" height="58" rx="8" fill="#fff" opacity=".95"/><path d="M25 67h9V51h-9zm15 0h9V39h-9zm15 0h9V47h-9zm15 0h9V31h-9z" fill="#34c759"/></svg>';
-let z=10,wins={};
+let z=10,wins={},base=56,maxS=1.7,mx=null,dockRaf=0,dockMetricsDirty=true;
 function dockIcon(id){return dock.querySelector(`[data-id="${CSS.escape(id)}"]`)}
 function addIcon(id){const a=apps[id];
- const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.style.background=a.c;
- d.innerHTML=`<i>${a.svg}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);dock.appendChild(d)}
+ const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.style.background=a.c;d.style.width=d.style.height=base+'px';d._s=1;dockMetricsDirty=true;
+ d.innerHTML=`<i>${a.svg}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);dock.appendChild(d);scheduleDock()}
 Object.keys(apps).forEach(addIcon);
 function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>(r.apps||[]).forEach(a=>{if(apps[a.id])return;
  apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain;background:#fff">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)}))}
 const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#b4bac6"/></linearGradient></defs><rect width="100" height="100" fill="url(#glp)"/>'+[['#ff5f57','#febc2e','#28c840'],['#5ac8fa','#0a84ff','#af52de'],['#ff2d92','#ff9500','#34c759']].map((r,y)=>r.map((c,x)=>`<rect x="${20+x*22}" y="${20+y*22}" width="16" height="16" rx="4.500" fill="${c}"/>`).join('')).join('')+'</svg>';
-{const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();dock.prepend(d)}
+{const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.style.width=d.style.height=base+'px';d._s=1;d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();dock.prepend(d);dockMetricsDirty=true;scheduleDock()}
 function launch(id){
  if(apps[id].run){apps[id].run();return}
  const ic=dockIcon(id),w=wins[id];
@@ -277,18 +285,24 @@ function dragify(el,h){
   const mv=ev=>{el.style.left=ev.clientX-sx+'px';el.style.top=Math.max(28,ev.clientY-sy)+'px'};
   const up=()=>{el.classList.remove('drag');h.style.cursor='';h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up)};
   h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up)})}
-/* dock magnification, lerped on rAF */
-const icons=[...dock.children];let base=56,maxS=1.7,mx=null;
-icons.forEach(i=>i._s=1);
-dock.addEventListener('pointermove',e=>mx=e.clientX);
-dock.addEventListener('pointerleave',()=>mx=null);
-function tick(){let busy=false;
- icons.forEach(ic=>{
-  let t=1;if(mx!=null){const r=ic.getBoundingClientRect(),d=mx-(r.left+r.width/2);t=1+(maxS-1)*Math.exp(-(d*d)/(2*55*55))}
-  ic._s+=(t-ic._s)*.22;if(Math.abs(t-ic._s)>.002)busy=true;
-  const s=base*ic._s;ic.style.width=ic.style.height=s+'px';ic.firstChild.style.fontSize=26*ic._s+'px'});
- requestAnimationFrame(tick)}
-tick();
+/* Keep the Dock's spring magnification off the layout path and idle when untouched. */
+function scheduleDock(){if(!dockRaf)dockRaf=requestAnimationFrame(tick)}
+function tick(){
+ dockRaf=0;let moving=false;
+ if(dockMetricsDirty){for(const ic of dock.children){const r=ic.getBoundingClientRect();ic._centerX=r.left+r.width/2}dockMetricsDirty=false}
+ for(const ic of dock.children){
+  if(ic._s===undefined)ic._s=1;
+  const distance=mx===null?Infinity:mx-ic._centerX;
+  const target=mx!==null&&cfg.mag?1+(maxS-1)*Math.exp(-(distance*distance)/(2*55*55)):1;
+  ic._s+=(target-ic._s)*.22;
+  if(Math.abs(target-ic._s)>.002)moving=true;else ic._s=target;
+  ic.style.transform=`scale(${ic._s})`;
+ }
+ if(moving)scheduleDock()
+}
+dock.addEventListener('pointermove',e=>{mx=e.clientX;scheduleDock()});
+dock.addEventListener('pointerleave',()=>{mx=null;scheduleDock()});
+addEventListener('resize',()=>{dockMetricsDirty=true;scheduleDock()});
 /* clock */
 function clk(){$('#clock').textContent=new Date().toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}setInterval(()=>$('#clock')&&clk(),10000);
 /* apps */
@@ -494,12 +508,28 @@ const IC={
  bat:'<svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".6" y=".6" width="20" height="10.800" rx="3.200" opacity=".6"/><rect x="2.200" y="2.200" width="16.800" height="7.600" rx="1.800" fill="currentColor" stroke="none"/><path d="M22 4v4" stroke-linecap="round" opacity=".6"/></svg>',
  cc:'<svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x=".7" y=".7" width="14.600" height="5" rx="2.500"/><circle cx="4" cy="3.200" r="1.300" fill="currentColor" stroke="none"/><rect x=".7" y="8.300" width="14.600" height="5" rx="2.500"/><circle cx="12" cy="10.800" r="1.300" fill="currentColor" stroke="none"/></svg>',
  srch:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round"><circle cx="6" cy="6" r="4.600"/><path d="m9.500 9.500 3.300 3.300"/></svg>'};
-let curApp=null,dd=null,ddKey=null,curMenus={},bri=100,batInfo=null;
+let curApp=null,dd=null,ddKey=null,curMenus={},bri=100,batInfo=null,brightnessAvailable=false,brightnessTimer=null,brightnessRequest=0;
 const mleft=$('#mleft'),mright=$('#mright');
 const toggleLite=()=>{cfg.lite=document.body.classList.toggle('lite');save()};
 const toggleFS=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
 document.body.insertAdjacentHTML('beforeend','<div id="power"><span></span></div><div id="dim"></div>');
 const pw=$('#power'),dim=$('#dim');
+function setDisplayBrightness(value){
+ bri=cfg.bri=Number(value);save();
+ const fallback=()=>{brightnessAvailable=false;dim.style.opacity=(100-bri)/100*.85;return false};
+ if(!window.silk||silk.platform!=='linux'||!silk.brightness)return Promise.resolve(fallback());
+ const request=++brightnessRequest;
+ if(brightnessTimer){clearTimeout(brightnessTimer.id);brightnessTimer.resolve(false)}
+ return new Promise((resolve,reject)=>{const pending={resolve};brightnessTimer=pending;pending.id=setTimeout(()=>{if(brightnessTimer===pending)brightnessTimer=null;silk.brightness(bri).then(ok=>{
+  if(request!==brightnessRequest)return resolve(false);
+  brightnessAvailable=!!ok;dim.style.opacity=ok?0:(100-bri)/100*.85;resolve(!!ok)
+ }).catch(error=>{if(request===brightnessRequest){brightnessAvailable=false;dim.style.opacity=(100-bri)/100*.85}reject(error)})},90)})
+}
+function probeDisplayBrightness(){
+ if(!window.silk||silk.platform!=='linux'||!silk.brightness)return;
+ const request=++brightnessRequest;
+ silk.brightness().then(level=>{if(request!==brightnessRequest)return;brightnessAvailable=typeof level==='number';if(brightnessAvailable){bri=cfg.bri=level;dim.style.opacity=0}else dim.style.opacity=(100-bri)/100*.85}).catch(()=>{if(request!==brightnessRequest)return;brightnessAvailable=false;dim.style.opacity=(100-bri)/100*.85})
+}
 function power(k){if(window.silk&&silk.platform==='linux'&&silk.power){if(k==='sleep'){silk.power('sleep');return}setTimeout(()=>silk.power(k),900)}pw.firstChild.textContent=k==='off'?'SilkOS is shut down. Click to power on.':k==='restart'?'Restarting…':'';pw.dataset.k=k;pw.classList.add('on');if(k==='restart')setTimeout(()=>location.reload(),1400)}
 pw.onclick=()=>{if(pw.dataset.k!=='restart')pw.classList.remove('on')};
 function webSearch(q){const had=!!wins.browser;launch('browser');setTimeout(()=>openTab&&openTab(q),had?60:450)}
@@ -524,15 +554,98 @@ function listEl(items){const el=document.createElement('div');items.forEach(it=>
  if(it==='-'){el.insertAdjacentHTML('beforeend','<div class="sep"></div>');return}
  const[l,f,sc,dis]=it,d=document.createElement('div');d.className='di'+(dis?' dis':'');d.innerHTML='<span>'+esc(l)+'</span><em>'+(sc||'')+'</em>';
  if(!dis&&f)d.onclick=()=>{closeDd();setTimeout(f,70)};el.appendChild(d)});return el}
-function ccEl(){const el=document.createElement('div');el.className='cc';
- el.innerHTML=`<h5>Control Center</h5><div class="row"><span>Lite Mode (no blur)</span><button class="tg${document.body.classList.contains('lite')?' on':''}" data-c="l"></button></div><div class="row"><span>Full Screen</span><button class="tg${document.fullscreenElement?' on':''}" data-c="f"></button></div><div class="row col"><span>Brightness</span><input class="sl" type="range" min="25" max="100" value="${bri}"></div>`;
- el.querySelectorAll('.tg').forEach(t=>t.onclick=()=>{t.classList.toggle('on');t.dataset.c==='l'?toggleLite():toggleFS()});
- el.querySelector('.sl').oninput=e=>{bri=cfg.bri=+e.target.value;save();if(window.silk&&silk.platform==='linux'&&silk.brightness){silk.brightness(bri).then(ok=>{if(!ok)dim.style.opacity=(100-bri)/100*.85})}else dim.style.opacity=(100-bri)/100*.85};return el}
+function ccEl(){
+ const el=document.createElement('div');el.className='cc';
+ el.innerHTML=`<h5>Control Center</h5><div class="cc-grid"><div class="cc-network">
+  <button class="cc-control" data-control="wifi" aria-pressed="false"><span class="cc-symbol">◔</span><span class="cc-copy"><b>Wi-Fi</b><small>Checking…</small></span></button>
+  <button class="cc-control" data-control="bluetooth" aria-pressed="false"><span class="cc-symbol">ᛒ</span><span class="cc-copy"><b>Bluetooth</b><small>Checking…</small></span></button>
+  <button class="cc-control" data-control="nearby" disabled><span class="cc-symbol">◉</span><span class="cc-copy"><b>AirDrop</b><small>Not available</small></span></button>
+ </div><div class="cc-quick">
+  <button class="cc-control" data-control="focus" aria-pressed="false"><span class="cc-symbol">☾</span><span class="cc-copy"><b>Do Not Disturb</b><small>SilkOS focus mode</small></span></button>
+  <div class="cc-pair"><button class="cc-control" data-control="keyboard" disabled><span class="cc-symbol">⌨</span><span class="cc-copy"><b>Keyboard</b><small>Backlight unavailable</small></span></button><button class="cc-control" data-control="mirror" disabled><span class="cc-symbol">▣</span><span class="cc-copy"><b>Screen Mirroring</b><small>Not available</small></span></button></div>
+ </div></div>
+ <div class="cc-section"><div class="cc-section-head"><span>Display</span><small class="cc-brightness-state">Brightness</small></div><div class="cc-slider"><span class="cc-slider-icon">☼</span><input class="sl" data-slider="brightness" type="range" min="5" max="100" value="${bri}" aria-label="Display brightness"><span class="cc-slider-icon">▣</span></div></div>
+ <div class="cc-section"><div class="cc-section-head"><span>Sound</span><small class="cc-volume-state">Unavailable</small></div><div class="cc-slider"><span class="cc-slider-icon">◖</span><input class="sl" data-slider="volume" type="range" min="0" max="100" value="50" aria-label="Sound volume" disabled><span class="cc-slider-icon">◖</span></div></div>
+ <div class="cc-section"><div class="cc-section-head"><span>Now Playing</span><small class="cc-player-state">No media playing</small></div><div class="cc-media"><span class="cc-album">♫</span><span class="cc-track"><b class="cc-track-title">Nothing is playing</b><small class="cc-track-artist">Open a media app to see playback controls</small></span><span class="cc-media-actions"><button data-media="play-pause" aria-label="Play or pause" disabled>▶</button><button data-media="next" aria-label="Next track" disabled>≫</button></span></div></div><div class="cc-status" role="status" aria-live="polite"></div>`;
+ const focus=el.querySelector('[data-control=focus]'),status=el.querySelector('.cc-status'),brightness=el.querySelector('[data-slider=brightness]'),volume=el.querySelector('[data-slider=volume]'),volumeLabel=el.querySelector('.cc-volume-state');
+ let network=null,bluetooth=null,media=null,volumeTimer=null,brightnessTimer=null,updating=false;
+ const focusOn=()=>localStorage.getItem('silk.focus')==='true';
+ const paintSlider=input=>input.style.setProperty('--fill',`${(input.value-input.min)/(input.max-input.min)*100}%`);
+ const report=m=>{status.textContent=m||''};
+ const paintToggle=(key,state,label)=>{
+  const b=el.querySelector(`[data-control="${key}"]`);if(!b)return;
+  b.classList.toggle('on',!!state);b.setAttribute('aria-pressed',String(!!state));
+  b.querySelector('small').textContent=label;
+ };
+ function drawMedia(){
+  const player=el.querySelector('.cc-player-state'),title=el.querySelector('.cc-track-title'),artist=el.querySelector('.cc-track-artist'),buttons=el.querySelectorAll('[data-media]');
+  if(!media){player.textContent='No media playing';title.textContent='Nothing is playing';artist.textContent='Open a media app to see playback controls';buttons.forEach(b=>b.disabled=true);return}
+  player.textContent=media.status==='Playing'?'Playing':media.name||'Paused';
+  title.textContent=media.title||'Unknown track';artist.textContent=media.artist||media.name||'Media player';
+  buttons.forEach(b=>b.disabled=false);buttons[0].textContent=media.status==='Playing'?'Ⅱ':'▶';
+ }
+ async function refresh(){
+  if(!el.isConnected||!window.silk)return;
+  try{
+   const [w,b,v,level,m]=await Promise.all([silk.wifi(),silk.bluetooth(),silk.volume(),silk.brightness(),silk.media()]);
+   if(!el.isConnected)return;
+   network=w;bluetooth=b;media=m;wfInfo=w;wfu();
+   paintToggle('wifi',!!w?.enabled,w?.available?(w.connected?w.name||'Connected':'Not connected'):'Not available');
+   paintToggle('bluetooth',!!b?.enabled,b?.available?(b.enabled?'On':'Off'):'Not available');
+   focus.classList.toggle('on',focusOn());focus.setAttribute('aria-pressed',String(focusOn()));
+    if(typeof level==='number'&&!brightness.matches(':active')){brightnessAvailable=true;bri=cfg.bri=level;dim.style.opacity=0;brightness.value=String(Math.max(5,Math.min(100,level)));paintSlider(brightness);el.querySelector('.cc-brightness-state').textContent='Hardware brightness'}
+   if(typeof v==='number'){volume.disabled=false;volume.value=String(Math.max(0,Math.min(100,v)));volumeLabel.textContent=`${Math.round(v)}%`;paintSlider(volume)}
+   else{volume.disabled=true;volumeLabel.textContent='Not available'}
+   drawMedia();if(w?.error||b?.error)report(w.error||b.error);
+  }catch(e){if(el.isConnected)report(`Could not refresh controls: ${e.message}`)}
+ }
+ async function setSlider(kind,value){
+  if(kind==='brightness'){
+   paintSlider(brightness);
+   const ok=await setDisplayBrightness(value);
+   el.querySelector('.cc-brightness-state').textContent=ok?'Hardware brightness':'Screen dimming';
+   return;
+  }
+  if(!window.silk||silk.platform!=='linux'||!silk.volume)return;
+  const result=await silk.volume(Number(value));if(result===null)report('Could not change system volume');else{volumeLabel.textContent=`${value}%`;report('')}
+ }
+ el.onclick=async e=>{
+  const mediaButton=e.target.closest('[data-media]'),button=e.target.closest('[data-control]');
+  if(mediaButton&&media&&!updating){
+   updating=true;mediaButton.disabled=true;
+   try{if(!await silk.mediaAction(media.player,mediaButton.dataset.media))report('Could not control the media player');await refresh()}
+   catch(error){report(`Media control failed: ${error.message}`)}
+   finally{updating=false}
+   return;
+  }
+  if(!button||button.disabled||updating)return;
+  const control=button.dataset.control;
+  if(control==='focus'){
+   const next=!focusOn();localStorage.setItem('silk.focus',String(next));focus.classList.toggle('on',next);focus.setAttribute('aria-pressed',String(next));report(next?'Do Not Disturb is on for SilkOS':'Do Not Disturb is off');return;
+  }
+  if(control!=='wifi'&&control!=='bluetooth')return;
+  const state=control==='wifi'?network:bluetooth;
+  if(!state?.available)return report(`${control==='wifi'?'Wi-Fi':'Bluetooth'} is not available`);
+  updating=true;button.disabled=true;
+  try{
+   const ok=control==='wifi'?await silk.setWifi(!state.enabled):await silk.setBluetooth(!state.enabled);
+   report(ok?'':`Could not change ${control==='wifi'?'Wi-Fi':'Bluetooth'}`);
+   await refresh();
+  }catch(error){report(`Could not change ${control}: ${error.message}`)}
+  finally{updating=false;button.disabled=false}
+ };
+ brightness.oninput=()=>{paintSlider(brightness);clearTimeout(brightnessTimer);brightnessTimer=setTimeout(()=>setSlider('brightness',brightness.value).catch(e=>report(`Brightness control failed: ${e.message}`)),90)};
+ brightness.onchange=()=>{clearTimeout(brightnessTimer);setSlider('brightness',brightness.value).catch(e=>report(`Brightness control failed: ${e.message}`))};
+ volume.oninput=()=>{paintSlider(volume);volumeLabel.textContent=`${volume.value}%`;clearTimeout(volumeTimer);volumeTimer=setTimeout(()=>setSlider('volume',volume.value).catch(e=>report(`Volume control failed: ${e.message}`)),100)};
+ volume.onchange=()=>{clearTimeout(volumeTimer);setSlider('volume',volume.value).catch(e=>report(`Volume control failed: ${e.message}`))};
+ paintSlider(brightness);paintSlider(volume);focus.classList.toggle('on',focusOn());focus.setAttribute('aria-pressed',String(focusOn()));
+ refresh();el._timer=setInterval(refresh,8000);return el
+}
 function calEl(){const n=new Date(),f=new Date(n.getFullYear(),n.getMonth(),1).getDay(),dm=new Date(n.getFullYear(),n.getMonth()+1,0).getDate(),el=document.createElement('div');el.className='calw';
  let h='<h5>'+n.toLocaleString([],{month:'long',year:'numeric'})+'</h5><div class="cal">'+'SMTWTFS'.split('').map(c=>'<i>'+c+'</i>').join('')+'<b></b>'.repeat(f);
  for(let d=1;d<=dm;d++)h+='<b'+(d===n.getDate()?' class="today"':'')+'>'+d+'</b>';el.innerHTML=h+'</div>';return el}
 function openK(b){const k=b.dataset.k,right=b.parentNode===mright;let el;
- if(k==='apple')el=listEl([['About SilkOS',()=>launch('settings')],'-',[(document.body.classList.contains('lite')?'✓ ':'    ')+'Lite Mode (no blur)',toggleLite],['Enter Full Screen',toggleFS,'F11'],'-',['Sleep',()=>power('sleep')],['Restart…',()=>power('restart')],['Shut Down…',()=>power('off')]]);
+ if(k==='apple')el=listEl([['About SilkOS',()=>launch('settings')],['Lock Screen',()=>showLock(currentProfile?.id),'Ctrl+Alt+L'],'-',[(document.body.classList.contains('lite')?'✓ ':'    ')+'Lite Mode (no blur)',toggleLite],['Enter Full Screen',toggleFS,'F11'],'-',['Sleep',()=>power('sleep')],['Restart…',()=>power('restart')],['Shut Down…',()=>power('off')]]);
  else if(k==='cc')el=ccEl();else if(k==='clock')el=calEl();
  else if(k==='wifi')el=listEl([[wfInfo?(wfInfo.connected?(wfInfo.type==='wifi'?'Wi-Fi: ':'Network: ')+(wfInfo.name||'Connected'):'Not connected'):'Wi-Fi: '+(navigator.onLine?'Connected':'Not connected'),null,'',true]]);
  else if(k==='bat')el=listEl([[batInfo?Math.round(batInfo.level*100)+'% · '+(batInfo.charging?'Charging':'On battery'):'Battery',null,'',true]]);
@@ -541,7 +654,7 @@ function openK(b){const k=b.dataset.k,right=b.parentNode===mright;let el;
  const r=b.getBoundingClientRect();el.style.top=(r.bottom+4)+'px';
  if(right){el.style.right=Math.max(6,innerWidth-r.right)+'px';el.style.transformOrigin='top right'}else el.style.left=Math.max(6,r.left)+'px';
  requestAnimationFrame(()=>el.classList.add('on'))}
-function closeDd(now){if(!dd)return;const d=dd;dd=null;ddKey=null;document.querySelectorAll('.mi.on').forEach(x=>x.classList.remove('on'));d.classList.remove('on');setTimeout(()=>d.remove(),now?0:220)}
+function closeDd(now){if(!dd)return;const d=dd;dd=null;ddKey=null;if(d._timer)clearInterval(d._timer);document.querySelectorAll('.mi.on').forEach(x=>x.classList.remove('on'));d.classList.remove('on');setTimeout(()=>d.remove(),now?0:220)}
 mright.innerHTML='<button class="mi" id="bat" data-k="bat"></button><button class="mi" data-k="wifi">'+IC.wifi+'</button><button class="mi" data-k="srch">'+IC.srch+'</button><button class="mi" data-k="cc">'+IC.cc+'</button><button class="mi" id="clock" data-k="clock"></button>';
 wire(mright);clk();
 if(window.silk&&silk.platform==='linux'&&silk.battery){const pb=()=>silk.battery().then(r=>{if(!r){$('#bat').style.display='none';return}batInfo={level:r.level/100,charging:r.charging};$('#bat').style.display='';$('#bat').innerHTML=IC.bat+'<span>'+r.level+'%</span>'});pb();setInterval(pb,30000)}else if(navigator.getBattery)navigator.getBattery().then(b=>{batInfo=b;const u=()=>{$('#bat').innerHTML=IC.bat+'<span>'+Math.round(b.level*100)+'%</span>'};u();b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u)}).catch(()=>{});
@@ -584,12 +697,13 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&
 const DEF={theme:'auto',accent:'#0a60ff',wall:0,lite:false,dock:56,mag:true,magAmt:1.7,hide:false,engine:'google',sugg:true,bri:100};
 const cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('silk.cfg'))||{}}catch(e){return{}}})());
 const save=()=>{try{localStorage.setItem('silk.cfg',JSON.stringify(cfg))}catch(e){}};
+let profiles=[],currentProfile=null,desktopWallpaper=null,lockWallpaper=null,selectedProfileId=null,startupPending=true,lockTimer=null;
 const ENG={google:{n:'Google',u:'https://www.google.com/search?q='},ddg:{n:'DuckDuckGo',u:'https://duckduckgo.com/?q='},bing:{n:'Bing',u:'https://www.bing.com/search?q='}};
 function searchURL(v){return(ENG[cfg.engine]||ENG.google).u+encodeURIComponent(v)}
 const WALLS=[['Aurora','radial-gradient(60% 60% at 20% 20%,#7aa7ff,transparent),radial-gradient(50% 50% at 80% 30%,#ff8fc7,transparent),radial-gradient(60% 60% at 60% 90%,#ffc27a,transparent),#3b3b8f'],['Sunset','radial-gradient(70% 60% at 30% 100%,#ff5e62,transparent),radial-gradient(60% 60% at 80% 20%,#ffc371,transparent),#5b2a86'],['Ocean','radial-gradient(60% 60% at 20% 30%,#4facfe,transparent),radial-gradient(60% 70% at 85% 80%,#00f2c3,transparent),#0b2a5b'],['Forest','radial-gradient(60% 60% at 25% 25%,#9be15d,transparent),radial-gradient(60% 60% at 80% 80%,#00a99d,transparent),#0f3d2e'],['Graphite','radial-gradient(60% 60% at 30% 20%,#6b7280,transparent),radial-gradient(60% 60% at 80% 90%,#374151,transparent),#111827']];
 function applyCfg(){const R=document.documentElement;cfg.theme==='auto'?R.removeAttribute('data-theme'):R.setAttribute('data-theme',cfg.theme);R.style.setProperty('--accent',cfg.accent);
- $('#wall').style.background=WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('lite',!!cfg.lite);
- base=cfg.dock;maxS=cfg.mag?cfg.magAmt:1;$('#dockwrap').classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=(100-bri)/100*.85}
+$('#wall').style.background=desktopWallpaper?`url("${desktopWallpaper}") center/cover no-repeat`:WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('lite',!!cfg.lite);
+base=cfg.dock;maxS=cfg.mag?cfg.magAmt:1;for(const ic of dock.children){ic.style.width=ic.style.height=base+'px'}dockMetricsDirty=true;scheduleDock();$('#dockwrap').classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=brightnessAvailable?0:(100-bri)/100*.85}
 document.addEventListener('mousemove',e=>{if(!cfg.hide)return;const w=$('#dockwrap');w.classList.toggle('show',e.clientY>innerHeight-10||(w.classList.contains('show')&&e.clientY>innerHeight-120))});
 function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=document.createElement('div');h.className='rz '+d;el.appendChild(h);
  h.onpointerdown=ev=>{if(el.dataset.max)return;ev.preventDefault();ev.stopPropagation();h.setPointerCapture(ev.pointerId);
@@ -600,7 +714,7 @@ function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=
    Object.assign(el.style,{left:L+'px',top:T+'px',width:W+'px',height:H+'px'})};
   const up=()=>{el.classList.remove('rzing');h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up)};h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up)}})}
 function settingsInit(el){
- const NAV=[['gen','General','⚙️','#8e8e93'],['app','Appearance','🎨','#0a84ff'],['desk','Desktop & Dock','🖼️','#af52de'],['disp','Displays','🖥️','#30b0c7'],['web','Browser','🧭','#34c759'],['stor','Storage','💾','#ff9500']];
+ const NAV=[['gen','General','⚙️','#8e8e93'],['users','Users & Groups','👤','#ff9f0a'],['app','Appearance','🎨','#0a84ff'],['desk','Desktop & Dock','🖼️','#af52de'],['disp','Displays','🖥️','#30b0c7'],['web','Browser','🧭','#34c759'],['stor','Storage','💾','#ff9500']];
  const body=el.querySelector('.body');body.innerHTML='<div class="set"><div class="sbn">'+NAV.map(n=>`<div class="it" data-p="${n[0]}"><b style="background:${n[3]}">${n[2]}</b>${n[1]}</div>`).join('')+'</div><div class="pane"></div></div>';
  const pane=body.querySelector('.pane');let cp='gen';
  const tg=(k,l)=>`<div class="rw"><span>${l}</span><button class="tg${cfg[k]?' on':''}" data-t="${k}"></button></div>`;
@@ -609,28 +723,136 @@ function settingsInit(el){
  const P={
   gen:()=>'<h2>General</h2><div class="grp">'+rw('SilkOS','Version 1.0')+rw('Engine',(navigator.userAgent.match(/Electron\/[\d.]+/)||['Web browser'])[0])+rw('Processor cores',navigator.hardwareConcurrency||'–')+rw('Memory',navigator.deviceMemory?'≥ '+navigator.deviceMemory+' GB':'–')+rw('Display',screen.width+' × '+screen.height)+'</div><div class="grp"><div class="rw"><span>Reset all settings</span><button class="btn" data-a="reset">Reset</button></div></div>',
   app:()=>'<h2>Appearance</h2><h3>Theme</h3><div class="grp"><div class="tiles">'+[['auto','Auto'],['light','Light'],['dark','Dark']].map(t=>`<div class="tl2${cfg.theme===t[0]?' on':''}" data-th="${t[0]}"><div class="pv ${t[0]}"></div><span>${t[1]}</span></div>`).join('')+'</div></div><h3>Accent color</h3><div class="grp"><div class="acs">'+['#0a60ff','#af52de','#ff2d92','#ff3b30','#ff9500','#34c759','#8e8e93'].map(c=>`<div class="ac${cfg.accent===c?' on':''}" data-ac="${c}" style="background:${c}"></div>`).join('')+'</div></div><div class="grp">'+tg('lite','Reduce transparency (Lite Mode)')+'</div>',
-  desk:()=>'<h2>Desktop & Dock</h2><h3>Wallpaper</h3><div class="grp"><div class="wps">'+WALLS.map((w,i)=>`<div class="wp${cfg.wall===i?' on':''}" data-w="${i}" style="background:${w[1]}"><span>${w[0]}</span></div>`).join('')+'</div></div><h3>Dock</h3><div class="grp">'+sl('dock','Size',40,80,cfg.dock)+tg('mag','Magnification')+sl('magAmt','Magnification amount',12,20,Math.round(cfg.magAmt*10),.1)+tg('hide','Automatically hide the Dock')+'</div>',
+  desk:()=>'<h2>Desktop & Dock</h2><h3>Wallpaper</h3><div class="grp"><div class="wps">'+WALLS.map((w,i)=>`<div class="wp${cfg.wall===i&&!desktopWallpaper?' on':''}" data-w="${i}" style="background:${w[1]}"><span>${w[0]}</span></div>`).join('')+'</div><div class="user-actions"><button class="btn" data-image="desktop">Choose Desktop Picture…</button><button class="btn" data-image="lock">Choose Lock Screen Picture…</button><button class="btn" data-image-clear="lock">Reset Lock Screen Picture</button></div><p class="user-hint">Choose an image from this device. SilkOS keeps its own copy so it remains available after the original is moved.</p></div><h3>Dock</h3><div class="grp">'+sl('dock','Size',40,80,cfg.dock)+tg('mag','Magnification')+sl('magAmt','Magnification amount',12,20,Math.round(cfg.magAmt*10),.1)+tg('hide','Automatically hide the Dock')+'</div>',
+  users:()=>'<h2>Users & Groups</h2><p class="user-hint">SilkOS profiles have their own sign-in names, passwords and pictures. They do not create or secure operating-system accounts.</p><div class="grp"><div class="user-list">'+profiles.map(p=>`<button class="user-card${p.id===(selectedProfileId||currentProfile?.id)?' sel':''}" data-user="${esc(p.id)}">${avatarMarkup(p)}<span>${esc(p.name)}${p.id===currentProfile?.id?' · Current':''}</span></button>`).join('')+'</div><div class="user-actions"><button class="btn" data-u-action="new">Add User…</button></div></div><div class="grp" data-user-editor></div>',
   stor:()=>'<h2>Storage</h2><div class="grp">'+rw('Saving','Checking…')+'</div>',
   disp:()=>'<h2>Displays</h2><div class="grp">'+sl('bri','Brightness',25,100,cfg.bri)+`<div class="rw"><span>Full screen</span><button class="tg${document.fullscreenElement?' on':''}" data-t="fs"></button></div></div>`,
   web:()=>'<h2>Browser</h2><h3>Search engine</h3><div class="grp">'+Object.entries(ENG).map(([k,e])=>`<div class="rw pick" data-e="${k}"><span>${e.n}</span><span class="ck">${cfg.engine===k?'✓':''}</span></div>`).join('')+'</div><div class="grp">'+tg('sugg','Show live search suggestions')+'</div><h3>Data</h3><div class="grp"><div class="rw"><span>History · '+store.get('hist').length+' items</span><button class="btn" data-a="clrh">Clear</button></div><div class="rw"><span>Bookmarks · '+store.get('bm').length+' items</span><button class="btn" data-a="clrb">Clear</button></div></div>'};
- function draw(k){cp=k;body.querySelectorAll('.it').forEach(n=>n.classList.toggle('on',n.dataset.p===k));const t=pane.scrollTop;pane.innerHTML=P[k]();pane.scrollTop=t;if(k==='stor')stor()}
+ function draw(k){cp=k;body.querySelectorAll('.it').forEach(n=>n.classList.toggle('on',n.dataset.p===k));const t=pane.scrollTop;pane.innerHTML=P[k]();pane.scrollTop=t;if(k==='stor')stor();if(k==='users')drawUserEditor()}
+ function drawUserEditor(){
+  const box=pane.querySelector('[data-user-editor]'),profile=profiles.find(p=>p.id===(selectedProfileId||currentProfile?.id));
+  if(!box)return;
+  if(!profile){box.innerHTML='<div class="user-form"><span>No users yet.</span></div>';return}
+  if(profile.id!==currentProfile?.id){box.innerHTML=`<div class="user-editor"><h3>${esc(profile.name)}</h3><p class="user-hint">Switch to this profile from the SilkOS sign-in screen.</p><div class="user-actions"><button class="btn" data-u-action="switch" data-user="${esc(profile.id)}">Switch User…</button></div></div>`;return}
+  box.innerHTML=`<div class="user-editor"><div class="rw">${avatarMarkup(profile)}<span style="flex:1">${esc(profile.name)}</span><button class="btn" data-u-action="avatar" data-user="${esc(profile.id)}">Change Picture…</button></div>
+   <div class="user-form"><label>Display name<input data-field="name" maxlength="32" value="${esc(profile.name)}"></label><label>Current password<input data-field="current-password" type="password" autocomplete="current-password"></label><label>New password <span class="mut">(leave blank to keep it)</span><input data-field="new-password" type="password" autocomplete="new-password"></label><button class="btn" data-u-action="update" data-user="${esc(profile.id)}">Save Changes</button><p class="user-hint" data-user-message></p></div>
+   ${profiles.length>1?`<div class="user-actions"><button class="btn" data-u-action="delete" data-user="${esc(profile.id)}">Delete This User…</button></div>`:''}</div>`;
+ }
+ function drawNewUser(){
+  const box=pane.querySelector('[data-user-editor]');if(!box)return;
+  box.innerHTML='<div class="user-form"><h3>Add a User</h3><label>Display name<input data-field="new-name" maxlength="32" autocomplete="name"></label><label>Password <span class="mut">(at least 8 characters)</span><input data-field="new-user-password" type="password" autocomplete="new-password"></label><label>Confirm password<input data-field="confirm-password" type="password" autocomplete="new-password"></label><div class="user-actions"><button class="btn" data-u-action="create">Create User</button><button class="btn" data-u-action="cancel">Cancel</button></div><p class="user-hint" data-user-message></p></div>';
+ }
  async function stor(){const g=pane.querySelector('.grp'),S=window.silk&&silk.persist;if(!S){g.innerHTML=rw('Saving','Only when SilkOS runs on Linux');return}const r=await S.status();if(cp!=='stor')return;
   g.innerHTML=r.on?rw('Saving','On: your files, settings and apps are kept'):r.has?rw('Saving','Ready. Restart SilkOS to turn it on'):r.disk?`<div class="rw"><span>Save everything on empty disk ${esc(r.disk.name)} (${esc(r.disk.size)})</span><button class="stb" data-a="pers" data-d="${esc(r.disk.name)}">Set up</button></div>`:rw('Saving','Off')+'<div class="rw"><span class="mut">Add a second, empty virtual disk (8 GB or more) to this VM, restart, then come back here.</span></div>'}
  body.querySelector('.sbn').onclick=e=>{const n=e.target.closest('.it');if(n)draw(n.dataset.p)};
- pane.onclick=e=>{const t=e.target.closest('[data-th],[data-ac],[data-w],[data-t],[data-e],[data-a]');if(!t)return;const d=t.dataset;
+ pane.onclick=e=>{const t=e.target.closest('[data-th],[data-ac],[data-w],[data-t],[data-e],[data-a],[data-image],[data-image-clear],[data-user],[data-u-action]');if(!t)return;const d=t.dataset;
+  if(d.user&&!d.uAction){selectedProfileId=d.user;drawUserEditor();pane.querySelectorAll('.user-card').forEach(n=>n.classList.toggle('sel',n.dataset.user===d.user));return}
+  if(d.image){silk.appearance.chooseWallpaper(d.image).then(image=>{if(!image)return;if(d.image==='desktop')desktopWallpaper=image;else lockWallpaper=image;applyCfg()}).catch(error=>alert('Could not set the picture: '+error.message));return}
+  if(d.imageClear){silk.appearance.clearWallpaper(d.imageClear).then(()=>{lockWallpaper=null;applyCfg()}).catch(error=>alert('Could not reset the lock screen picture: '+error.message));return}
+  if(d.uAction==='new'){drawNewUser();return}if(d.uAction==='cancel'){selectedProfileId=currentProfile?.id||profiles[0]?.id;draw('users');return}
+  if(d.uAction){handleUserAction(d.uAction,t).catch(error=>{const msg=pane.querySelector('[data-user-message]');if(msg)msg.textContent=error.message;else alert(error.message)});return}
   if(d.a==='pers'){if(!confirm('Set up disk '+d.d+' for saving? Anything on it will be erased.'))return;t.disabled=true;t.textContent='Setting up…';silk.persist.setup(d.d).then(r=>{if(r.ok)stor();else{t.disabled=false;t.textContent='Retry';alert('Setup failed: '+(r.error||'unknown error'))}});return}
-  if(d.th)cfg.theme=d.th;else if(d.ac)cfg.accent=d.ac;else if(d.w)cfg.wall=+d.w;else if(d.e)cfg.engine=d.e;
+  if(d.th)cfg.theme=d.th;else if(d.ac)cfg.accent=d.ac;else if(d.w!==undefined){cfg.wall=+d.w;if(desktopWallpaper){silk.appearance.clearWallpaper('desktop').then(()=>{desktopWallpaper=null;save();applyCfg();draw(cp)}).catch(error=>alert('Could not reset the desktop picture: '+error.message));return}}else if(d.e)cfg.engine=d.e;
   else if(d.t==='fs')toggleFS();else if(d.t)cfg[d.t]=!cfg[d.t];
   else if(d.a==='reset'){Object.assign(cfg,DEF)}else if(d.a==='clrh')store.set('hist',[]);else if(d.a==='clrb')store.set('bm',[]);
   save();applyCfg();draw(cp);if(d.a==='clrb')Object.values(wins).forEach(w=>w._b&&w._b.rebuild&&w._b.rebuild())};
- pane.oninput=e=>{const r=e.target.dataset.r;if(!r)return;cfg[r]=+e.target.value*(+e.target.dataset.sc);save();applyCfg()};
+ async function handleUserAction(action,button){
+  const id=button.dataset.user,field=name=>pane.querySelector(`[data-field="${name}"]`)?.value||'';
+  if(action==='switch'){showLock(id);return}
+  if(action==='avatar'){profiles=await silk.users.chooseAvatar(id);draw('users');return}
+  if(action==='create'){
+   const name=field('new-name'),password=field('new-user-password');
+   if(password!==field('confirm-password'))throw new Error('The passwords do not match.');
+   const result=await silk.users.create(name,password);profiles=result.profiles;selectedProfileId=result.profile.id;showLock(result.profile.id);return
+  }
+  if(action==='update'){
+   profiles=await silk.users.update(id,field('current-password'),field('name'),field('new-password'));
+   currentProfile=profiles.find(p=>p.id===id)||currentProfile;selectedProfileId=id;draw('users');return
+  }
+  if(action==='delete'){
+   if(!confirm('Delete this SilkOS profile? Its sign-in picture will be removed.'))return;
+   profiles=await silk.users.remove(id,field('current-password'));
+   if(currentProfile?.id===id){currentProfile=null;selectedProfileId=null;showLock(profiles[0]?.id)}
+   else{selectedProfileId=profiles[0]?.id;draw('users')}
+  }
+ }
+ pane.oninput=e=>{const r=e.target.dataset.r;if(!r)return;cfg[r]=+e.target.value*(+e.target.dataset.sc);save();if(r==='bri'){setDisplayBrightness(cfg[r]).catch(error=>console.error('Brightness control failed:',error));return}applyCfg()};
  el._go=draw;draw('gen')}
+function avatarMarkup(profile){
+ const initial=esc((profile.name||'?').trim().slice(0,1).toUpperCase());
+ return `<span class="user-avatar">${profile.avatar?`<img src="${profile.avatar}" alt="">`:initial}</span>`;
+}
+function renderLock(){
+ const screen=$('#lock-screen'),panel=screen.querySelector('.lock-panel');
+ screen.style.backgroundImage=lockWallpaper?`linear-gradient(180deg,#0002,#0004),url("${lockWallpaper}")`:'';
+ screen.querySelector('.lock-date').textContent=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(new Date());
+ screen.querySelector('.lock-clock').textContent=new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date());
+ if(!profiles.length){
+  panel.innerHTML='<div class="lock-setup"><h2>Welcome to SilkOS</h2><p>Create your first SilkOS profile to continue. This sign-in only protects the SilkOS interface, not the operating system.</p><form data-lock-setup><input name="name" maxlength="32" placeholder="Full name" autocomplete="name" required><input name="password" type="password" placeholder="Create password (8+ characters)" autocomplete="new-password" required minlength="8"><input name="confirm" type="password" placeholder="Confirm password" autocomplete="new-password" required minlength="8"><button class="lock-primary">Create Profile</button><div class="lock-error" role="status"></div></form></div>';
+  panel.querySelector('[name=name]').focus();return;
+ }
+ if(!profiles.some(p=>p.id===selectedProfileId))selectedProfileId=currentProfile?.id||profiles[0].id;
+ const user=profiles.find(p=>p.id===selectedProfileId)||profiles[0];
+ panel.innerHTML=`<div class="lock-users">${profiles.map(p=>`<button class="lock-user${p.id===user.id?' selected':''}" data-lock-user="${esc(p.id)}">${avatarMarkup(p)}<span>${esc(p.name)}</span></button>`).join('')}</div><form class="lock-form" data-lock-login><input name="password" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password"><button aria-label="Sign in">➜</button></form><div class="lock-error" role="status" aria-live="polite"></div>`;
+ panel.querySelector('[name=password]').focus();
+}
+function showLock(id){
+ if(id)selectedProfileId=id;
+ closeDd(true);spot(false);launchpad(false);
+ document.body.classList.add('locked');
+ const screen=$('#lock-screen');screen.classList.remove('hidden');renderLock();
+}
+function unlockProfile(profile){
+ currentProfile=profile;selectedProfileId=profile.id;
+ document.activeElement?.blur();
+ const screen=$('#lock-screen');screen.classList.add('hidden');document.body.classList.remove('locked');
+ buildBar();
+ if(startupPending){startupPending=false;launch('browser');setTimeout(()=>wins.browser&&maxToggle(wins.browser),700)}
+}
+async function initSession(){
+ try{
+  const [userList,appearance]=await Promise.all([silk.users.list(),silk.appearance.get()]);
+  profiles=userList;desktopWallpaper=appearance.desktop;lockWallpaper=appearance.lock;
+  applyCfg();probeDisplayBrightness();buildBar();syncFlatpaks();
+  selectedProfileId=profiles[0]?.id||null;showLock();
+ }catch(error){
+  const panel=$('#lock-screen .lock-panel');panel.innerHTML=`<div class="lock-setup"><h2>SilkOS couldn’t start</h2><p>${esc(error.message)}</p></div>`;
+  document.body.classList.add('locked');
+ }
+}
+$('#lock-screen').addEventListener('click',event=>{
+ const user=event.target.closest('[data-lock-user]');if(!user)return;
+ selectedProfileId=user.dataset.lockUser;renderLock();
+});
+$('#lock-screen').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const form=event.target,panel=form.closest('.lock-panel'),error=panel.querySelector('.lock-error');
+ try{
+  if(form.matches('[data-lock-setup]')){
+   const name=form.elements.name.value,password=form.elements.password.value;
+   if(password!==form.elements.confirm.value)throw new Error('The passwords do not match.');
+   const result=await silk.users.create(name,password);profiles=result.profiles;
+   const auth=await silk.users.verify(result.profile.id,password);
+   if(!auth.ok)throw new Error('The new profile could not be signed in.');
+   form.reset();
+   unlockProfile(auth.profile);return;
+  }
+  const auth=await silk.users.verify(selectedProfileId,form.elements.password.value);
+  if(!auth.ok)throw new Error('That password is incorrect.');
+  form.elements.password.value='';
+  unlockProfile(auth.profile);
+ }catch(e){error.textContent=e.message;form.elements.password?.select()}
+});
+setInterval(()=>{
+ const clock=$('#lock-screen .lock-clock'),date=$('#lock-screen .lock-date');
+ if(clock&&date){clock.textContent=new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date());date.textContent=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(new Date())}
+},15000);
+document.addEventListener('keydown',event=>{
+ if((event.ctrlKey||event.metaKey)&&event.altKey&&event.key.toLowerCase()==='l'&&!document.body.classList.contains('locked')){event.preventDefault();showLock(currentProfile?.id)}
+});
 document.addEventListener('contextmenu',e=>{if(e.target.closest('.win,.dd,#dockwrap,#menubar'))return;e.preventDefault();closeDd(true);
  const open=p=>{launch('settings');setTimeout(()=>wins.settings&&wins.settings._go(p),60)};
  const el=listEl([['Change Wallpaper…',()=>open('desk')],['Use '+(document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches)?'Light':'Dark')+' Mode',()=>{const dk=document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme=dk?'light':'dark';save();applyCfg()}],'-',['Open Browser',()=>launch('browser')],['Spotlight Search',()=>spot(true),'Ctrl+K'],['Settings…',()=>open('gen')]]);
  ddKey='ctx';dd=el;el.classList.add('dd');document.body.appendChild(el);el.style.left=Math.min(e.clientX,innerWidth-250)+'px';el.style.top=Math.min(e.clientY,innerHeight-220)+'px';requestAnimationFrame(()=>el.classList.add('on'))});
-applyCfg();
-buildBar();
-syncFlatpaks();
-launch('browser');setTimeout(()=>wins.browser&&maxToggle(wins.browser),700);
+initSession();
 </script></body></html>

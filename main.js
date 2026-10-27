@@ -1,10 +1,57 @@
-const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, dialog } = require('electron');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const { promisify } = require('util');
 const { execFile, spawn } = require('child_process');
 const IS_LINUX = process.platform === 'linux';
 const run = (cmd, args, ms = 4000) => new Promise(res => execFile(cmd, args, { timeout: ms }, (e, out) => res(e ? null : String(out))));
+const scrypt = promisify(crypto.scrypt);
+const IMAGE_TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
+const profileDir = () => path.join(app.getPath('userData'), 'silkos-profiles');
+const profilesPath = () => path.join(profileDir(), 'users.json');
+const appearancePath = () => path.join(profileDir(), 'appearance.json');
+const assetPath = file => path.join(profileDir(), 'images', file);
+const removeAsset = async file => {
+  if (typeof file === 'string' && /^[a-f0-9-]+\.(png|jpg|jpeg|webp|gif)$/i.test(file)) await fs.promises.rm(assetPath(file), { force: true });
+};
+const readJson = async (file, fallback) => {
+  try { return JSON.parse(await fs.promises.readFile(file, 'utf8')); }
+  catch (error) { if (error.code === 'ENOENT') return fallback; throw error; }
+};
+const writeJson = async (file, value) => {
+  await fs.promises.mkdir(path.dirname(file), { recursive: true });
+  const temp = `${file}.${crypto.randomUUID()}.tmp`;
+  await fs.promises.writeFile(temp, JSON.stringify(value), { mode: 0o600 });
+  await fs.promises.rename(temp, file);
+};
+const readProfiles = async () => {
+  const profiles = await readJson(profilesPath(), []);
+  if (!Array.isArray(profiles) || profiles.some(p => !p || typeof p.id !== 'string' || !/^[a-f0-9-]{36}$/i.test(p.id) || typeof p.name !== 'string' || !p.name.trim() || p.name.length > 32 || typeof p.salt !== 'string' || !/^[a-f0-9]{32}$/i.test(p.salt) || typeof p.hash !== 'string' || !/^[a-f0-9]{128}$/i.test(p.hash))) {
+    throw new Error('SilkOS profile data is invalid.');
+  }
+  return profiles;
+};
+const checkPassword = async (profile, password) => {
+  const actual = await scrypt(password, profile.salt, 64);
+  const expected = Buffer.from(profile.hash, 'hex');
+  return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
+};
+const imageDataUrl = async file => {
+  if (!file || !/^[a-f0-9-]+\.(png|jpg|jpeg|webp|gif)$/i.test(file)) return null;
+  const type = IMAGE_TYPES[path.extname(file).toLowerCase()];
+  if (!type) return null;
+  try {
+    const data = await fs.promises.readFile(assetPath(file));
+    return `data:${type};base64,${data.toString('base64')}`;
+  } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+};
+const safeProfiles = async profiles => Promise.all(profiles.map(async ({ id, name, avatar }) => ({ id, name, avatar: await imageDataUrl(avatar) })));
+const validateCredentials = (name, password) => {
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 32) throw new Error('Enter a name between 1 and 32 characters.');
+  if (typeof password !== 'string' || password.length < 8 || password.length > 128) throw new Error('Passwords must be 8–128 characters.');
+};
 let previousCpuTotal = null;
 let previousProcessCpu = new Map();
 const cpuTimes = () => os.cpus().reduce((sum, cpu) => {
@@ -106,11 +153,29 @@ ipcMain.handle('sys:battery', async () => {
 });
 ipcMain.handle('sys:wifi', async () => {
   if (!IS_LINUX) return null;
-  const out = await run('nmcli', ['-t', '-f', 'TYPE,STATE,CONNECTION', 'device']);
-  if (!out) return null;
+  const [radio, out] = await Promise.all([
+    run('nmcli', ['-t', '-f', 'WIFI', 'general']),
+    run('nmcli', ['-t', '-f', 'TYPE,STATE,CONNECTION', 'device'])
+  ]);
+  if (!radio || !out) return { available: false, enabled: false, connected: false };
   const rows = out.trim().split('\n').map(l => l.split(':'));
   const up = rows.find(r => r[1] === 'connected');
-  return { connected: !!up, type: up ? up[0] : null, name: up ? up[2] : null };
+  return { available: true, enabled: radio.trim() === 'enabled', connected: !!up && up[0] === 'wifi', type: up ? up[0] : null, name: up ? up.slice(2).join(':') : null };
+});
+ipcMain.handle('sys:wifi:set', async (_, enabled) => {
+  if (!IS_LINUX || typeof enabled !== 'boolean') return false;
+  return (await run('nmcli', ['radio', 'wifi', enabled ? 'on' : 'off'])) !== null;
+});
+ipcMain.handle('sys:bluetooth', async () => {
+  if (!IS_LINUX) return null;
+  const out = await run('bluetoothctl', ['show']);
+  const powered = out && out.match(/^\s*Powered:\s*(yes|no)\s*$/mi);
+  return powered ? { available: true, enabled: powered[1].toLowerCase() === 'yes' } : { available: false, enabled: false };
+});
+ipcMain.handle('sys:bluetooth:set', async (_, enabled) => {
+  if (!IS_LINUX || typeof enabled !== 'boolean') return false;
+  const out = await run('bluetoothctl', ['power', enabled ? 'on' : 'off']);
+  return out !== null && !/no default controller|not available/i.test(out);
 });
 ipcMain.handle('sys:volume', async (_, v) => {
   if (!IS_LINUX) return null;
@@ -121,6 +186,21 @@ ipcMain.handle('sys:volume', async (_, v) => {
   const out = await run('wpctl', ['get-volume', '@DEFAULT_AUDIO_SINK@']);
   const m = out && out.match(/([\d.]+)/);
   return m ? Math.round(parseFloat(m[1]) * 100) : null;
+});
+ipcMain.handle('sys:media', async () => {
+  if (!IS_LINUX) return null;
+  const players = await run('playerctl', ['-l']);
+  const player = players && players.trim().split('\n').find(id => /^[\w.-]+$/.test(id));
+  if (!player) return null;
+  const out = await run('playerctl', ['--player', player, 'metadata', '--format', '{{playerName}}|{{artist}}|{{title}}|{{status}}']);
+  if (!out) return null;
+  const [name, artist, ...rest] = out.trim().split('|');
+  const titleAndStatus = rest.join('|').split('|');
+  return { player, name: name || player, artist: artist || '', title: titleAndStatus[0] || 'Unknown track', status: titleAndStatus[1] || 'Paused' };
+});
+ipcMain.handle('sys:media:action', async (_, player, action) => {
+  if (!IS_LINUX || typeof player !== 'string' || !/^[\w.-]+$/.test(player) || !['play-pause', 'next', 'previous'].includes(action)) return false;
+  return (await run('playerctl', ['--player', player, action])) !== null;
 });
 ipcMain.handle('sys:brightness', async (_, v) => {
   if (!IS_LINUX) return null;
@@ -227,6 +307,112 @@ ipcMain.handle('store:install', async (_, id) => {
 ipcMain.handle('store:run', (_, id) => {
   if (!IS_LINUX || !okId(id)) return false;
   spawn('flatpak', ['run', id], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
+  return true;
+});
+ipcMain.handle('users:list', async () => safeProfiles(await readProfiles()));
+ipcMain.handle('users:create', async (_, name, password) => {
+  validateCredentials(name, password);
+  const profiles = await readProfiles();
+  const normalized = name.trim();
+  if (profiles.some(profile => profile.name.toLocaleLowerCase() === normalized.toLocaleLowerCase())) throw new Error('A user with that name already exists.');
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = (await scrypt(password, salt, 64)).toString('hex');
+  const profile = { id: crypto.randomUUID(), name: normalized, salt, hash, avatar: null };
+  profiles.push(profile);
+  await writeJson(profilesPath(), profiles);
+  return { profile: { id: profile.id, name: profile.name, avatar: null }, profiles: await safeProfiles(profiles) };
+});
+ipcMain.handle('users:verify', async (_, id, password) => {
+  if (typeof id !== 'string' || typeof password !== 'string' || password.length > 128) return { ok: false };
+  const profiles = await readProfiles();
+  const profile = profiles.find(item => item.id === id);
+  if (!profile || !(await checkPassword(profile, password))) return { ok: false };
+  return { ok: true, profile: { id: profile.id, name: profile.name, avatar: await imageDataUrl(profile.avatar) } };
+});
+ipcMain.handle('users:update', async (_, id, password, name, newPassword = '') => {
+  if (typeof id !== 'string' || typeof password !== 'string' || typeof newPassword !== 'string') throw new Error('Invalid profile update.');
+  const profiles = await readProfiles();
+  const profile = profiles.find(item => item.id === id);
+  if (!profile || !(await checkPassword(profile, password))) throw new Error('The current password is incorrect.');
+  const normalized = typeof name === 'string' ? name.trim() : '';
+  if (!normalized || normalized.length > 32) throw new Error('Enter a name between 1 and 32 characters.');
+  if (profiles.some(item => item.id !== id && item.name.toLocaleLowerCase() === normalized.toLocaleLowerCase())) throw new Error('A user with that name already exists.');
+  if (newPassword && (newPassword.length < 8 || newPassword.length > 128)) throw new Error('New passwords must be 8–128 characters.');
+  profile.name = normalized;
+  if (newPassword) {
+    profile.salt = crypto.randomBytes(16).toString('hex');
+    profile.hash = (await scrypt(newPassword, profile.salt, 64)).toString('hex');
+  }
+  await writeJson(profilesPath(), profiles);
+  return safeProfiles(profiles);
+});
+ipcMain.handle('users:delete', async (_, id, password) => {
+  const profiles = await readProfiles();
+  const profile = profiles.find(item => item.id === id);
+  if (!profile || !(await checkPassword(profile, String(password || '')))) throw new Error('The password is incorrect.');
+  if (profiles.length <= 1) throw new Error('SilkOS must have at least one user.');
+  const remaining = profiles.filter(item => item.id !== id);
+  await writeJson(profilesPath(), remaining);
+  await removeAsset(profile.avatar);
+  return safeProfiles(remaining);
+});
+ipcMain.handle('users:avatar', async (event, id) => {
+  const profiles = await readProfiles();
+  const profile = profiles.find(item => item.id === id);
+  if (!profile) throw new Error('User not found.');
+  const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+    title: 'Choose a profile picture', properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }]
+  });
+  if (result.canceled || !result.filePaths[0]) return safeProfiles(profiles);
+  const source = result.filePaths[0];
+  const extension = path.extname(source).toLowerCase();
+  const stat = await fs.promises.stat(source);
+  if (!IMAGE_TYPES[extension] || stat.size > 20 * 1024 * 1024) throw new Error('Choose a supported image smaller than 20 MB.');
+  const filename = `${crypto.randomUUID()}${extension}`;
+  await fs.promises.mkdir(path.dirname(assetPath(filename)), { recursive: true });
+  await fs.promises.copyFile(source, assetPath(filename));
+  const oldAvatar = profile.avatar;
+  profile.avatar = filename;
+  try { await writeJson(profilesPath(), profiles); }
+  catch (error) { await fs.promises.rm(assetPath(filename), { force: true }); throw error; }
+  await removeAsset(oldAvatar);
+  return safeProfiles(profiles);
+});
+ipcMain.handle('appearance:get', async () => {
+  const appearance = await readJson(appearancePath(), {});
+  return { desktop: await imageDataUrl(appearance.desktop), lock: await imageDataUrl(appearance.lock) };
+});
+ipcMain.handle('appearance:pick', async (event, kind) => {
+  if (!['desktop', 'lock'].includes(kind)) throw new Error('Invalid wallpaper type.');
+  const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+    title: kind === 'desktop' ? 'Choose desktop wallpaper' : 'Choose lock screen wallpaper',
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }]
+  });
+  if (result.canceled || !result.filePaths[0]) return null;
+  const source = result.filePaths[0];
+  const extension = path.extname(source).toLowerCase();
+  const stat = await fs.promises.stat(source);
+  if (!IMAGE_TYPES[extension] || stat.size > 20 * 1024 * 1024) throw new Error('Choose a supported image smaller than 20 MB.');
+  const filename = `${crypto.randomUUID()}${extension}`;
+  await fs.promises.mkdir(path.dirname(assetPath(filename)), { recursive: true });
+  await fs.promises.copyFile(source, assetPath(filename));
+  const appearance = await readJson(appearancePath(), {});
+  const oldFile = appearance[kind];
+  appearance[kind] = filename;
+  try { await writeJson(appearancePath(), appearance); }
+  catch (error) { await fs.promises.rm(assetPath(filename), { force: true }); throw error; }
+  await removeAsset(oldFile);
+  return imageDataUrl(filename);
+});
+ipcMain.handle('appearance:clear', async (_, kind) => {
+  if (!['desktop', 'lock'].includes(kind)) throw new Error('Invalid wallpaper type.');
+  const appearance = await readJson(appearancePath(), {});
+  const oldFile = appearance[kind];
+  delete appearance[kind];
+  await writeJson(appearancePath(), appearance);
+  await removeAsset(oldFile);
   return true;
 });
 /* ---- Finder + Terminal ---- */
