@@ -5,6 +5,67 @@ const fs = require('fs');
 const { execFile, spawn } = require('child_process');
 const IS_LINUX = process.platform === 'linux';
 const run = (cmd, args, ms = 4000) => new Promise(res => execFile(cmd, args, { timeout: ms }, (e, out) => res(e ? null : String(out))));
+let previousCpuTotal = null;
+let previousProcessCpu = new Map();
+const cpuTimes = () => os.cpus().reduce((sum, cpu) => {
+  const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+  return { total: sum.total + total, idle: sum.idle + cpu.times.idle };
+}, { total: 0, idle: 0 });
+const readLinuxCpuTimes = async () => {
+  const line = (await fs.promises.readFile('/proc/stat', 'utf8')).split('\n', 1)[0];
+  const times = line.trim().split(/\s+/).slice(1).map(Number);
+  return {
+    total: times.slice(0, 8).reduce((sum, time) => sum + time, 0),
+    idle: (times[3] || 0) + (times[4] || 0)
+  };
+};
+const readLinuxProcesses = async () => {
+  const ids = (await fs.promises.readdir('/proc')).filter(id => /^\d+$/.test(id));
+  const rows = await Promise.all(ids.map(async pid => {
+    try {
+      const [stat, status, comm] = await Promise.all([
+        fs.promises.readFile(`/proc/${pid}/stat`, 'utf8'),
+        fs.promises.readFile(`/proc/${pid}/status`, 'utf8'),
+        fs.promises.readFile(`/proc/${pid}/comm`, 'utf8')
+      ]);
+      const fields = stat.slice(stat.lastIndexOf(')') + 1).trim().split(/\s+/);
+      const rss = status.match(/^VmRSS:\s+(\d+)\s+kB$/m);
+      return {
+        pid: Number(pid),
+        name: comm.trim() || pid,
+        cpuTime: (Number(fields[11]) || 0) + (Number(fields[12]) || 0),
+        memory: rss ? Number(rss[1]) * 1024 : 0
+      };
+    } catch {
+      return null;
+    }
+  }));
+  return rows.filter(Boolean);
+};
+const readWindowsProcesses = () => new Promise((resolve, reject) => {
+  const script = "Get-Process | Select-Object @{Name='pid';Expression={$_.Id}},@{Name='name';Expression={$_.ProcessName}},@{Name='cpuTime';Expression={if ($null -eq $_.CPU) { 0 } else { $_.CPU * 1000 }}},@{Name='memory';Expression={$_.WorkingSet64}} | ConvertTo-Json -Compress";
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { timeout: 10000, maxBuffer: 16 << 20 }, (error, stdout, stderr) => {
+    if (error) return reject(new Error(String(stderr || error.message).trim()));
+    try {
+      const parsed = JSON.parse(stdout || '[]');
+      resolve((Array.isArray(parsed) ? parsed : [parsed]).map(p => ({
+        pid: Number(p.pid), name: String(p.name), cpuTime: Number(p.cpuTime) || 0, memory: Number(p.memory) || 0
+      })));
+    } catch (e) {
+      reject(new Error(`Could not parse the process list: ${e.message}`));
+    }
+  });
+});
+const readMacProcesses = async () => {
+  const out = await new Promise((resolve, reject) => execFile('ps', ['-axo', 'pid=,comm=,%cpu=,rss='], { timeout: 10000, maxBuffer: 16 << 20 }, (e, stdout, stderr) => {
+    if (e) return reject(new Error(String(stderr || e.message).trim()));
+    resolve(String(stdout));
+  }));
+  return out.split('\n').flatMap(line => {
+    const m = line.match(/^\s*(\d+)\s+(.+?)\s+([\d.]+)\s+(\d+)\s*$/);
+    return m ? [{ pid: Number(m[1]), name: m[2], cpu: Number(m[3]) || 0, memory: Number(m[4]) * 1024 }] : [];
+  });
+};
 app.on('web-contents-created', (_, c) => {
   if (c.getType() === 'webview') {
     c.setWindowOpenHandler(({ url }) => { c.hostWebContents.send('open-tab', url); return { action: 'deny' }; });
@@ -67,6 +128,52 @@ ipcMain.handle('sys:brightness', async (_, v) => {
   const out = await run('brightnessctl', ['-m']);
   const m = out && out.match(/(\d+)%/);
   return m ? +m[1] : null;
+});
+ipcMain.handle('sys:resources', async () => {
+  let cpus;
+  try {
+    cpus = process.platform === 'linux' ? await readLinuxCpuTimes() : cpuTimes();
+  } catch (e) {
+    return { error: `Could not read CPU usage: ${e.message}` };
+  }
+  const deltaTotal = previousCpuTotal === null ? 0 : Math.max(0, cpus.total - previousCpuTotal.total);
+  const deltaIdle = previousCpuTotal === null ? 0 : Math.max(0, cpus.idle - previousCpuTotal.idle);
+  const totalMemory = os.totalmem();
+  const freeMemory = os.freemem();
+  let processes;
+  try {
+    if (process.platform === 'linux') processes = await readLinuxProcesses();
+    else if (process.platform === 'win32') processes = await readWindowsProcesses();
+    else processes = await readMacProcesses();
+  } catch (e) {
+    return { error: `Could not read running processes: ${e.message}` };
+  }
+  previousCpuTotal = cpus;
+  const currentProcessCpu = new Map();
+  processes = processes.map(p => {
+    let cpu = p.cpu || 0;
+    if (Number.isFinite(p.cpuTime)) {
+      const key = `${p.pid}:${p.name}`;
+      const previous = previousProcessCpu.get(key);
+      currentProcessCpu.set(key, p.cpuTime);
+      cpu = previous !== undefined && deltaTotal > 0
+        ? Math.max(0, (p.cpuTime - previous) / deltaTotal * 100)
+        : 0;
+    }
+    return { pid: p.pid, name: p.name, cpu: Math.min(100, cpu), memory: p.memory };
+  });
+  previousProcessCpu = currentProcessCpu;
+  let disk = null;
+  try {
+    const stats = fs.statfsSync(os.homedir());
+    disk = { total: stats.blocks * stats.bsize, free: stats.bavail * stats.bsize };
+  } catch {}
+  return {
+    cpu: { percent: deltaTotal ? Math.max(0, Math.min(100, (deltaTotal - deltaIdle) / deltaTotal * 100)) : 0, cores: os.cpus().length },
+    memory: { total: totalMemory, free: freeMemory, used: totalMemory - freeMemory },
+    disk,
+    processes
+  };
 });
 /* ---- Store: Flathub apps via flatpak, installed per-user so no root is needed ---- */
 const fp = (args, ms) => new Promise(res => execFile('flatpak', args, { timeout: ms, maxBuffer: 32 << 20 }, (e, out, err) => res({ ok: !e, out: String(out || ''), err: String(err || (e && e.message) || '') })));

@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('silk', {
   wifi: () => ipcRenderer.invoke('sys:wifi'),
   volume: v => ipcRenderer.invoke('sys:volume', v),
   brightness: v => ipcRenderer.invoke('sys:brightness', v),
+  resources: () => ipcRenderer.invoke('sys:resources'),
   files: { home: () => ipcRenderer.invoke('fs:home'), list: d => ipcRenderer.invoke('fs:list', d), open: p => ipcRenderer.invoke('fs:open', p) },
   persist: { status: () => ipcRenderer.invoke('persist:status'), setup: d => ipcRenderer.invoke('persist:setup', d) },
   terminal: () => ipcRenderer.invoke('sys:terminal'),
