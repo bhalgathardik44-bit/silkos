@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, globalShortcut } = require('electron');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
@@ -12,6 +12,7 @@ let mainWindow = null;
 let screenLocked = false;
 let lockFailures = 0;
 let lockRetryAt = 0;
+const globalWindowShortcuts = new Set();
 const lockFile = () => path.join(app.getPath('userData'), 'screen-lock.json');
 const readLock = async () => {
   try {
@@ -95,6 +96,10 @@ app.on('web-contents-created', (_, c) => {
   if (c.getType() === 'webview') {
     c.setWindowOpenHandler(({ url }) => { c.hostWebContents.send('open-tab', url); return { action: 'deny' }; });
     c.on('before-input-event', (e, i) => {
+      if (screenLocked && ((i.type === 'keyDown' && i.alt && i.key === 'Tab') || (i.type === 'keyUp' && /^Alt/.test(i.key)))) { e.preventDefault(); return; }
+      const accelerator = i.shift ? 'Alt+Shift+Tab' : 'Alt+Tab';
+      if (i.type === 'keyDown' && i.alt && i.key === 'Tab' && !globalWindowShortcuts.has(accelerator)) { e.preventDefault(); c._silkWindowSwitchPending = true; c.hostWebContents.send('shortcut', i.shift ? 'alt-tab-reverse' : 'alt-tab'); return; }
+      if (i.type === 'keyUp' && /^Alt/.test(i.key) && c._silkWindowSwitchPending) { c._silkWindowSwitchPending = false; c.hostWebContents.send('shortcut', 'alt-release'); return; }
       if (i.type === 'keyDown' && i.key === 'F4') { e.preventDefault(); c.hostWebContents.send('shortcut', 'lp'); return; }
       const k = i.key.toLowerCase();
       if (i.type === 'keyDown' && (i.control || i.meta) && !i.shift && !i.alt && ['t', 'w', 'l', 'r', 'k', 'd', ' '].includes(k)) {
@@ -174,13 +179,52 @@ ipcMain.handle('sys:battery', async () => {
     return { level: Math.min(100, +rd('capacity')), charging: /^(Charging|Full)$/.test(rd('status')) };
   } catch (e) { return null; }
 });
-ipcMain.handle('sys:wifi', async () => {
+ipcMain.handle('sys:wifi', async (_, enabled) => {
   if (!IS_LINUX) return null;
+  if (typeof enabled === 'boolean' && await run('nmcli', ['radio', 'wifi', enabled ? 'on' : 'off']) === null) return null;
   const out = await run('nmcli', ['-t', '-f', 'TYPE,STATE,CONNECTION', 'device']);
   if (!out) return null;
   const rows = out.trim().split('\n').map(l => l.split(':'));
   const up = rows.find(r => r[1] === 'connected');
-  return { connected: !!up, type: up ? up[0] : null, name: up ? up[2] : null };
+  const radio = await run('nmcli', ['radio', 'wifi']);
+  return { available: radio !== null, enabled: radio ? radio.trim() === 'enabled' : false, connected: !!up, type: up ? up[0] : null, name: up ? up[2] : null };
+});
+ipcMain.handle('sys:bluetooth', async (_, enabled) => {
+  if (!IS_LINUX) return null;
+  if (typeof enabled === 'boolean' && await run('bluetoothctl', ['power', enabled ? 'on' : 'off']) === null) return null;
+  const out = await run('bluetoothctl', ['show']);
+  if (!out || !/Controller\s+[0-9A-F:]+/i.test(out)) return { available: false, powered: false };
+  return { available: true, powered: /^\s*Powered:\s*yes/im.test(out) };
+});
+ipcMain.handle('sys:keyboard-brightness', async (_, value) => {
+  if (!IS_LINUX) return null;
+  const dir = '/sys/class/leds';
+  let device;
+  try {
+    device = fs.readdirSync(dir).find(name => /kbd|keyboard/i.test(name) && fs.existsSync(path.join(dir, name, 'max_brightness')));
+  } catch { return null; }
+  if (!device) return null;
+  if (typeof value === 'number') {
+    const percent = Math.max(0, Math.min(100, Math.round(value)));
+    if (await run('brightnessctl', ['--device', device, 'set', `${percent}%`]) === null) return null;
+  }
+  try {
+    const base = path.join(dir, device);
+    const max = Number(fs.readFileSync(path.join(base, 'max_brightness'), 'utf8').trim());
+    const current = Number(fs.readFileSync(path.join(base, 'brightness'), 'utf8').trim());
+    return max > 0 && Number.isFinite(current) ? { available: true, value: Math.round(current / max * 100) } : null;
+  } catch { return null; }
+});
+ipcMain.handle('sys:media', async (_, action) => {
+  if (!IS_LINUX || !['play-pause', 'previous', 'next'].includes(action)) return null;
+  if (action && await run('playerctl', [action]) === null) return null;
+  const [status, metadata] = await Promise.all([
+    run('playerctl', ['status']),
+    run('playerctl', ['metadata', '--format', '{{title}}\t{{artist}}'])
+  ]);
+  if (!status || !metadata) return { available: false };
+  const [title, artist] = metadata.trim().split('\t');
+  return { available: true, playing: status.trim() === 'Playing', title: title || 'Unknown track', artist: artist || '' };
 });
 ipcMain.handle('sys:volume', async (_, v) => {
   if (!IS_LINUX) return null;
@@ -302,14 +346,24 @@ ipcMain.handle('fs:home', () => {
   for (const d of ['Desktop', 'Documents', 'Downloads']) try { fs.mkdirSync(path.join(h, d), { recursive: true }); } catch {}
   return h;
 });
-ipcMain.handle('fs:list', async (_, d) => {
+ipcMain.handle('fs:list', async (_, d, showHidden = false) => {
   try {
     const ents = await fs.promises.readdir(String(d), { withFileTypes: true });
-    return { items: ents.filter(e => !e.name.startsWith('.')).map(e => ({ name: e.name, dir: e.isDirectory() || (e.isSymbolicLink() && isDir(path.join(d, e.name))) })).sort((a, b) => b.dir - a.dir || a.name.localeCompare(b.name)) };
+    return { items: ents.filter(e => showHidden === true || !e.name.startsWith('.')).map(e => ({ name: e.name, dir: e.isDirectory() || (e.isSymbolicLink() && isDir(path.join(d, e.name))) })).sort((a, b) => b.dir - a.dir || a.name.localeCompare(b.name)) };
   } catch (e) { return { error: e.code === 'EACCES' ? 'You don\'t have permission to open this folder.' : 'Folder not found.' }; }
 });
 /* Launch a native app, log its output, and bring its window in front of SilkOS (which is fullscreen). */
 const xWins = async () => new Set(((await run('wmctrl', ['-l'])) || '').split('\n').map(l => l.split(' ')[0]).filter(Boolean));
+const cycleNativeWindows = async reverse => {
+  const output = await run('wmctrl', ['-l']);
+  const windows = (output || '').split('\n').map(line => line.match(/^(0x[\da-f]+)/i)?.[1]?.toLowerCase()).filter(Boolean);
+  if (!windows.length) return;
+  const activeOutput = await run('xprop', ['-root', '_NET_ACTIVE_WINDOW']);
+  const active = activeOutput && activeOutput.match(/window id # (0x[\da-f]+)/i)?.[1].toLowerCase();
+  const index = windows.indexOf(active);
+  const next = windows[(index + (reverse ? -1 : 1) + windows.length) % windows.length];
+  await run('wmctrl', ['-i', '-a', next]);
+};
 const launchExt = async (cmd, args, cwd) => {
   const before = await xWins(), log = path.join(os.homedir(), '.cache', 'silkos-apps.log');
   let fd = 'ignore'; try { fs.mkdirSync(path.dirname(log), { recursive: true }); fd = fs.openSync(log, 'a'); } catch {}
@@ -349,7 +403,48 @@ app.whenReady().then(() => {
   if (IS_LINUX && process.env.SILKOS_KIOSK === '1') win.setFullScreen(true);
   win.loadFile(path.join(__dirname, 'app', 'index.html'));
   win.once('ready-to-show', () => win.show());
+  let localWindowSwitchPending = false;
+  let windowSwitchTimer = null;
+  if (IS_LINUX && globalShortcut) {
+    for (const [accelerator, shortcut] of [['Alt+Tab', 'alt-tab'], ['Alt+Shift+Tab', 'alt-tab-reverse']]) {
+      try {
+        if (globalShortcut.register(accelerator, () => {
+          if (screenLocked) return;
+          if (win.isFocused()) {
+            win.webContents.send('shortcut', shortcut);
+            clearTimeout(windowSwitchTimer);
+            windowSwitchTimer = setTimeout(() => {
+              windowSwitchTimer = null;
+              if (!screenLocked && win.isFocused()) win.webContents.send('shortcut', 'alt-release');
+            }, 700);
+          } else {
+            void cycleNativeWindows(shortcut === 'alt-tab-reverse');
+          }
+        })) globalWindowShortcuts.add(accelerator);
+        else console.error(`Could not register the ${accelerator} window-switching shortcut.`);
+      } catch (error) {
+        console.error(`Could not register the ${accelerator} window-switching shortcut:`, error);
+      }
+    }
+    win.on('blur', () => {
+      if (!windowSwitchTimer) return;
+      clearTimeout(windowSwitchTimer);
+      windowSwitchTimer = null;
+      if (!screenLocked) win.webContents.send('shortcut', 'alt-release');
+    });
+  }
   win.webContents.on('before-input-event', (e, i) => {
+    const accelerator = i.shift ? 'Alt+Shift+Tab' : 'Alt+Tab';
+    if (i.type === 'keyDown' && i.alt && i.key === 'Tab' && !globalWindowShortcuts.has(accelerator)) {
+      e.preventDefault();
+      if (!screenLocked) { localWindowSwitchPending = true; win.webContents.send('shortcut', i.shift ? 'alt-tab-reverse' : 'alt-tab'); }
+      return;
+    }
+    if (i.type === 'keyUp' && /^Alt/.test(i.key) && localWindowSwitchPending) {
+      localWindowSwitchPending = false;
+      if (!screenLocked) win.webContents.send('shortcut', 'alt-release');
+      return;
+    }
     if (screenLocked && i.type === 'keyDown' && (
       (i.alt && i.key === 'F4') ||
       ((i.control || i.meta) && ['q', 'w', 'r'].includes(i.key.toLowerCase())) ||
