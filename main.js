@@ -80,10 +80,31 @@ const fpSetup = () => fpReady || (fpReady = (async () => {
   await fp(['update', '--user', '--appstream', 'flathub'], 180000);
   return '';
 })());
+const fpIcon = id => {
+  const b = path.join(os.homedir(), '.local/share/flatpak/exports/share/icons/hicolor');
+  return ['128x128/apps/' + id + '.png', 'scalable/apps/' + id + '.svg', '64x64/apps/' + id + '.png'].map(f => path.join(b, f)).find(f => fs.existsSync(f)) || '';
+};
 ipcMain.handle('store:installed', async () => {
-  const e = await fpSetup(); if (e) return { error: e };
+  if (!IS_LINUX) return { error: 'The Store works when SilkOS runs on Linux.' };
   const r = await fp(['list', '--user', '--app', '--columns=application,name'], 15000);
-  return { apps: fpRows(r.out).map(([id, name]) => ({ id, name })) };
+  if (!r.ok && /ENOENT/.test(r.err)) return { error: 'flatpak is not installed.' };
+  return { apps: fpRows(r.out).map(([id, name]) => ({ id, name, icon: fpIcon(id) })) };
+});
+/* ---- Persistence: an empty disk becomes a live-boot "persistence" partition ---- */
+ipcMain.handle('persist:status', async () => {
+  if (!IS_LINUX) return {};
+  let on = false; try { on = fs.readdirSync('/run/live/persistence').length > 0; } catch {}
+  const r = await run('lsblk', ['-J', '-b', '-o', 'NAME,TYPE,SIZE,FSTYPE,LABEL,PTTYPE,RO']);
+  let devs = []; try { devs = JSON.parse(r).blockdevices || []; } catch {}
+  const all = devs.flatMap(d => [d, ...(d.children || [])]);
+  const has = (all.find(d => d.label === 'persistence') || {}).name || '';
+  const e = devs.find(d => d.type === 'disk' && !d.ro && !d.children && !d.fstype && !d.pttype && +d.size >= 2e9);
+  return { on, has, disk: e ? { name: e.name, size: Math.round(e.size / 1e9) + ' GB' } : null };
+});
+ipcMain.handle('persist:setup', async (_, name) => {
+  if (!IS_LINUX || !/^[a-z0-9]+$/.test(String(name))) return { ok: false, error: 'Invalid disk' };
+  const r = await new Promise(res => execFile('sudo', ['-n', '/usr/local/bin/silkos-persist-setup', name], { timeout: 300000 }, (e, out, err) => res({ ok: !e, error: String(err || out || (e && e.message) || '').trim() })));
+  return r;
 });
 ipcMain.handle('store:search', async (_, q) => {
   const e = await fpSetup(); if (e) return { error: e };
