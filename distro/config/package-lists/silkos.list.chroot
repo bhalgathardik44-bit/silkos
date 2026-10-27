@@ -24,6 +24,7 @@ libpam-systemd
 polkitd
 # --- real hardware hooks used by SilkOS ---
 network-manager
+flatpak
 brightnessctl
 upower
 pipewire

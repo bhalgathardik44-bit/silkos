@@ -190,6 +190,15 @@ body.lite #lp{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(
 .lpa:hover b{transform:scale(1.06)}.lpa:active b{transform:scale(.92);filter:brightness(.75)}
 .lpa.sel b{box-shadow:0 0 0 3px rgba(255,255,255,.85),0 8px 22px rgba(0,0,0,.35)}
 .lpe{grid-column:1/-1;text-align:center;color:rgba(255,255,255,.7);font-size:15px;margin-top:40px}
+.sto{display:flex;flex-direction:column;height:100%}.stq{padding:14px 16px;border-bottom:1px solid var(--line)}
+.stq input{width:100%;height:34px;border:0;outline:0;border-radius:10px;padding:0 14px;font-size:14px;background:var(--sfield);color:inherit;user-select:text}
+.stl{flex:1;overflow:auto;padding:4px 16px 16px}.stl h5{font-size:12px;opacity:.55;margin:12px 0 4px}
+.str{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.str>b{width:44px;height:44px;border-radius:22%;flex:none;display:grid;place-items:center;position:relative;overflow:hidden;color:#fff;font-size:20px;background:linear-gradient(#5ac8fa,#0a60ff)}
+.str>b img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:var(--win)}
+.str>div{flex:1;min-width:0}.str h4{font-size:14px;font-weight:600}.str p{font-size:12px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stb{border:0;border-radius:14px;padding:5px 16px;font-size:13px;font-weight:600;background:var(--sfield);color:var(--accent);flex:none}.stb:disabled{opacity:.6}
+.stm{text-align:center;opacity:.6;font-size:14px;margin-top:70px;padding:0 20px}
 </style></head><body>
 <div id="wall"></div>
 <div id="menubar"><div id="mleft"></div><div id="mright"></div></div>
@@ -201,6 +210,7 @@ const apps={
  browser:{n:'Browser',i:'🧭',c:'linear-gradient(#5ac8fa,#0a60ff)',w:1000,h:640,html:()=>`<div class="bwrap"><div class="stabs"></div><div class="main"><div class="side"><div></div></div><div class="pages"><div class="start"></div></div></div><div class="ov"></div></div>`,init:browserInit},
  notes:{n:'Notes',i:'📝',c:'linear-gradient(#ffd54a,#ff9f0a)',w:380,h:300,html:()=>'<textarea placeholder="Start typing…"></textarea>'},
  calc:{n:'Calculator',i:'🧮',c:'linear-gradient(#555,#222)',w:260,h:360,html:()=>'<div class="calc"><div class="scr">0</div>'+['C','±','%','÷',7,8,9,'×',4,5,6,'−',1,2,3,'+',0,'.','=',''].map(k=>k===''?'<button disabled></button>':`<button class="${'÷×−+='.includes(k)?'op':''}">${k}</button>`).join('')+'</div>',init:calcInit},
+ store:{n:'Store',i:'🛍️',c:'linear-gradient(#3fc5ff,#1a5cff)',w:720,h:540,html:()=>'<div></div>',init:storeInit},
  settings:{n:'Settings',i:'⚙️',c:'#888',w:780,h:540,html:()=>'<div></div>',init:settingsInit}
 };
 const SVG={
@@ -208,7 +218,7 @@ browser:`<svg viewBox="0 0 100 100"><defs><linearGradient id="g1" x1="0" y1="0" 
 notes:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#fffdf6"/><rect width="100" height="29" fill="#ffd60a"/><rect y="29" width="100" height="2" fill="#000" opacity=".08"/><g stroke="#e4dfcf" stroke-width="2.400" stroke-linecap="round"><path d="M15 46h70M15 59h70M15 72h70M15 85h40"/></g><path d="M15 46h28" stroke="#c9c2ab" stroke-width="2.400" stroke-linecap="round"/></svg>`,
 calc:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1c1c1e"/><rect x="9" y="9" width="82" height="24" rx="8" fill="#2c2c2e"/><text x="84" y="28" text-anchor="end" font-family="-apple-system,Segoe UI,sans-serif" font-size="17" font-weight="300" fill="#fff">42</text><g fill="#a5a5a5"><circle cx="22" cy="48" r="8.500"/><circle cx="41" cy="48" r="8.500"/><circle cx="60" cy="48" r="8.500"/></g><g fill="#3a3a3c"><circle cx="22" cy="67" r="8.500"/><circle cx="41" cy="67" r="8.500"/><circle cx="60" cy="67" r="8.500"/><circle cx="22" cy="86" r="8.500"/><circle cx="41" cy="86" r="8.500"/><circle cx="60" cy="86" r="8.500"/></g><g fill="#ff9f0a"><circle cx="79" cy="48" r="8.500"/><circle cx="79" cy="67" r="8.500"/><circle cx="79" cy="86" r="8.500"/></g></svg>`,
 about:`<svg viewBox="0 0 100 100"><defs><linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a8cff"/><stop offset="1" stop-color="#5b2bff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g3)"/><path d="M50 16c3 20 14 31 34 34-20 3-31 14-34 34-3-20-14-31-34-34 20-3 31-14 34-34z" fill="#fff"/><path d="M78 14c1 6 4 9 10 10-6 1-9 4-10 10-1-6-4-9-10-10 6-1 9-4 10-10z" fill="#fff" opacity=".8"/></svg>`};
-SVG.settings=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5aab3"/><stop offset="1" stop-color="#5d626b"/></linearGradient></defs><rect width="100" height="100" fill="url(#g4)"/><g fill="#eceef1"><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(0 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(45 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(90 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(135 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(180 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(225 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(270 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="27"/></g><circle cx="50" cy="50" r="12" fill="#6a6f78"/></svg>`;Object.keys(SVG).forEach(k=>apps[k]&&(apps[k].svg=SVG[k]));
+SVG.settings=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5aab3"/><stop offset="1" stop-color="#5d626b"/></linearGradient></defs><rect width="100" height="100" fill="url(#g4)"/><g fill="#eceef1"><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(0 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(45 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(90 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(135 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(180 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(225 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(270 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="27"/></g><circle cx="50" cy="50" r="12" fill="#6a6f78"/></svg>`;SVG.store=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fc5ff"/><stop offset="1" stop-color="#1a5cff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g5)"/><path d="M39 38v-5a11 11 0 0 1 22 0v5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><rect x="25" y="37" width="50" height="42" rx="9" fill="#fff"/><path d="M50 47v19M42 59l8 8 8-8" fill="none" stroke="#1a5cff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;Object.keys(SVG).forEach(k=>apps[k]&&(apps[k].svg=SVG[k]));
 let z=10,wins={};
 function dockIcon(id){return dock.querySelector(`[data-id=${id}]`)}
 Object.entries(apps).forEach(([id,a])=>{
@@ -268,6 +278,20 @@ tick();
 /* clock */
 function clk(){$('#clock').textContent=new Date().toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}setInterval(()=>$('#clock')&&clk(),10000);
 /* apps */
+function storeInit(el){const b=el.querySelector('.body');b.innerHTML='<div class="sto"><div class="stq"><input placeholder="Search Flathub apps" spellcheck="false"></div><div class="stl"></div></div>';
+ const q=b.querySelector('input'),L=b.querySelector('.stl'),S=window.silk&&silk.store;let inst=new Set(),busy={},t;
+ const msg=m=>L.innerHTML='<div class="stm">'+esc(m)+'</div>';
+ const row=a=>`<div class="str"><b>${esc((a.name||'?')[0])}<img src="https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${esc(a.id)}.png" onerror="this.remove()"></b><div><h4>${esc(a.name)}</h4><p>${esc(a.desc||a.id)}</p></div><button class="stb" data-id="${esc(a.id)}"${busy[a.id]?' disabled':''}>${busy[a.id]?'Installing…':inst.has(a.id)?'Open':'Install'}</button></div>`;
+ const draw=(l,h)=>L.innerHTML='<h5>'+h+'</h5>'+l.map(row).join('');
+ async function home(){if(!S)return msg('The Store works when SilkOS runs on Linux.');msg('Loading…');const r=await S.installed();if(q.value.trim())return;if(r.error)return msg(r.error);
+  inst=new Set(r.apps.map(a=>a.id));r.apps.length?draw(r.apps,'Installed'):msg('Search for an app above, e.g. VLC, GIMP, Spotify or Steam.')}
+ async function find(){const v=q.value.trim();if(!v||!S)return home();msg('Searching…');const r=await S.search(v);if(q.value.trim()!==v)return;
+  if(r.error)return msg(r.error);r.apps.length?draw(r.apps,'Results'):msg('No apps found for “'+v+'”.')}
+ q.oninput=()=>{clearTimeout(t);t=setTimeout(find,350)};
+ L.onclick=async e=>{const x=e.target.closest('.stb');if(!x||x.disabled)return;const id=x.dataset.id;if(inst.has(id))return S.run(id);
+  busy[id]=1;x.disabled=true;x.textContent='Installing…';const r=await S.install(id);delete busy[id];if(r.ok)inst.add(id);
+  const n=L.querySelector(`.stb[data-id="${CSS.escape(id)}"]`);if(n){n.disabled=false;n.textContent=r.ok?'Open':'Retry';n.title=r.error||''}};
+ home()}
 function calcInit(el){let cur='0',acc=null,op=null,fresh=true;const s=el.querySelector('.scr');
  const ops={'+':(a,b)=>a+b,'−':(a,b)=>a-b,'×':(a,b)=>a*b,'÷':(a,b)=>a/b};
  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.textContent;
