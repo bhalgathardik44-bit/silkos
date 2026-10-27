@@ -8,6 +8,7 @@ app.on('web-contents-created', (_, c) => {
   if (c.getType() === 'webview') {
     c.setWindowOpenHandler(({ url }) => { c.hostWebContents.send('open-tab', url); return { action: 'deny' }; });
     c.on('before-input-event', (e, i) => {
+      if (i.type === 'keyDown' && i.key === 'F4') { e.preventDefault(); c.hostWebContents.send('shortcut', 'lp'); return; }
       const k = i.key.toLowerCase();
       if (i.type === 'keyDown' && (i.control || i.meta) && !i.shift && !i.alt && ['t', 'w', 'l', 'r', 'k', 'd', ' '].includes(k)) {
         e.preventDefault(); c.hostWebContents.send('shortcut', k);

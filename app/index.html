@@ -177,6 +177,19 @@ body.lite #dock{background:var(--win)}
 .wps{display:grid;grid-template-columns:repeat(auto-fill,108px);gap:14px;padding:14px}.wp{height:68px;border-radius:12px;position:relative;cursor:var(--curp);border:2px solid transparent;box-shadow:0 0 0 1px var(--line);transition:transform .3s var(--spring)}.wp:hover{transform:scale(1.05)}.wp.on{border-color:var(--accent)}
 .wp span{position:absolute;bottom:4px;left:8px;font-size:11px;color:#fff;text-shadow:0 1px 3px #0008}
 .rw.pick{cursor:var(--curp)}.rw.pick .ck{color:var(--accent);font-weight:700}
+#lp{position:fixed;inset:0;z-index:9400;display:flex;flex-direction:column;align-items:center;padding:56px 6vw 150px;background:rgba(18,18,28,.32);-webkit-backdrop-filter:blur(40px) saturate(1.5);backdrop-filter:blur(40px) saturate(1.5);opacity:0;pointer-events:none;transform:scale(1.08);transition:opacity .3s var(--ease),transform .45s var(--ease)}
+#lp.on{opacity:1;pointer-events:auto;transform:none}
+body.lite #lp{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(18,18,28,.92)}
+#lp input{width:240px;height:30px;border:0;outline:0;border-radius:9px;padding:0 12px;font-size:14px;text-align:center;color:#fff;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3);user-select:text;transition:box-shadow .2s}
+#lp input::placeholder{color:rgba(255,255,255,.6)}#lp input:focus{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3),0 0 0 3px rgba(255,255,255,.22)}
+.lpg{flex:1;width:100%;max-width:1080px;margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,130px);justify-content:center;gap:44px 28px;align-content:start;overflow:auto}
+.lpa{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:0;transform:scale(.8);transition:opacity .3s var(--ease),transform .5s var(--spring);cursor:var(--curp)}
+#lp.on .lpa{opacity:1;transform:none}
+.lpa b{width:96px;height:96px;border-radius:22%;overflow:hidden;display:grid;place-items:center;font-size:44px;box-shadow:0 8px 22px rgba(0,0,0,.35);transition:transform .25s var(--spring),filter .15s}
+.lpa b svg{width:100%;height:100%;display:block}
+.lpa:hover b{transform:scale(1.06)}.lpa:active b{transform:scale(.92);filter:brightness(.75)}
+.lpa.sel b{box-shadow:0 0 0 3px rgba(255,255,255,.85),0 8px 22px rgba(0,0,0,.35)}
+.lpe{grid-column:1/-1;text-align:center;color:rgba(255,255,255,.7);font-size:15px;margin-top:40px}
 </style></head><body>
 <div id="wall"></div>
 <div id="menubar"><div id="mleft"></div><div id="mright"></div></div>
@@ -201,6 +214,8 @@ function dockIcon(id){return dock.querySelector(`[data-id=${id}]`)}
 Object.entries(apps).forEach(([id,a])=>{
  const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.style.background=a.c;
  d.innerHTML=`<i>${a.svg}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);dock.appendChild(d)});
+const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#b4bac6"/></linearGradient></defs><rect width="100" height="100" fill="url(#glp)"/>'+[['#ff5f57','#febc2e','#28c840'],['#5ac8fa','#0a84ff','#af52de'],['#ff2d92','#ff9500','#34c759']].map((r,y)=>r.map((c,x)=>`<rect x="${20+x*22}" y="${20+y*22}" width="16" height="16" rx="4.500" fill="${c}"/>`).join('')).join('')+'</svg>';
+{const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();dock.prepend(d)}
 function launch(id){
  const ic=dockIcon(id),w=wins[id];
  if(w){ if(w.classList.contains('min')){restore(w,id)} focus(w,id); return }
@@ -460,12 +475,27 @@ function spaint(){srs.innerHTML=sres.map((r,i)=>`<div class="sr${i===si?' on':''
  srs.querySelectorAll('.sr').forEach(n=>n.onclick=()=>{const r=sres[+n.dataset.i];spot(false);r.f()})}
 spi.oninput=sfind;
 spi.onkeydown=e=>{if(e.key==='ArrowDown'){si=Math.min(si+1,sres.length-1);spaint();e.preventDefault()}else if(e.key==='ArrowUp'){si=Math.max(si-1,0);spaint();e.preventDefault()}else if(e.key==='Enter'&&sres[si]){const r=sres[si];spot(false);r.f()}else if(e.key==='Escape')spot(false)};
+/* launchpad */
+document.body.insertAdjacentHTML('beforeend','<div id="lp"><input placeholder="Search" spellcheck="false" autocomplete="off"><div class="lpg"></div></div>');
+const lp=$('#lp'),lpi=lp.querySelector('input'),lpg=lp.querySelector('.lpg');
+const lpOn=()=>lp.classList.contains('on');
+function lpList(){const v=lpi.value.trim().toLowerCase();return Object.keys(apps).filter(k=>!v||apps[k].n.toLowerCase().includes(v))}
+function lpDraw(){const l=lpList(),q=!!lpi.value.trim();
+ lpg.innerHTML=l.length?l.map((k,i)=>`<div class="lpa${q&&!i?' sel':''}" data-id="${k}" style="transition-delay:${Math.min(i,24)*18}ms"><b style="background:${apps[k].c}">${apps[k].svg||apps[k].i}</b><span>${esc(apps[k].n)}</span></div>`).join(''):'<div class="lpe">No Results</div>'}
+function launchpad(on=!lpOn()){if(on===lpOn())return;
+ if(on){closeDd(true);spot(false);lpi.value='';lpDraw();void lp.offsetWidth;lp.classList.add('on');setTimeout(()=>lpi.focus(),30)}
+ else{lp.classList.remove('on');lpi.blur()}}
+function lpGo(id){launchpad(false);setTimeout(()=>launch(id),160)}
+lp.onclick=e=>{const a=e.target.closest('.lpa');if(a)lpGo(a.dataset.id);else if(!e.target.closest('input'))launchpad(false)};
+lpi.oninput=lpDraw;
+lpi.onkeydown=e=>{if(e.key==='Enter'){const l=lpList();if(l.length)lpGo(l[0])}else if(e.key==='Escape')launchpad(false)};
+dock.addEventListener('click',e=>{if(lpOn()&&!e.target.closest('[data-id=launchpad]'))launchpad(false)});
 document.addEventListener('pointerdown',e=>{if(dd&&!e.target.closest('.dd,.mi'))closeDd();if(sp.classList.contains('on')&&!e.target.closest('#spot,[data-k=srch]'))spot(false)});
 addEventListener('blur',()=>closeDd());
-function shortcut(k){if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
+function shortcut(k){if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
  if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='d')b.addBm()}
 if(window.silk&&silk.onShortcut)silk.onShortcut(shortcut);
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='Escape'){closeDd();spot(false)}});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad()}else if(e.key==='Escape'){closeDd();spot(false);launchpad(false)}});
 const DEF={theme:'auto',accent:'#0a60ff',wall:0,lite:false,dock:56,mag:true,magAmt:1.7,hide:false,engine:'google',sugg:true,bri:100};
 const cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('silk.cfg'))||{}}catch(e){return{}}})());
 const save=()=>{try{localStorage.setItem('silk.cfg',JSON.stringify(cfg))}catch(e){}};

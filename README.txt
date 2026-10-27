@@ -8,4 +8,4 @@ Optional - make a single .exe: open a terminal in this folder and run
    npm run build
 The exe appears in the "dist" folder.
 
-Shortcuts: Ctrl+K = Spotlight, Ctrl+T new tab, Ctrl+W close tab, Ctrl+L address bar, Ctrl+R reload, Ctrl+D add bookmark, F11 fullscreen.
+Shortcuts: F4 = Launchpad, Ctrl+K = Spotlight, Ctrl+T new tab, Ctrl+W close tab, Ctrl+L address bar, Ctrl+R reload, Ctrl+D add bookmark, F11 fullscreen.
