@@ -5,7 +5,7 @@ apt-get install -y -f || true
 [ -f /opt/SilkOS/chrome-sandbox ] && chmod 4755 /opt/SilkOS/chrome-sandbox || true
 # Wi-Fi/Ethernet management through NetworkManager
 systemctl enable NetworkManager || true
-# Match native app windows to SilkOS and place their controls on the left.
+# Match native app windows to SilkOS and place close/minimize/maximize controls on the left.
 OPENBOX_RC=/etc/xdg/openbox/rc.xml
 OPENBOX_THEME=/usr/share/themes/SilkOS/openbox-3/themerc
 test -f "$OPENBOX_RC"
