@@ -1,0 +1,13 @@
+node_modules/
+dist/
+distro/*.iso
+distro/chroot/
+distro/binary/
+distro/cache/
+distro/.build/
+distro/config/binary
+distro/config/bootstrap
+distro/config/chroot
+distro/config/common
+distro/config/source
+distro/config/packages.chroot/*.deb

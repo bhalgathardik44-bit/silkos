@@ -4,6 +4,9 @@ live-config
 live-config-systemd
 systemd-sysv
 sudo
+user-setup
+adduser
+passwd
 locales
 # --- display: Xorg + tiny window manager ---
 xserver-xorg-core
