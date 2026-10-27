@@ -14,5 +14,7 @@ sed -i '/<theme>/,/<\/theme>/ {
   s|<name>[^<]*</name>|<name>SilkOS</name>|
   s|<titleLayout>[^<]*</titleLayout>|<titleLayout>CIML</titleLayout>|
 }' "$OPENBOX_RC"
+sed -i '/<keybind key="A-Tab">/,/<\/keybind>/d; /<keybind key="A-S-Tab">/,/<\/keybind>/d' "$OPENBOX_RC"
 grep -q '<name>SilkOS</name>' "$OPENBOX_RC"
 grep -q '<titleLayout>CIML</titleLayout>' "$OPENBOX_RC"
+! grep -q '<keybind key="A-\(S-\)\?Tab">' "$OPENBOX_RC"
