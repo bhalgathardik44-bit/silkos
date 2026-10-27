@@ -293,12 +293,19 @@ ipcMain.handle('sys:resources', async () => {
 const fp = (args, ms) => new Promise(res => execFile('flatpak', args, { timeout: ms, maxBuffer: 32 << 20 }, (e, out, err) => res({ ok: !e, out: String(out || ''), err: String(err || (e && e.message) || '') })));
 const fpRows = s => s.split('\n').map(l => l.split('\t')).filter(r => r.length > 1 && r[0]);
 const okId = id => /^[\w.-]+$/.test(String(id));
+const fpDetails = result => result.err.trim().split('\n').slice(-3).join('\n').slice(-600);
+const fpFailure = (result, action) => {
+  if (/ENOENT/.test(result.err)) return 'Flatpak is not installed.';
+  const details = fpDetails(result);
+  return `${action}${details ? `: ${details}` : '.'}`;
+};
 let fpReady = null;
 const fpSetup = () => fpReady || (fpReady = (async () => {
   if (!IS_LINUX) return 'The Store works when SilkOS runs on Linux.';
   const r = await fp(['remote-add', '--user', '--if-not-exists', 'flathub', 'https://dl.flathub.org/repo/flathub.flatpakrepo'], 60000);
-  if (!r.ok) { fpReady = null; return /ENOENT/.test(r.err) ? 'flatpak is not installed.' : 'Could not reach Flathub. Check your internet connection.'; }
-  await fp(['update', '--user', '--appstream', 'flathub'], 180000);
+  if (!r.ok) { fpReady = null; return /ENOENT/.test(r.err) ? 'Flatpak is not installed.' : `Could not connect to Flathub: ${fpDetails(r) || 'check your internet connection.'}`; }
+  const catalog = await fp(['update', '--user', '--appstream', 'flathub'], 180000);
+  if (!catalog.ok) { fpReady = null; return `Could not load the Flathub app catalog: ${fpDetails(catalog) || 'check your internet connection.'}`; }
   return '';
 })());
 const fpIcon = id => {
@@ -308,7 +315,7 @@ const fpIcon = id => {
 ipcMain.handle('store:installed', async () => {
   if (!IS_LINUX) return { error: 'The Store works when SilkOS runs on Linux.' };
   const r = await fp(['list', '--user', '--app', '--columns=application,name'], 15000);
-  if (!r.ok && /ENOENT/.test(r.err)) return { error: 'flatpak is not installed.' };
+  if (!r.ok) return { error: fpFailure(r, 'Could not list installed apps') };
   return { apps: fpRows(r.out).map(([id, name]) => ({ id, name, icon: fpIcon(id) })) };
 });
 /* ---- Persistence: an empty disk becomes a live-boot "persistence" partition ---- */
@@ -316,10 +323,13 @@ ipcMain.handle('persist:status', async () => {
   if (!IS_LINUX) return {};
   let on = false; try { on = fs.readdirSync('/run/live/persistence').length > 0; } catch {}
   const r = await run('lsblk', ['-J', '-b', '-o', 'NAME,TYPE,SIZE,FSTYPE,LABEL,PTTYPE,RO']);
-  let devs = []; try { devs = JSON.parse(r).blockdevices || []; } catch {}
+  if (r === null) return { error: 'Could not inspect storage devices.' };
+  let devs;
+  try { devs = JSON.parse(r).blockdevices; } catch (e) { return { error: `Could not read storage devices: ${e.message}` }; }
+  if (!Array.isArray(devs)) return { error: 'Could not read storage devices.' };
   const all = devs.flatMap(d => [d, ...(d.children || [])]);
   const has = (all.find(d => d.label === 'persistence') || {}).name || '';
-  const e = devs.find(d => d.type === 'disk' && !d.ro && !d.children && !d.fstype && !d.pttype && +d.size >= 2e9);
+  const e = devs.find(d => d.type === 'disk' && !d.ro && !d.children && !d.fstype && !d.pttype && +d.size >= 8e9);
   return { on, has, disk: e ? { name: e.name, size: Math.round(e.size / 1e9) + ' GB' } : null };
 });
 ipcMain.handle('persist:setup', async (_, name) => {
@@ -330,15 +340,18 @@ ipcMain.handle('persist:setup', async (_, name) => {
 ipcMain.handle('store:search', async (_, q) => {
   const e = await fpSetup(); if (e) return { error: e };
   const r = await fp(['search', '--user', '--columns=name,description,application', String(q).slice(0, 80)], 30000);
+  if (!r.ok) return { error: fpFailure(r, 'Could not search Flathub') };
   const seen = new Set();
   return { apps: fpRows(r.out).filter(x => okId(x[2]) && !seen.has(x[2]) && seen.add(x[2])).slice(0, 40).map(([name, desc, id]) => ({ id, name, desc })) };
 });
 ipcMain.handle('store:install', async (_, id) => {
-  if (!okId(id) || await fpSetup()) return { ok: false };
+  if (!okId(id)) return { ok: false, error: 'Invalid app ID.' };
+  const setupError = await fpSetup();
+  if (setupError) return { ok: false, error: setupError };
   const r = await fp(['install', '--user', '-y', '--noninteractive', 'flathub', id], 30 * 60000);
-  return { ok: r.ok, error: r.ok ? '' : r.err.trim().split('\n').pop() };
+  return { ok: r.ok, error: r.ok ? '' : fpFailure(r, 'Could not install app') };
 });
-ipcMain.handle('store:run', (_, id) => IS_LINUX && okId(id) ? launchExt('flatpak', ['run', id], os.homedir()) : { ok: false, error: 'Not available here' });
+ipcMain.handle('store:run', (_, id) => IS_LINUX && okId(id) ? launchExt('flatpak', ['run', '--env=GTK_CSD=0', id], os.homedir()) : { ok: false, error: 'Not available here' });
 /* ---- Finder + Terminal ---- */
 const isDir = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
 ipcMain.handle('fs:home', () => {

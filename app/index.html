@@ -213,6 +213,90 @@ body.lite #lp{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(
 .str>div{flex:1;min-width:0}.str h4{font-size:14px;font-weight:600}.str p{font-size:12px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stb{border:0;border-radius:14px;padding:5px 16px;font-size:13px;font-weight:600;background:var(--sfield);color:var(--accent);flex:none}.stb:disabled{opacity:.6}
 .stm{text-align:center;opacity:.6;font-size:14px;margin-top:70px;padding:0 20px}
+.store-head{padding:18px 20px 12px;border-bottom:1px solid var(--line);flex:none}
+.store-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.store-title h2{font-size:22px;letter-spacing:-.4px}.store-title p{font-size:12px;opacity:.58;margin-top:3px}
+.store-search{height:38px;display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:12px;background:var(--sfield);color:inherit}
+.store-search svg{width:16px;height:16px;opacity:.55;flex:none}.store-search input{width:100%;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:13px;user-select:text}
+.store-cats{display:flex;gap:7px;overflow-x:auto;padding:12px 18px 9px;flex:none;scrollbar-width:none}
+.store-cats::-webkit-scrollbar{display:none}
+.store-cat{border:0;border-radius:999px;padding:7px 12px;background:var(--sfield);color:inherit;font-size:12px;white-space:nowrap;cursor:pointer}
+.store-cat.active{background:var(--accent);color:#fff}
+.store-content{flex:1;min-height:0;overflow:auto;padding:0 18px 20px}
+.store-feature{position:relative;min-height:126px;margin:6px 0 18px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;overflow:hidden;border-radius:18px;color:#fff;background:radial-gradient(circle at 85% 20%,rgba(255,255,255,.32),transparent 30%),linear-gradient(115deg,#113a2b,#1ed760)}
+.store-feature-copy{position:relative;z-index:1;max-width:390px}.store-eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;opacity:.8}
+.store-feature h3{font-size:22px;margin:5px 0 3px}.store-feature p{font-size:12px;opacity:.85}
+.store-feature .stb{background:#fff;color:#173b2b;padding:8px 17px}
+.store-feature-mark{position:absolute;right:108px;width:112px;height:112px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.3);border-radius:50%;background:rgba(255,255,255,.12);font-size:76px;font-weight:700;line-height:1;opacity:.3;transform:rotate(12deg)}
+.store-section{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:16px 2px 10px}
+.store-section h3{font-size:15px}.store-section span{font-size:11px;opacity:.55}
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}
+.store-card{min-width:0;display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:15px;background:var(--win);transition:transform .18s var(--ease),box-shadow .18s}
+.store-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.store-icon{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;position:relative;overflow:hidden;background:linear-gradient(145deg,#8ec5ff,#5968df);color:white;font-size:20px;font-weight:700}
+.store-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.store-meta{min-width:0}.store-meta h4{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.store-meta p{font-size:11px;opacity:.58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.store-card .stb{padding:6px 11px;background:color-mix(in srgb,var(--accent) 10%,var(--win));border-radius:10px}
+.store-status{min-height:18px;padding:10px 3px 0;font-size:11px;opacity:.7}
+@media(max-width:620px){.store-grid{grid-template-columns:1fr}.store-feature-icon{right:60px}.store-title h2{font-size:19px}}
+.notes-app{height:100%;min-height:0;display:grid;grid-template-columns:172px 255px minmax(0,1fr);background:var(--win);color:var(--text);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.notes-folders,.notes-list{min-width:0;min-height:0;display:flex;flex-direction:column;background:color-mix(in srgb,var(--sbar) 72%,var(--win))}
+.notes-folders{border-right:1px solid var(--line);padding:14px 10px 10px;gap:12px}
+.notes-brand{display:flex;align-items:center;gap:9px;padding:3px 6px 7px;font-size:13px;font-weight:650}
+.notes-brand-mark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(180deg,#ffe46b,#ffb922);color:#805600;font-size:15px;box-shadow:inset 0 1px 0 #fff8}
+.notes-section-label{padding:0 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.48}
+.notes-folder-scroll{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:3px}
+.notes-folder-row{display:flex;align-items:center;min-width:0}.notes-folder-row>.notes-folder{flex:1}
+.notes-folder-delete{width:24px;height:26px;flex:none;border:0;border-radius:7px;background:transparent;color:inherit;opacity:0;cursor:pointer}
+.notes-folder-row:hover .notes-folder-delete,.notes-folder-delete:focus-visible{opacity:.55}.notes-folder-delete:hover{opacity:1!important;background:var(--sfield)}
+.notes-folder{width:100%;display:flex;align-items:center;gap:8px;border:0;border-radius:8px;padding:7px 8px;text-align:left;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}
+.notes-folder:hover{background:var(--sfield)}.notes-folder.active{background:color-mix(in srgb,var(--accent) 15%,var(--win));color:var(--accent);font-weight:600}
+.notes-folder-icon{width:17px;text-align:center;opacity:.72}.notes-folder-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.notes-folder-count{font-size:10px;opacity:.5}
+.notes-folder-actions{margin-top:auto;display:flex;gap:6px}.notes-quiet-button{border:0;border-radius:8px;padding:7px 9px;background:transparent;color:inherit;font:inherit;font-size:11px;cursor:pointer}.notes-quiet-button:hover{background:var(--sfield)}
+.notes-list{border-right:1px solid var(--line)}
+.notes-list-head{padding:16px 13px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.notes-list-head h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:680}
+.notes-new{width:30px;height:30px;flex:none;border:0;border-radius:9px;background:var(--accent);color:white;font-size:20px;line-height:1;cursor:pointer;box-shadow:0 3px 9px color-mix(in srgb,var(--accent) 28%,transparent)}
+.notes-search{margin:0 11px 9px;padding:0 9px;height:30px;display:flex;align-items:center;gap:7px;border-radius:8px;background:var(--sfield)}
+.notes-search svg{width:14px;height:14px;opacity:.55}.notes-search input{width:100%;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:11px;user-select:text}
+.notes-items{min-height:0;overflow:auto;padding:0 7px 10px}
+.notes-item{position:relative;margin:3px 0;padding:10px;border:1px solid transparent;border-radius:10px;cursor:pointer}
+.notes-item:hover{background:color-mix(in srgb,var(--sfield) 65%,transparent)}.notes-item.active{background:color-mix(in srgb,var(--accent) 12%,var(--win));border-color:color-mix(in srgb,var(--accent) 22%,transparent)}
+.notes-item-top{display:flex;align-items:center;gap:5px;font-size:10px;opacity:.58}.notes-item-top time{flex:1}
+.notes-pin{color:var(--accent);font-size:11px}.notes-item h3{margin:4px 0 3px;font-size:12px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notes-item p{font-size:10px;line-height:1.45;opacity:.56;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.notes-editor-pane{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative}
+.notes-toolbar{min-height:48px;display:flex;align-items:center;gap:5px;padding:7px 12px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--win) 88%,var(--sbar))}
+.notes-toolbar-group{display:flex;align-items:center;gap:3px}.notes-toolbar-divider{height:22px;width:1px;background:var(--line);margin:0 4px}
+.notes-tool{min-width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px;cursor:pointer}
+.notes-tool:hover,.notes-tool.active{background:var(--sfield)}.notes-tool:disabled{opacity:.35;cursor:not-allowed}
+.notes-tool.primary{background:color-mix(in srgb,var(--accent) 12%,var(--win));color:var(--accent);font-weight:650}
+.notes-format-select{height:29px;max-width:122px;border:0;border-radius:7px;background:transparent;color:inherit;font:inherit;font-size:11px;padding:0 5px}
+.notes-editor-scroll{flex:1;min-height:0;overflow:auto;padding:28px clamp(22px,6vw,76px) 50px}
+.notes-title{width:100%;border:0;outline:0;background:transparent;color:inherit;font:650 27px/1.2 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:-.04em;user-select:text}
+.notes-meta{display:flex;align-items:center;gap:9px;margin:9px 0 22px;font-size:10px;opacity:.5}
+.notes-meta-dot{width:3px;height:3px;border-radius:50%;background:currentColor}
+.notes-editor{min-height:220px;outline:0;color:inherit;font:15px/1.72 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-wrap:anywhere;user-select:text}
+.notes-editor:empty::before{content:attr(data-placeholder);opacity:.38;pointer-events:none}
+.notes-editor h1{font-size:22px;line-height:1.3;margin:18px 0 8px}.notes-editor h2{font-size:18px;line-height:1.4;margin:16px 0 7px}
+.notes-editor p{margin:0 0 9px}.notes-editor blockquote{margin:10px 0;padding:3px 0 3px 13px;border-left:3px solid var(--accent);opacity:.78}
+.notes-editor ul,.notes-editor ol{padding-left:24px;margin:7px 0 12px}.notes-editor li{padding-left:3px;margin:3px 0}
+.notes-editor li:has(> input[type=checkbox]){list-style:none;margin-left:-20px}
+.notes-editor input[type=checkbox]{width:15px;height:15px;vertical-align:-2px;margin-right:8px;accent-color:var(--accent);cursor:pointer}
+.notes-editor a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.notes-empty{flex:1;display:grid;place-content:center;text-align:center;padding:25px;opacity:.52}
+.notes-empty b{font-size:14px;margin-bottom:5px}.notes-empty span{font-size:11px}
+.notes-trash-banner{padding:9px 14px;text-align:center;background:color-mix(in srgb,#ff9f0a 14%,var(--win));color:inherit;font-size:10px}
+.notes-editor-pane.is-trash .notes-editor{opacity:.7}
+.notes-editor-pane.no-note .notes-editor-scroll{display:grid;place-items:center}
+.notes-editor-pane.no-note .notes-title,.notes-editor-pane.no-note .notes-meta,.notes-editor-pane.no-note .notes-editor{display:none}
+.notes-editor-empty{max-width:260px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;opacity:.62}
+.notes-editor-empty[hidden]{display:none}
+.notes-empty-mark{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(180deg,#ffe46b,#ffb922);color:#805600;font-size:25px;box-shadow:0 6px 18px #0002}
+.notes-editor-empty h2{font-size:16px;opacity:1}.notes-editor-empty p{font-size:11px;line-height:1.55}.notes-editor-empty button{margin-top:5px;border:0;border-radius:9px;padding:8px 14px;background:var(--accent);color:white;font:inherit;font-size:11px;font-weight:650;cursor:pointer}
+.notes-footer{min-height:25px;display:flex;align-items:center;justify-content:center;padding:4px 8px;font-size:9px;opacity:.48}
+@media(max-width:760px){.notes-app{grid-template-columns:130px 205px minmax(240px,1fr)}.notes-folders{padding-inline:6px}.notes-editor-scroll{padding:22px 24px 40px}.notes-title{font-size:23px}}
+@media(max-width:560px){.notes-app{grid-template-columns: minmax(90px,25%) minmax(0,1fr)}.notes-list{display:none}.notes-toolbar{padding-inline:6px;gap:2px}.notes-format-select{max-width:90px}.notes-editor-scroll{padding:20px 16px 35px}}
 .fnd{display:flex;height:100%}.fsb{width:160px;flex:none;padding:10px 8px;border-right:1px solid var(--line);font-size:13px}
 .fsb div{padding:6px 10px;border-radius:7px}.fsb div.on{background:var(--sfield);font-weight:600}
 .fmn{flex:1;display:flex;flex-direction:column;min-width:0}.ftb{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px}
@@ -325,7 +409,7 @@ const $=s=>document.querySelector(s),desk=$('#desk'),dock=$('#dock');let icons=[
 const apps={
  finder:{n:'Finder',i:'🗂️',c:'linear-gradient(#6fd0ff,#1a7cff)',w:760,h:480,html:()=>'<div></div>',init:finderInit},
  browser:{n:'Browser',i:'🧭',c:'linear-gradient(#5ac8fa,#0a60ff)',w:1000,h:640,html:()=>`<div class="bwrap"><div class="stabs"></div><div class="main"><div class="side"><div></div></div><div class="pages"><div class="start"></div></div></div><div class="ov"></div></div>`,init:browserInit},
- notes:{n:'Notes',i:'📝',c:'linear-gradient(#ffd54a,#ff9f0a)',w:380,h:300,html:()=>'<textarea placeholder="Start typing…"></textarea>',init:el=>{const t=el.querySelector('textarea');t.value=localStorage.getItem('silk.notes')||'';t.oninput=()=>localStorage.setItem('silk.notes',t.value)}},
+ notes:{n:'Notes',i:'📝',c:'linear-gradient(#ffd54a,#ff9f0a)',w:1080,h:700,html:()=>'<div></div>',init:notesInit},
  terminal:{n:'Terminal',i:'⌨️',c:'linear-gradient(#444,#111)',run:()=>window.silk&&silk.terminal()},
  calc:{n:'Calculator',i:'🧮',c:'linear-gradient(#555,#222)',w:260,h:360,html:()=>'<div class="calc"><div class="scr">0</div>'+['C','±','%','÷',7,8,9,'×',4,5,6,'−',1,2,3,'+',0,'.','=',''].map(k=>k===''?'<button disabled></button>':`<button class="${'÷×−+='.includes(k)?'op':''}">${k}</button>`).join('')+'</div>',init:calcInit},
  store:{n:'Store',i:'🛍️',c:'linear-gradient(#3fc5ff,#1a5cff)',w:720,h:540,html:()=>'<div></div>',init:storeInit},
@@ -369,8 +453,9 @@ Object.keys(apps).forEach(addIcon);
 const DEF={theme:'auto',accent:'#0a60ff',wall:0,lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,engine:'google',sugg:true,bri:100,
  clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false};
 const cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('silk.cfg'))||{}}catch(e){return{}}})());
-function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>(r.apps||[]).forEach(a=>{if(apps[a.id])return;
- apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id).then(r=>r&&r.error&&alert('Could not open '+(a.name||a.id)+':\n'+r.error)),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain;background:#fff">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)}))}
+function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>{if(r.error)throw new Error(r.error);(r.apps||[]).forEach(a=>{if(apps[a.id])return;
+ apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id).then(r=>r&&r.error&&alert('Could not open '+(a.name||a.id)+':\n'+r.error)),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)})})
+ .catch(error=>console.error('Could not load installed Store apps:',error))}
 const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#b4bac6"/></linearGradient></defs><rect width="100" height="100" fill="url(#glp)"/>'+[['#ff5f57','#febc2e','#28c840'],['#5ac8fa','#0a84ff','#af52de'],['#ff2d92','#ff9500','#34c759']].map((r,y)=>r.map((c,x)=>`<rect x="${20+x*22}" y="${20+y*22}" width="16" height="16" rx="4.500" fill="${c}"/>`).join('')).join('')+'</svg>';
 {const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();dock.prepend(d);icons.unshift(d)}
 function launch(id){
@@ -438,6 +523,163 @@ function clk(){const now=new Date(),date=cfg.showDate?now.toLocaleDateString([],
  $('#clock').textContent=date+now.toLocaleTimeString([],{hour:cfg.clock24?'2-digit':'numeric',minute:'2-digit',...(cfg.clockSeconds?{second:'2-digit'}:{}),...(cfg.clock24?{hourCycle:'h23'}:{})})}
 setInterval(()=>$('#clock')&&clk(),1000);
 /* apps */
+function notesInit(el){
+ const STORE='silk.notes.v2',LEGACY='silk.notes',SAFE_TAGS=new Set(['P','DIV','BR','H1','H2','H3','BLOCKQUOTE','UL','OL','LI','B','STRONG','I','EM','U','S','A','INPUT']);
+ const folders=[{id:'notes',name:'Notes',builtin:true}],notes=[],now=()=>Date.now(),makeId=()=>`${now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
+ let currentFolder='all',currentNote='',query='',saveTimer,statusTimer;
+ const body=el.querySelector('.body');
+ body.innerHTML=`<div class="notes-app"><aside class="notes-folders"><div class="notes-brand"><span class="notes-brand-mark">N</span><span>Notes</span></div><div class="notes-section-label">Library</div><nav class="notes-folder-scroll" aria-label="Note folders"></nav><div class="notes-folder-actions"><button class="notes-quiet-button" data-action="new-folder">＋ New folder</button></div></aside><section class="notes-list"><header class="notes-list-head"><h2 class="notes-list-title">All Notes</h2><button class="notes-new" type="button" data-action="new-note" title="New note" aria-label="New note">+</button></header><label class="notes-search">${uiIcon('search')}<input type="search" placeholder="Search notes" aria-label="Search notes"></label><div class="notes-items"></div></section><section class="notes-editor-pane"><div class="notes-toolbar"><div class="notes-toolbar-group"><select class="notes-format-select" aria-label="Text style"><option value="P">Body</option><option value="H1">Title</option><option value="H2">Heading</option><option value="H3">Subheading</option><option value="BLOCKQUOTE">Quote</option></select><button class="notes-tool" type="button" data-format="bold" title="Bold" aria-label="Bold"><b>B</b></button><button class="notes-tool" type="button" data-format="italic" title="Italic" aria-label="Italic"><i>I</i></button><button class="notes-tool" type="button" data-format="underline" title="Underline" aria-label="Underline"><u>U</u></button></div><span class="notes-toolbar-divider"></span><div class="notes-toolbar-group"><button class="notes-tool" type="button" data-format="insertUnorderedList" title="Bulleted list" aria-label="Bulleted list">☷</button><button class="notes-tool" type="button" data-action="checklist" title="Checklist" aria-label="Checklist">☑</button><button class="notes-tool" type="button" data-action="link" title="Add link" aria-label="Add link">↗</button></div><span class="notes-toolbar-divider"></span><div class="notes-toolbar-group"><button class="notes-tool" type="button" data-action="pin" title="Pin note" aria-label="Pin note">☆</button><button class="notes-tool" type="button" data-action="export" title="Export note" aria-label="Export note">↓</button><button class="notes-tool" type="button" data-action="delete" title="Move to Trash" aria-label="Move to Trash">⌫</button></div></div><div class="notes-trash-banner" hidden></div><div class="notes-editor-scroll"><div class="notes-editor-empty" hidden><span class="notes-empty-mark">N</span><h2>Your ideas, in one place</h2><p>Select a note to keep writing, or start with a fresh page.</p><button type="button" data-action="new-note">Create a note</button></div><input class="notes-title" type="text" placeholder="New note" aria-label="Note title" maxlength="160"><div class="notes-meta"><span class="notes-meta-folder"></span><span class="notes-meta-dot"></span><time></time></div><article class="notes-editor" contenteditable="true" role="textbox" aria-label="Note content" aria-multiline="true" data-placeholder="Start writing…"></article></div><footer class="notes-footer" role="status" aria-live="polite">Saved on this device</footer></section></div>`;
+ const folderNav=body.querySelector('.notes-folder-scroll'),list=body.querySelector('.notes-items'),listTitle=body.querySelector('.notes-list-title'),search=body.querySelector('.notes-search input'),title=body.querySelector('.notes-title'),editor=body.querySelector('.notes-editor'),metaFolder=body.querySelector('.notes-meta-folder'),metaTime=body.querySelector('.notes-meta time'),footer=body.querySelector('.notes-footer'),trashBanner=body.querySelector('.notes-trash-banner'),editorPane=body.querySelector('.notes-editor-pane'),emptyEditor=body.querySelector('.notes-editor-empty'),pinButton=body.querySelector('[data-action=pin]'),formatSelect=body.querySelector('.notes-format-select');
+ const escapeHtml=value=>esc(String(value??''));
+ function sanitizeHtml(input){
+  const parsed=new DOMParser().parseFromString(`<body>${String(input||'')}</body>`,'text/html'),output=document.createDocumentFragment();
+  function copy(node,parent){
+   if(node.nodeType===Node.TEXT_NODE){parent.appendChild(document.createTextNode(node.nodeValue));return}
+   if(node.nodeType!==Node.ELEMENT_NODE)return;
+   const tag=node.tagName;
+   if(['SCRIPT','STYLE','IFRAME','OBJECT','SVG','MATH'].includes(tag))return;
+   if(!SAFE_TAGS.has(tag)){node.childNodes.forEach(child=>copy(child,parent));return}
+   const clean=document.createElement(tag.toLowerCase());
+   if(tag==='INPUT'&&node.getAttribute('type')==='checkbox'){clean.type='checkbox';clean.checked=node.hasAttribute('checked');clean.contentEditable='false';clean.setAttribute('aria-label','Checklist item')}
+   if(tag==='A'){try{const url=new URL(node.getAttribute('href')||'');if(['http:','https:','mailto:'].includes(url.protocol)){clean.href=url.href;clean.target='_blank';clean.rel='noopener noreferrer'}}catch{}}
+   node.childNodes.forEach(child=>copy(child,clean));parent.appendChild(clean);
+  }
+  parsed.body.childNodes.forEach(node=>copy(node,output));return output;
+ }
+ function plainText(html){const temp=document.createElement('div');temp.appendChild(sanitizeHtml(html));return temp.innerText||temp.textContent||''}
+ function persist(){
+  try{localStorage.setItem(STORE,JSON.stringify({version:1,folders,notes}));footer.textContent='Saved on this device';return true}
+  catch(error){console.error('Could not save Notes:',error);footer.textContent='Could not save — device storage may be full';return false}
+ }
+ try{
+  const saved=JSON.parse(localStorage.getItem(STORE)||'null');
+  if(saved?.version===1&&Array.isArray(saved.folders)&&Array.isArray(saved.notes)){
+   for(const folder of saved.folders)if(folder&&typeof folder.id==='string'&&typeof folder.name==='string'&&folder.id!=='notes'&&!folders.some(item=>item.id===folder.id))folders.push({id:folder.id,name:folder.name.slice(0,40)});
+   const validFolders=new Set(folders.map(folder=>folder.id));
+   for(const note of saved.notes)if(note&&typeof note.id==='string'&&typeof note.title==='string'&&typeof note.body==='string'){
+    notes.push({id:note.id,folderId:validFolders.has(note.folderId)?note.folderId:'notes',title:note.title.slice(0,160),body:note.body,createdAt:Number(note.createdAt)||now(),updatedAt:Number(note.updatedAt)||now(),pinned:note.pinned===true,deletedAt:Number(note.deletedAt)||0,font:['system','serif','mono'].includes(note.font)?note.font:'system'});
+   }
+  }else if(typeof localStorage.getItem(LEGACY)==='string'&&localStorage.getItem(LEGACY)){
+   const text=localStorage.getItem(LEGACY),note={id:makeId(),folderId:'notes',title:'',body:text.split(/\r?\n/).map(line=>`<p>${escapeHtml(line)||'<br>'}</p>`).join(''),createdAt:now(),updatedAt:now(),pinned:false,deletedAt:0,font:'system'};
+   notes.push(note);persist();
+  }
+ }catch(error){console.error('Could not read saved Notes:',error);footer.textContent='Could not read saved notes'}
+ function activeNote(){return notes.find(note=>note.id===currentNote)||null}
+ function visibleNotes(){
+  const needle=query.toLocaleLowerCase();
+  return notes.filter(note=>{
+   if(currentFolder==='trash'?!note.deletedAt:!!note.deletedAt)return false;
+   if(currentFolder==='pinned'&&!note.pinned)return false;
+   if(currentFolder!=='all'&&currentFolder!=='pinned'&&currentFolder!=='trash'&&note.folderId!==currentFolder)return false;
+   return !needle||`${note.title} ${plainText(note.body)}`.toLocaleLowerCase().includes(needle);
+  }).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||b.updatedAt-a.updatedAt);
+ }
+ function dateLabel(time){
+  const date=new Date(time),today=new Date();
+  if(date.toDateString()===today.toDateString())return date.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const yesterday=new Date(today);yesterday.setDate(yesterday.getDate()-1);
+  return date.toDateString()===yesterday.toDateString()?'Yesterday':date.toLocaleDateString([],{month:'short',day:'numeric'});
+ }
+ function folderName(id){return folders.find(folder=>folder.id===id)?.name||'Notes'}
+ function renderFolders(){
+  const rows=[
+   {id:'all',name:'All Notes',icon:'▤',count:notes.filter(note=>!note.deletedAt).length},
+   {id:'pinned',name:'Pinned',icon:'☆',count:notes.filter(note=>note.pinned&&!note.deletedAt).length},
+   ...folders.map(folder=>({id:folder.id,name:folder.name,icon:'▱',count:notes.filter(note=>note.folderId===folder.id&&!note.deletedAt).length})),
+   {id:'trash',name:'Recently Deleted',icon:'⌫',count:notes.filter(note=>note.deletedAt).length}
+  ];
+  folderNav.innerHTML=rows.map(folder=>`<div class="notes-folder-row"><button type="button" class="notes-folder${currentFolder===folder.id?' active':''}" data-folder="${escapeHtml(folder.id)}" aria-current="${currentFolder===folder.id?'page':'false'}"><span class="notes-folder-icon">${folder.icon}</span><span class="notes-folder-name">${escapeHtml(folder.name)}</span><span class="notes-folder-count">${folder.count||''}</span></button>${folder.id!=='notes'&&folder.id!=='all'&&folder.id!=='pinned'&&folder.id!=='trash'?`<button class="notes-folder-delete" type="button" data-delete-folder="${escapeHtml(folder.id)}" aria-label="Delete ${escapeHtml(folder.name)} folder" title="Delete folder">×</button>`:''}</div>`).join('');
+  listTitle.textContent=rows.find(folder=>folder.id===currentFolder)?.name||folderName(currentFolder);
+ }
+ function renderList(updateEditor=true){
+  renderFolders();const scroll=list.scrollTop,items=visibleNotes();
+  if(currentNote&&!items.some(note=>note.id===currentNote))currentNote=items[0]?.id||'';
+  const selected=activeNote();list.innerHTML=items.map(note=>{const text=plainText(note.body).trim().replace(/\s+/g,' ');return `<article class="notes-item${note.id===currentNote?' active':''}" data-note="${escapeHtml(note.id)}" tabindex="0" aria-label="${escapeHtml(note.title||text.slice(0,50)||'Untitled note')}"><div class="notes-item-top"><time>${dateLabel(note.updatedAt)}</time>${note.pinned?'<span class="notes-pin" aria-label="Pinned">★</span>':''}</div><h3>${escapeHtml(note.title||text.split('\n')[0]||'New Note')}</h3><p>${escapeHtml(text||'No additional text')}</p></article>`}).join('');
+  if(!items.length)list.innerHTML=`<div class="notes-empty"><b>${currentFolder==='trash'?'Trash is empty':query?'No matches':'No notes yet'}</b><span>${query?'Try a different search.':currentFolder==='trash'?'Deleted notes will appear here.':'Create a note to capture an idea.'}</span></div>`;
+  list.scrollTop=scroll;if(updateEditor)renderEditor(selected);
+ }
+ function renderEditor(note){
+  const deleted=!!note?.deletedAt;editorPane.classList.toggle('is-trash',deleted);editorPane.classList.toggle('no-note',!note);emptyEditor.hidden=!!note;
+  title.value=note?.title||'';title.disabled=!note||deleted;
+  editor.innerHTML='';if(note)editor.appendChild(sanitizeHtml(note.body));editor.contentEditable=String(!!note&&!deleted);
+  editor.dataset.placeholder=note?'Start writing…':'Select a note or create a new one.';
+  metaFolder.textContent=note?(deleted?'Recently Deleted':folderName(note.folderId)):'';
+  metaTime.textContent=note?`Edited ${dateLabel(note.updatedAt)}`:'';
+  pinButton.textContent=note?.pinned?'★':'☆';pinButton.classList.toggle('active',!!note?.pinned);pinButton.disabled=!note||deleted;
+  body.querySelectorAll('.notes-toolbar [data-format],.notes-toolbar [data-action]').forEach(button=>{if(!['new-note','new-folder','restore','permanent'].includes(button.dataset.action))button.disabled=!note||deleted});
+  formatSelect.disabled=!note||deleted;
+  trashBanner.hidden=!deleted;
+  trashBanner.innerHTML=deleted?`This note is in Recently Deleted. <button class="notes-quiet-button" data-action="restore">Restore</button> <button class="notes-quiet-button" data-action="permanent">Delete permanently</button>`:'';
+  if(!note)footer.textContent='Notes are stored on this device';
+  else if(deleted)footer.textContent='Deleted note';
+  else footer.textContent='Saved on this device';
+  const fonts={system:'ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',serif:'Georgia,"Times New Roman",serif',mono:'ui-monospace,SFMono-Regular,Consolas,monospace'};
+  editor.style.fontFamily=fonts[note?.font]||fonts.system;
+ }
+ function saveCurrent(){
+  const note=activeNote();if(!note||note.deletedAt)return;
+  const cleaned=document.createElement('div');cleaned.appendChild(sanitizeHtml(editor.innerHTML));
+  note.title=title.value.trimStart().slice(0,160);note.body=cleaned.innerHTML;note.updatedAt=now();persist();renderList(false);
+ }
+ function scheduleSave(){footer.textContent='Saving…';clearTimeout(saveTimer);saveTimer=setTimeout(saveCurrent,320)}
+ function createNote(){
+  const folderId=folders.some(folder=>folder.id===currentFolder)?currentFolder:(folders[0]?.id||'notes');
+  const note={id:makeId(),folderId,title:'',body:'',createdAt:now(),updatedAt:now(),pinned:false,deletedAt:0,font:'system'};
+  notes.push(note);currentFolder=folderId;query='';search.value='';currentNote=note.id;persist();renderList();title.focus();
+ }
+ function selectFolder(id){
+  currentFolder=id;query='';search.value='';const items=visibleNotes();currentNote=items[0]?.id||'';renderList();
+ }
+ function newFolder(){
+  const name=prompt('Name this folder:');if(!name||!name.trim())return;
+  if(folders.some(folder=>folder.name.toLocaleLowerCase()===name.trim().toLocaleLowerCase())){alert('A folder with that name already exists.');return}
+  const folder={id:makeId(),name:name.trim().slice(0,40)};folders.push(folder);currentFolder=folder.id;currentNote='';persist();renderList();
+ }
+ function deleteFolder(id){
+  const folder=folders.find(item=>item.id===id);if(!folder||folder.builtin)return;
+  if(!confirm(`Delete the “${folder.name}” folder? Notes in it will move to Notes.`))return;
+  notes.filter(note=>note.folderId===id).forEach(note=>{note.folderId='notes';note.updatedAt=now()});
+  folders.splice(folders.indexOf(folder),1);currentFolder='notes';currentNote='';persist();renderList();
+ }
+ function runFormat(command,value){
+  const note=activeNote();if(!note||note.deletedAt)return;
+  editor.focus();document.execCommand(command,false,value||null);scheduleSave();
+ }
+ function exportNote(){
+  const note=activeNote();if(!note)return;
+  const text=`${note.title||'Untitled note'}\n\n${plainText(note.body)}`.trimEnd(),blob=new Blob([text],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=`${(note.title||'Untitled note').replace(/[<>:"/\\|?*\x00-\x1f]/g,'-').slice(0,100)}.txt`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);footer.textContent='Note exported';
+ }
+ folderNav.onclick=event=>{const del=event.target.closest('[data-delete-folder]');if(del){deleteFolder(del.dataset.deleteFolder);return}const button=event.target.closest('[data-folder]');if(button)selectFolder(button.dataset.folder)};
+ list.onclick=event=>{const item=event.target.closest('[data-note]');if(!item)return;clearTimeout(saveTimer);saveCurrent();currentNote=item.dataset.note;renderList()};
+ list.onkeydown=event=>{if((event.key==='Enter'||event.key===' ')&&event.target.matches('[data-note]')){event.preventDefault();event.target.click()}};
+ search.oninput=()=>{clearTimeout(saveTimer);saveCurrent();query=search.value.trim();renderList()};
+ title.oninput=scheduleSave;editor.oninput=scheduleSave;
+ editor.onclick=event=>{if(event.target.matches('input[type=checkbox]')){event.preventDefault();event.target.checked=!event.target.checked;event.target.toggleAttribute('checked',event.target.checked);scheduleSave()}};
+ body.querySelector('[data-action=new-note]').onclick=createNote;
+ body.querySelector('[data-action=new-folder]').onclick=newFolder;
+ emptyEditor.querySelector('[data-action=new-note]').onclick=createNote;
+ body.querySelector('.notes-toolbar').onmousedown=event=>{if(event.target.closest('button'))event.preventDefault()};
+ body.querySelector('.notes-toolbar').onclick=event=>{
+  const button=event.target.closest('button');if(!button||button.disabled)return;
+  const format=button.dataset.format;if(format){runFormat(format);return}
+  const action=button.dataset.action,note=activeNote();if(!note)return;
+  if(action==='pin'){note.pinned=!note.pinned;note.updatedAt=now();persist();renderList()}
+  else if(action==='delete'){note.deletedAt=now();note.updatedAt=now();currentNote='';persist();renderList()}
+  else if(action==='checklist'){runFormat('insertHTML','<ul><li><input type="checkbox" aria-label="Checklist item"> <span></span></li></ul><p><br></p>')}
+  else if(action==='link'){const value=prompt('Enter a web address:');if(value){let url;try{url=new URL(value)}catch{try{url=new URL(`https://${value}`)}catch{url=null}}if(!url||!['https:','http:','mailto:'].includes(url.protocol)){alert('Enter a valid web address.');return}runFormat('createLink',url.href)}}
+  else if(action==='export')exportNote();
+  else if(action==='restore'){note.deletedAt=0;note.updatedAt=now();currentFolder=note.folderId;persist();renderList()}
+  else if(action==='permanent'&&confirm('Permanently delete this note? This cannot be undone.')){notes.splice(notes.indexOf(note),1);currentNote='';persist();renderList()}
+ };
+ trashBanner.onclick=event=>{
+  const button=event.target.closest('[data-action]'),note=activeNote();if(!button||!note?.deletedAt)return;
+  if(button.dataset.action==='restore'){note.deletedAt=0;note.updatedAt=now();currentFolder=note.folderId;persist();renderList()}
+  else if(button.dataset.action==='permanent'&&confirm('Permanently delete this note? This cannot be undone.')){notes.splice(notes.indexOf(note),1);currentNote='';persist();renderList()}
+ };
+ formatSelect.onchange=()=>runFormat('formatBlock',`<${formatSelect.value}>`);
+ renderList();
+}
 function finderInit(el){const b=el.querySelector('.body'),F=window.silk&&silk.files;
  b.innerHTML='<div class="fnd"><div class="fsb"></div><div class="fmn"><div class="ftb"><button class="fup">‹</button><b class="fpt"></b></div><div class="fls"></div></div></div>';
  const sb=b.querySelector('.fsb'),ls=b.querySelector('.fls'),pt=b.querySelector('.fpt'),j=(d,n)=>(d.endsWith('/')?d:d+'/')+n;let cur='',locations={};
@@ -455,20 +697,99 @@ function finderInit(el){const b=el.querySelector('.body'),F=window.silk&&silk.fi
  b.querySelector('.fup').onclick=()=>cur!=='/'&&go(cur.replace(/\/[^/]+\/?$/,'')||'/');
  F.home().then(h=>{locations={home:h,desktop:j(h,'Desktop'),documents:j(h,'Documents'),downloads:j(h,'Downloads')};sb.innerHTML=[['🏠','Home',h],['🖥️','Desktop',locations.desktop],['📄','Documents',locations.documents],['⬇️','Downloads',locations.downloads],['💽','Computer','/']].map(([i,n,p])=>`<div data-p="${esc(p)}">${i} ${n}</div>`).join('');
   sb.onclick=e=>{const x=e.target.closest('[data-p]');x&&go(x.dataset.p)};go(configuredLocation())})}
-function storeInit(el){const b=el.querySelector('.body');b.innerHTML='<div class="sto"><div class="stq"><input placeholder="Search Flathub apps" spellcheck="false"></div><div class="stl"></div></div>';
- const q=b.querySelector('input'),L=b.querySelector('.stl'),S=window.silk&&silk.store;let inst=new Set(),busy={},t;
- const msg=m=>L.innerHTML='<div class="stm">'+esc(m)+'</div>';
- const row=a=>`<div class="str"><b>${esc((a.name||'?')[0])}<img src="https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${esc(a.id)}.png" onerror="this.remove()"></b><div><h4>${esc(a.name)}</h4><p>${esc(a.desc||a.id)}</p></div><button class="stb" data-id="${esc(a.id)}"${busy[a.id]?' disabled':''}>${busy[a.id]?'Installing…':inst.has(a.id)?'Open':'Install'}</button></div>`;
- const draw=(l,h)=>L.innerHTML='<h5>'+h+'</h5>'+l.map(row).join('');
- async function home(){if(!S)return msg('The Store works when SilkOS runs on Linux.');msg('Loading…');const r=await S.installed();if(q.value.trim())return;if(r.error)return msg(r.error);
-  inst=new Set(r.apps.map(a=>a.id));r.apps.length?draw(r.apps,'Installed'):msg('Search for an app above, e.g. VLC, GIMP, Spotify or Steam.')}
- async function find(){const v=q.value.trim();if(!v||!S)return home();msg('Searching…');const r=await S.search(v);if(q.value.trim()!==v)return;
-  if(r.error)return msg(r.error);r.apps.length?draw(r.apps,'Results'):msg('No apps found for “'+v+'”.')}
- q.oninput=()=>{clearTimeout(t);t=setTimeout(find,350)};
- L.onclick=async e=>{const x=e.target.closest('.stb');if(!x||x.disabled)return;const id=x.dataset.id;if(inst.has(id)){x.disabled=true;x.textContent='Opening…';const r=await S.run(id);x.disabled=false;x.textContent='Open';if(r&&r.error)alert('Could not open the app:\n'+r.error);return}
-  busy[id]=1;x.disabled=true;x.textContent='Installing…';const r=await S.install(id);delete busy[id];if(r.ok){inst.add(id);syncFlatpaks()}
-  const n=L.querySelector(`.stb[data-id="${CSS.escape(id)}"]`);if(n){n.disabled=false;n.textContent=r.ok?'Open':'Retry';n.title=r.error||''}};
- home()}
+function storeInit(el){
+ const apps=[
+  {id:'org.spotify.Client',name:'Spotify',tag:'Music',category:'audio',summary:'Music and podcasts for every moment.',mark:'♫'},
+  {id:'org.mozilla.firefox',name:'Firefox',tag:'Browser',category:'internet',summary:'A fast browser built around your privacy.',mark:'F'},
+  {id:'org.videolan.VLC',name:'VLC',tag:'Video',category:'audio',summary:'Play almost any video or audio format.',mark:'▶'},
+  {id:'com.discordapp.Discord',name:'Discord',tag:'Community',category:'internet',summary:'Talk, share, and hang out with communities.',mark:'D'},
+  {id:'com.valvesoftware.Steam',name:'Steam',tag:'Games',category:'games',summary:'Discover and play your PC game library.',mark:'S'},
+  {id:'org.gimp.GIMP',name:'GIMP',tag:'Photo editing',category:'creative',summary:'A powerful free image editor.',mark:'G'},
+  {id:'org.libreoffice.LibreOffice',name:'LibreOffice',tag:'Office',category:'productivity',summary:'Documents, spreadsheets, and presentations.',mark:'L'},
+  {id:'org.obsproject.Studio',name:'OBS Studio',tag:'Streaming',category:'creative',summary:'Record and livestream your screen.',mark:'O'},
+  {id:'org.telegram.desktop',name:'Telegram',tag:'Messaging',category:'internet',summary:'Fast messaging across all your devices.',mark:'➤'},
+  {id:'org.kde.kdenlive',name:'Kdenlive',tag:'Video editing',category:'creative',summary:'Create polished videos with a full editor.',mark:'K'},
+  {id:'org.audacityteam.Audacity',name:'Audacity',tag:'Audio editing',category:'audio',summary:'Record and edit audio with precision.',mark:'A'},
+  {id:'org.blender.Blender',name:'Blender',tag:'3D design',category:'creative',summary:'Make 3D art, animation, and visual effects.',mark:'B'},
+  {id:'org.mozilla.Thunderbird',name:'Thunderbird',tag:'Email',category:'productivity',summary:'Keep your email and calendars in one place.',mark:'T'},
+  {id:'org.inkscape.Inkscape',name:'Inkscape',tag:'Vector design',category:'creative',summary:'Create illustrations and scalable graphics.',mark:'I'},
+  {id:'com.heroicgameslauncher.hgl',name:'Heroic Games Launcher',tag:'Games',category:'games',summary:'Manage games from multiple PC stores.',mark:'H'},
+  {id:'com.bitwarden.desktop',name:'Bitwarden',tag:'Password manager',category:'utilities',summary:'Keep passwords organized across devices.',mark:'B'}
+ ];
+ const categories=[
+  {id:'featured',name:'For you',description:'Popular picks to get your desktop started.'},
+  {id:'audio',name:'Audio & video',description:'Listen, watch, and make something worth sharing.'},
+  {id:'creative',name:'Creative',description:'Tools for design, photography, video, and sound.'},
+  {id:'games',name:'Games',description:'Find your next favorite game and game tools.'},
+  {id:'internet',name:'Internet',description:'Browsers, messaging, and online communities.'},
+  {id:'productivity',name:'Productivity',description:'Get organized and get more done.'},
+  {id:'utilities',name:'Utilities',description:'Handy tools for everyday desktop tasks.'}
+ ];
+ const b=el.querySelector('.body'),S=window.silk&&silk.store;
+ b.innerHTML=`<div class="sto"><header class="store-head"><div class="store-title"><div><h2>Discover apps</h2><p>Find something great for your desktop.</p></div></div><label class="store-search">${uiIcon('search')}<input type="search" placeholder="Search apps and games" spellcheck="false" autocomplete="off"></label></header><nav class="store-cats" aria-label="App categories" role="tablist"></nav><main class="store-content"><section class="store-feature"><span class="store-feature-mark" aria-hidden="true">♫</span><div class="store-feature-copy"><span class="store-eyebrow">Featured app · Music</span><h3>Make room for the music</h3><p>Your playlists, podcasts, and favorites in one place.</p></div><button class="stb" data-id="org.spotify.Client">Get Spotify</button></section><div class="store-section"><h3 class="store-heading"></h3><span class="store-count"></span></div><div class="store-grid"></div><div class="store-status" role="status" aria-live="polite"></div></main></div>`;
+ const q=b.querySelector('input'),nav=b.querySelector('.store-cats'),content=b.querySelector('.store-content'),feature=b.querySelector('.store-feature'),heading=b.querySelector('.store-heading'),count=b.querySelector('.store-count'),grid=b.querySelector('.store-grid'),status=b.querySelector('.store-status');
+ let installed=new Set(),busy=new Set(),active='featured',timer,searchRequest=0;
+ const category=id=>categories.find(item=>item.id===id)||categories[0];
+ const appCard=a=>`<article class="store-card"><div class="store-icon">${esc(a.mark||a.name?.[0]||'?')}<img src="https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${encodeURIComponent(a.id)}.png" alt="" loading="lazy" onerror="this.remove()"></div><div class="store-meta"><h4>${esc(a.name)}</h4><p>${esc(a.summary||a.desc||a.tag||a.id)}</p></div><button class="stb" data-id="${esc(a.id)}"${busy.has(a.id)||!S?' disabled':''}>${busy.has(a.id)?'Working…':installed.has(a.id)?'Open':'Get'}</button></article>`;
+ function renderCards(items,title,sub){
+  heading.textContent=title;count.textContent=sub||`${items.length} apps`;grid.innerHTML=items.map(appCard).join('');
+  if(!items.length)grid.innerHTML='<div class="stm">No apps found. Try another search.</div>';
+ }
+ function renderHome(){
+  const selected=category(active),items=active==='featured'?apps:apps.filter(app=>app.category===active);
+  nav.querySelectorAll('.store-cat').forEach(button=>{const selected=button.dataset.category===active;button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected))});
+  feature.hidden=!!q.value.trim();
+  renderCards(items,selected.name,selected.description);
+  status.textContent=S?'Curated picks from Flathub. Search Flathub for more apps.':'Browsing preview · installs are available when SilkOS runs on Linux.';
+ }
+ async function loadInstalled(){
+  if(!S){renderHome();return}
+  try{
+   const result=await S.installed();
+   if(result.error)throw new Error(result.error);
+   installed=new Set((result.apps||[]).map(app=>app.id));
+   if(!q.value.trim())renderHome();
+  }catch(error){console.error('Could not load installed Store apps:',error);status.textContent=error.message||'Could not load installed apps.';renderHome()}
+ }
+ async function search(){
+  const query=q.value.trim(),request=++searchRequest;
+  if(!query){active='featured';renderHome();return}
+  feature.hidden=true;heading.textContent='Search results';count.textContent='Searching Flathub…';grid.innerHTML='<div class="stm">Searching…</div>';
+  if(!S){count.textContent='Preview';grid.innerHTML='<div class="stm">Live search and installs are available when SilkOS runs on Linux.</div>';return}
+  try{
+   const result=await S.search(query);
+   if(request!==searchRequest||q.value.trim()!==query)return;
+   if(result.error)throw new Error(result.error);
+   renderCards(result.apps||[],'Search results',`${(result.apps||[]).length} found`);
+   status.textContent='Results from Flathub.';
+  }catch(error){
+   console.error('Could not search the Store:',error);
+   if(request===searchRequest){count.textContent='';grid.innerHTML=`<div class="stm">${esc(error.message||'Could not search Flathub.')}</div>`;status.textContent='Check your connection and try again.'}
+  }
+ }
+ nav.innerHTML=categories.map(item=>`<button class="store-cat" role="tab" aria-selected="false" data-category="${item.id}">${item.name}</button>`).join('');
+ nav.onclick=e=>{const button=e.target.closest('[data-category]');if(!button)return;active=button.dataset.category;q.value='';searchRequest++;renderHome()};
+ q.oninput=()=>{clearTimeout(timer);timer=setTimeout(search,280)};
+ q.onkeydown=e=>{if(e.key==='Enter'){clearTimeout(timer);search()}};
+ const activate=async button=>{
+  if(!S){status.textContent='Install apps when SilkOS runs on Linux.';return}
+  const id=button.dataset.id;if(!id||busy.has(id))return;
+  const isInstalled=installed.has(id);busy.add(id);button.disabled=true;button.textContent=isInstalled?'Opening…':'Installing…';status.textContent='';
+  try{
+   const result=isInstalled?await S.run(id):await S.install(id);
+   if(result?.error)throw new Error(result.error);
+   if(!isInstalled){installed.add(id);syncFlatpaks();status.textContent=`${apps.find(app=>app.id===id)?.name||id} installed successfully.`}
+  }catch(error){console.error(`Could not ${isInstalled?'open':'install'} Store app:`,error);status.textContent=error.message||`Could not ${isInstalled?'open':'install'} the app.`}
+  finally{
+   busy.delete(id);
+   const matching=[...content.querySelectorAll(`.stb[data-id="${CSS.escape(id)}"]`)];
+   matching.forEach(item=>{item.disabled=false;item.textContent=installed.has(id)?'Open':'Get'});
+  }
+ };
+ content.onclick=e=>{const button=e.target.closest('.stb');if(button)activate(button)};
+ renderHome();
+ loadInstalled();
+}
 function calcInit(el){let cur='0',acc=null,op=null,fresh=true;const s=el.querySelector('.scr');
  const ops={'+':(a,b)=>a+b,'−':(a,b)=>a-b,'×':(a,b)=>a*b,'÷':(a,b)=>a/b};
  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.textContent;
@@ -1019,7 +1340,7 @@ function settingsInit(el){
   try{const result=await silk.lock.status();if(!result.ok)throw new Error(result.error||'Could not read screen-lock settings.');lockConfigured=result.configured;current.hidden=!lockConfigured;status.textContent=lockConfigured?'A screen-lock password is set.':'No screen-lock password is set yet.'}
   catch(error){console.error('Could not load screen-lock settings:',error);status.textContent=error.message||'Could not load screen-lock settings.'}}
  function draw(k){cp=k;body.querySelectorAll('.it').forEach(n=>n.classList.toggle('on',n.dataset.p===k));const t=pane.scrollTop;pane.innerHTML=`<div class="settings-content">${P[k]()}</div>`;pane.scrollTop=t;if(k==='stor')stor();if(k==='sec')refreshLockSettings();if(k==='display'){const slider=pane.querySelector('[data-r=volume]'),mute=pane.querySelector('[data-t=muted]'),status=pane.querySelector('.volume-status');if(!window.silk||silk.platform!=='linux'||!silk.volume){slider.disabled=true;mute.disabled=true;status.textContent='Requires Linux audio'}else silk.volume().then(actual=>{if(cp!=='display')return;if(!Number.isFinite(actual)){slider.disabled=true;mute.disabled=true;status.textContent='Audio output control is unavailable.';return}volume=cfg.volume=actual;cfg.muted=actual===0;if(actual>0)lastAudibleVolume=cfg.lastAudibleVolume=actual;slider.value=String(actual);mute.classList.toggle('on',cfg.muted);status.textContent='Connected Linux audio';save()})}}
- async function stor(){const g=pane.querySelector('.grp'),S=window.silk&&silk.persist;if(!S){g.innerHTML=rw('Saving','Only when SilkOS runs on Linux');return}const r=await S.status();if(cp!=='stor')return;
+ async function stor(){const g=pane.querySelector('.grp'),S=window.silk&&silk.persist;if(!S||silk.platform!=='linux'){g.innerHTML=rw('Saving','Only when SilkOS runs on Linux');return}let r;try{r=await S.status()}catch(error){console.error('Could not inspect storage devices:',error);if(cp==='stor')g.innerHTML=rw('Saving',error.message||'Could not inspect storage devices.');return}if(cp!=='stor')return;if(r.error){g.innerHTML=rw('Saving',r.error);return}
   g.innerHTML=r.on?rw('Saving','On: your files, settings and apps are kept'):r.has?rw('Saving','Ready. Restart SilkOS to turn it on'):r.disk?`<div class="rw"><span>Save everything on empty disk ${esc(r.disk.name)} (${esc(r.disk.size)})</span><button class="stb" data-a="pers" data-d="${esc(r.disk.name)}">Set up</button></div>`:rw('Saving','Off')+'<div class="rw"><span class="mut">Add a second, empty virtual disk (8 GB or more) to this VM, restart, then come back here.</span></div>'}
  nav.onclick=e=>{const n=e.target.closest('.it');if(n)draw(n.dataset.p)};
  search.oninput=()=>{const q=search.value.trim().toLowerCase();nav.querySelectorAll('.it').forEach(n=>n.hidden=!!q&&!n.dataset.terms.includes(q))};
