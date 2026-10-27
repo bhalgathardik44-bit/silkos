@@ -13,7 +13,36 @@ FLAGS=""
 case "$CMDLINE" in *silkos.nosandbox*) FLAGS="--no-sandbox" ;; esac
 
 xset s off; xset -dpms; xset s noblank
-openbox >/tmp/openbox.log 2>&1 &
+# Use the image-wide config so stale per-user Openbox settings cannot override
+# the SilkOS decorations for Flatpak, Wine, terminal, and other app windows.
+OPENBOX_RC=/etc/xdg/openbox/rc.xml
+if [ ! -r "$OPENBOX_RC" ]; then
+  echo "Openbox config is missing: $OPENBOX_RC" >>/tmp/openbox.log
+  exit 1
+fi
+openbox --config-file "$OPENBOX_RC" >/tmp/openbox.log 2>&1 &
+OPENBOX_PID=$!
+tries=0
+until wmctrl -m >/dev/null 2>&1; do
+  if ! kill -0 "$OPENBOX_PID" 2>/dev/null || [ "$tries" -ge 50 ]; then
+    echo "Openbox did not become the window manager; see /tmp/openbox.log" >&2
+    exit 1
+  fi
+  tries=$((tries + 1))
+  sleep 0.1
+done
+
+# X11 window managers draw frames but cannot round their corners. Picom supplies
+# rounded corners and shadows for normal app windows; fullscreen SilkOS stays square.
+picom --config /dev/null --backend xrender --corner-radius 18 \
+  --shadow --shadow-radius 18 --shadow-opacity 0.28 \
+  --shadow-offset-x -8 --shadow-offset-y -8 --no-vsync \
+  >/tmp/picom.log 2>&1 &
+PICOM_PID=$!
+sleep 0.5
+if ! kill -0 "$PICOM_PID" 2>/dev/null; then
+  echo "Picom failed to start; rounded app windows are unavailable. See /tmp/picom.log" >&2
+fi
 
 APP="$(command -v silkos || echo /opt/SilkOS/silkos)"
 # Restart SilkOS if it ever exits or crashes, so you never end up on a black screen.
