@@ -26,5 +26,6 @@
 Real on Linux: Shut Down / Restart / Sleep (systemctl), battery (/sys), network status (nmcli), brightness (brightnessctl).
 Finder browses files (double-click an .exe to run it with Wine). Terminal opens xterm. Notes are saved automatically.
 Saving (persistence): add a second empty virtual disk to the VM, then Settings > Storage > Set up, and restart. Everything is kept after that. Installed Store apps appear in the dock and Launchpad.
+Installed desktop apps use SilkOS-style window title bars, with centered titles and controls on the left.
 Store app: searches and installs Flathub apps with flatpak (per-user, needs internet). On the live ISO, installed apps live in RAM and are gone after a reboot.
 Volume has a hook (`silk.volume`) but no slider in the UI yet. Still fake: Wi-Fi picker, Files app.
