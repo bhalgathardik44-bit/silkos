@@ -1,4 +1,5 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
+const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const { execFile, spawn } = require('child_process');
@@ -99,6 +100,28 @@ ipcMain.handle('store:run', (_, id) => {
   if (!IS_LINUX || !okId(id)) return false;
   spawn('flatpak', ['run', id], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
   return true;
+});
+/* ---- Finder + Terminal ---- */
+const isDir = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
+ipcMain.handle('fs:home', () => {
+  const h = os.homedir();
+  for (const d of ['Desktop', 'Documents', 'Downloads']) try { fs.mkdirSync(path.join(h, d), { recursive: true }); } catch {}
+  return h;
+});
+ipcMain.handle('fs:list', async (_, d) => {
+  try {
+    const ents = await fs.promises.readdir(String(d), { withFileTypes: true });
+    return { items: ents.filter(e => !e.name.startsWith('.')).map(e => ({ name: e.name, dir: e.isDirectory() || (e.isSymbolicLink() && isDir(path.join(d, e.name))) })).sort((a, b) => b.dir - a.dir || a.name.localeCompare(b.name)) };
+  } catch (e) { return { error: e.code === 'EACCES' ? 'You don\'t have permission to open this folder.' : 'Folder not found.' }; }
+});
+const detach = (cmd, args, cwd) => spawn(cmd, args, { detached: true, stdio: 'ignore', cwd }).on('error', () => {}).unref();
+ipcMain.handle('fs:open', (_, p) => {
+  p = String(p);
+  if (IS_LINUX && /\.exe$/i.test(p)) { detach('wine', [p], path.dirname(p)); return ''; }
+  return shell.openPath(p);
+});
+ipcMain.handle('sys:terminal', () => {
+  if (IS_LINUX) detach('xterm', ['-fa', 'DejaVu Sans Mono', '-fs', '11', '-bg', '#1e1e1e', '-fg', '#e6e6e6', '-geometry', '100x30', '-T', 'Terminal'], os.homedir());
 });
 if (IS_LINUX) {
   app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
