@@ -25,6 +25,9 @@ libpam-systemd
 polkitd
 # --- real hardware hooks used by SilkOS ---
 network-manager
+wpasupplicant
+wireless-regdb
+rfkill
 bluez
 flatpak
 playerctl

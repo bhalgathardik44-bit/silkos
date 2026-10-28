@@ -94,8 +94,10 @@ textarea{width:100%;height:100%;border:0;outline:0;resize:none;padding:14px;font
 .win{border-radius:18px;transform:scale(.92) translateY(14px);box-shadow:0 24px 70px rgba(0,0,0,.38),0 0 0 .5px rgba(0,0,0,.35);transition:transform .6s var(--spring),opacity .25s var(--ease),box-shadow .4s var(--ease)}
 .win.show{transform:none}
 .win.space-hidden{display:none!important}
-.win.space-leaving{opacity:0;transform:translateX(-22px) scale(.98);pointer-events:none;transition:opacity .2s var(--ease),transform .22s var(--ease)}
-.win.space-entering{opacity:0;transform:translateX(22px) scale(.98)}
+.win.space-leaving{opacity:0;transform:translateX(var(--space-exit-x,-18px)) scale(.99);pointer-events:none;transition:opacity .24s var(--ease),transform .28s var(--ease)}
+.win.space-entering{opacity:0;transform:translateX(var(--space-enter-x,18px)) scale(.99);transition:opacity .24s var(--ease),transform .28s var(--ease)}
+.win.space-swipe{transform:translate3d(var(--space-swipe-x),0,0);transition:none!important;pointer-events:none;will-change:transform}
+.win.space-swipe-settling{transition:transform .32s var(--ease)!important}
 .win.min{transform:scale(.04);transition:transform .55s cubic-bezier(.6,0,.25,1),opacity .45s cubic-bezier(.6,0,.25,1)}
 .win.closing{transform:scale(.9);transition:transform .25s var(--ease),opacity .25s}
 .win.inactive{box-shadow:0 12px 36px rgba(0,0,0,.22),0 0 0 .5px rgba(0,0,0,.3)}
@@ -195,18 +197,25 @@ body.reduce-motion .sbn .it,body.reduce-motion .settings-content,body.reduce-mot
 .wps{display:grid;grid-template-columns:repeat(auto-fill,108px);gap:14px;padding:14px}.wp{height:68px;border-radius:12px;position:relative;cursor:var(--curp);border:2px solid transparent;box-shadow:0 0 0 1px var(--line);transition:transform .3s var(--spring)}.wp:hover{transform:scale(1.05)}.wp.on{border-color:var(--accent)}
 .wp span{position:absolute;bottom:4px;left:8px;font-size:11px;color:#fff;text-shadow:0 1px 3px #0008}
 .rw.pick{cursor:var(--curp)}.rw.pick .ck{color:var(--accent);font-weight:700}
-#lp{position:fixed;inset:0;z-index:9400;display:flex;flex-direction:column;align-items:center;padding:56px 6vw 150px;background:transparent;opacity:0;pointer-events:none;transition:opacity .38s var(--ease);will-change:opacity}
-#lp::before{content:"";position:absolute;inset:0;background:rgba(24,28,44,.3);-webkit-backdrop-filter:blur(30px) saturate(1.55);backdrop-filter:blur(30px) saturate(1.55);opacity:0;transition:opacity .38s var(--ease);pointer-events:none}
+#lp{position:fixed;inset:0;z-index:9400;display:flex;flex-direction:column;align-items:center;padding:56px 6vw 150px;background:transparent;opacity:0;pointer-events:none;transition:opacity .24s var(--ease);will-change:opacity}
+#lp::before{content:"";position:absolute;inset:0;background:rgba(24,28,44,.3);-webkit-backdrop-filter:blur(var(--lp-blur,30px)) saturate(1.55);backdrop-filter:blur(var(--lp-blur,30px)) saturate(1.55);opacity:0;transition:opacity .28s var(--ease),backdrop-filter .24s var(--ease),-webkit-backdrop-filter .24s var(--ease);pointer-events:none}
 #lp.on{opacity:1;pointer-events:auto}
+#lp.gesture-active{opacity:1;pointer-events:none;transition:none}
+#lp.gesture-active::before{opacity:var(--lp-progress,0);transition:none}
 #lp>*{position:relative;z-index:1}
 body.lite #lp::before{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(18,18,28,.92)}
 body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
-#lp input{width:240px;height:30px;border:0;outline:0;border-radius:9px;padding:0 12px;font-size:14px;text-align:center;color:#fff;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3);user-select:text;transition:box-shadow .2s}
+#lp input{width:240px;height:30px;border:0;outline:0;border-radius:9px;padding:0 12px;font-size:14px;text-align:center;color:#fff;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3);user-select:text;opacity:0;transform:translateY(-8px);transition:opacity .2s var(--ease),transform .24s var(--ease),box-shadow .2s}
+#lp.on input{opacity:1;transform:none}
 #lp input::placeholder{color:rgba(255,255,255,.6)}#lp input:focus{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3),0 0 0 3px rgba(255,255,255,.22)}
-.lpg{flex:1;width:100%;max-width:1080px;margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,130px);justify-content:center;gap:44px 28px;align-content:start;overflow:auto}
-.lpa{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:0;transform:translate(var(--lp-dx,0px),var(--lp-dy,0px)) scale(.18) rotate(-8deg);transform-origin:center center;transition:opacity .24s var(--ease),transform .48s var(--spring);transition-delay:var(--lp-out-delay,0ms);cursor:grab;touch-action:none}
+.lpg{flex:1;width:100%;max-width:1080px;margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,130px);justify-content:center;gap:44px 28px;align-content:start;overflow:auto;opacity:0;transform:scale(.985);transition:opacity .2s var(--ease),transform .28s var(--ease)}
+#lp.on .lpg{opacity:1;transform:none}
+#lp.gesture-active .lpg{opacity:1;transform:translateY(var(--lp-grid-y,10px)) scale(var(--lp-grid-scale,.96));transition:none}
+.lpa{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:0;transform:translateY(10px) scale(.96);transform-origin:center center;transition:opacity .2s var(--ease),transform .24s var(--ease);transition-delay:var(--lp-out-delay,0ms);cursor:grab;touch-action:none}
 #lp.on::before{opacity:1}
+#lp.on.gesture-active::before{opacity:var(--lp-progress,0)}
 #lp.on .lpa{opacity:1;transform:none;transition-delay:var(--lp-delay,0ms)}
+#lp.gesture-active .lpa{opacity:var(--lp-progress,0);transform:translateY(var(--lp-icon-y,10px)) scale(var(--lp-icon-scale,.96));transition:none!important;transition-delay:0ms!important}
 .lpa.dragging,.ic.dragging{opacity:.42;cursor:grabbing}
 .lpa.drop-target b{box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 28px rgba(255,255,255,.5),0 8px 22px rgba(0,0,0,.35)}
 .ic.drop-target{filter:brightness(1.2);transform:scale(1.08)}
@@ -345,6 +354,7 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .cc-media-art{width:36px;height:36px;display:grid;place-items:center;flex:none;border-radius:7px;background:linear-gradient(145deg,#ee7899,#c82e61);color:#fff}.cc-media-art svg{width:19px;height:19px}
 .cc-media-meta{min-width:0;flex:1}.cc-media-meta strong,.cc-media-meta small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cc-media-meta strong{font-size:11px;font-weight:600}.cc-media-meta small{margin-top:3px;font-size:9px;opacity:.6}
 .cc-media-actions{display:flex;gap:3px}.cc-media-actions button{width:27px;height:27px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:inherit}.cc-media-actions button:hover:not(:disabled){background:var(--glass)}.cc-media-actions button:disabled{opacity:.35}.cc-media-actions svg{width:14px;height:14px}
+.cc-radio-actions{display:flex;gap:7px;margin:0 0 8px}.cc-radio-actions button,.cc-radio-pane button{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--sfield);color:inherit;font:inherit;font-size:10px;cursor:var(--curp)}.cc-radio-actions button{flex:1}.cc-radio-pane{padding:10px;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:var(--sfield)}.cc-radio-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}.cc-radio-head strong{flex:1;font-size:11px}.cc-radio-info{min-height:15px;margin-bottom:5px;font-size:10px;opacity:.65}.cc-radio-list{display:grid;gap:4px;max-height:150px;overflow:auto}.cc-radio-item{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;text-align:left}.cc-radio-item small{opacity:.6}.cc-wifi-join{display:flex;align-items:center;gap:6px;margin-top:8px}.cc-wifi-join strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;font-size:10px}.cc-wifi-join input{width:110px;min-width:50px;height:27px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--win);color:inherit;font:inherit;font-size:10px;user-select:text}
 @media(max-width:380px){.cc{padding:11px}.cc-toggles{gap:6px}.cc-service{gap:6px;padding:4px}.cc-glyph{width:24px;height:24px}.cc-tile-copy strong{font-size:10px}.cc-feature{padding:6px}}
 .sl{cursor:var(--curp)!important;touch-action:pan-y}.sl::-webkit-slider-thumb{cursor:var(--curp)}
 .resapp{min-width:0;background:var(--win)}.reshead{min-width:0;justify-content:space-between;gap:16px;padding:16px 20px}
@@ -396,6 +406,9 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .switcher-list.list .switcher-icon{width:30px;height:30px;border-radius:8px;font-size:19px}
 body.reduce-motion *,body.reduce-motion *::before,body.reduce-motion *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 body.static-wallpaper #wall{animation:none}
+body.space-swipe-active #wall{animation:none!important;transform:translate3d(var(--space-swipe-x),0,0)!important;z-index:0}
+.space-swipe-wall-incoming{position:fixed;inset:-10%;z-index:0;pointer-events:none;animation:none!important;transform:translate3d(var(--space-swipe-x),0,0)}
+body.space-swipe-settling #wall,.space-swipe-wall-incoming.space-swipe-settling{transition:transform .32s var(--ease)!important}
 body.high-contrast{--text:#000;--bar:#fff;--win:#fff;--glass:#fff;--line:rgba(0,0,0,.4);--sbar:#e5e5e5;--sfield:#f0f0f0}
 body.high-contrast.high-contrast-dark{--text:#fff;--bar:#080808;--win:#111;--glass:#111;--line:rgba(255,255,255,.55);--sbar:#181818;--sfield:#252525}
 body.high-contrast .win{box-shadow:0 0 0 2px var(--text)}
@@ -417,7 +430,8 @@ body.high-contrast .win{box-shadow:0 0 0 2px var(--text)}
 <div id="desk"></div>
 <div id="dockwrap"><div id="dock" class="glass"></div></div>
 <script>
-const $=s=>document.querySelector(s),desk=$('#desk'),dock=$('#dock');let icons=[],iconOrderReady=false,ignoreReorderClickUntil=0;
+const $=s=>document.querySelector(s),desk=$('#desk'),dock=$('#dock');let icons=[],iconOrderReady=false,suppressReorderClick=null;
+document.addEventListener('click',event=>{const pending=suppressReorderClick;if(!pending||Date.now()>pending.until||event.detail===0)return;if(event.target.closest(pending.selector)&&pending.container.contains(event.target)){suppressReorderClick=null;event.preventDefault();event.stopImmediatePropagation()}},true);
 const apps={
  finder:{n:'Finder',i:'🗂️',c:'linear-gradient(#6fd0ff,#1a7cff)',w:760,h:480,html:()=>'<div></div>',init:finderInit},
  browser:{n:'Browser',i:'🧭',c:'linear-gradient(#5ac8fa,#0a60ff)',w:1000,h:640,html:()=>`<div class="bwrap"><div class="stabs"></div><div class="main"><div class="side"><div></div></div><div class="pages"><div class="start"></div></div></div><div class="ov"></div></div>`,init:browserInit},
@@ -460,9 +474,9 @@ let z=10,wins={};
 function dockIcon(id){return dock.querySelector(`[data-id="${CSS.escape(id)}"]`)}
 function addIcon(id){const a=apps[id];
  const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-label',`${a.n}. Drag to reorder.`);d.style.background=a.c;d._s=1;
- d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>{if(Date.now()>=ignoreReorderClickUntil)launch(id)};d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launch(id)}};dock.appendChild(d);icons.push(d);if(iconOrderReady)applySavedOrder(dock,'.ic','dockOrder')}
+ d.draggable=false;d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launch(id)}};dock.appendChild(d);icons.push(d);if(iconOrderReady)applySavedOrder(dock,'.ic','dockOrder')}
 Object.keys(apps).forEach(addIcon);
-const DEF={theme:'auto',accent:'#0a60ff',wall:0,lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,dockOrder:[],launchpadOrder:[],engine:'google',sugg:true,bri:100,
+const DEF={theme:'auto',accent:'#0a60ff',wall:0,wallpaperImage:'',lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,dockOrder:[],launchpadOrder:[],engine:'google',sugg:true,bri:100,
  clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false};
 const cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('silk.cfg'))||{}}catch(e){return{}}})());
 let activeSpace=0,spacesAvailable=false,workspaceNames=Array.from({length:4},(_,index)=>`Desktop ${index+1}`);
@@ -475,11 +489,12 @@ function setupIconReordering(container,selector,key){
  const items=()=>[...container.querySelectorAll(selector)];
  const animateReflow=before=>items().forEach(item=>{const old=before.get(item);if(!old)return;const rect=item.getBoundingClientRect(),dx=old.left-rect.left,dy=old.top-rect.top;if(Math.abs(dx)+Math.abs(dy)<1)return;item.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})});
  const reorderAt=(x,y)=>{
+  if(!state)return;
   const target=document.elementFromPoint(x,y)?.closest(selector);
   if(!target||target===state.item||!container.contains(target))return;
   const rect=target.getBoundingClientRect(),vertical=container===dock&&cfg.dockPosition!=='bottom';
   const after=vertical?y>rect.top+rect.height/2:x>rect.left+rect.width/2;
-  if(after?state.item.nextElementSibling===target:target.nextElementSibling===state.item)return;
+  if(after?target.nextElementSibling===state.item:state.item.nextElementSibling===target)return;
   const before=new Map(items().map(item=>[item,item.getBoundingClientRect()]));
   container.insertBefore(state.item,after?target.nextSibling:target);
   animateReflow(before);
@@ -487,47 +502,110 @@ function setupIconReordering(container,selector,key){
  container.addEventListener('pointerdown',event=>{
   if(event.button!==0||event.target.closest('button,input,textarea,select')||!event.target.closest(selector))return;
   const item=event.target.closest(selector);state={item,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,ghost:null};
-  item.setPointerCapture(event.pointerId);
  });
- container.addEventListener('pointermove',event=>{
+ const move=event=>{
   if(!state||event.pointerId!==state.pointerId)return;
   state.x=event.clientX;state.y=event.clientY;
   if(container===dock)mx=cfg.dockPosition==='bottom'?event.clientX:event.clientY;
   if(!state.moved&&Math.hypot(event.clientX-state.startX,event.clientY-state.startY)<6)return;
   if(!state.moved){
-   state.moved=true;ignoreReorderClickUntil=Date.now()+500;state.item.classList.add('dragging');
+   state.moved=true;event.preventDefault();state.item.classList.add('dragging');
    const icon=state.item.getBoundingClientRect();state.ghost=state.item.cloneNode(true);state.ghost.classList.add('icon-drag-ghost');state.ghost.classList.remove('on','dragging','drop-target');state.ghost.style.cssText+=`;left:${state.startX-icon.width/2}px;top:${state.startY-icon.height/2}px;width:${icon.width}px;height:${icon.height}px`;
    document.body.appendChild(state.ghost);
-   if(container===dock)state.item.setPointerCapture(event.pointerId);
   }
   if(state.ghost)state.ghost.style.transform=`translate(${event.clientX-state.startX}px,${event.clientY-state.startY}px) scale(1.08)`;
   reorderAt(event.clientX,event.clientY);
- });
+ };
  const finish=event=>{
   if(!state||event.pointerId!==state.pointerId)return;
-  if(state.moved){ignoreReorderClickUntil=Date.now()+500;state.item.classList.remove('dragging');state.ghost?.remove();cfg[key]=items().map(item=>item.dataset.id);save()}
+  if(state.moved){suppressReorderClick={container,selector,until:Date.now()+500};state.item.classList.remove('dragging');state.ghost?.remove();cfg[key]=items().map(item=>item.dataset.id);save()}
   state=null;
  };
- container.addEventListener('pointerup',finish);container.addEventListener('pointercancel',finish);
- container.addEventListener('lostpointercapture',event=>{if(state&&event.pointerId===state.pointerId)finish(event)});
+ container.addEventListener('dragstart',event=>{if(event.target.closest(selector))event.preventDefault()});
+ window.addEventListener('pointermove',move,{capture:true});
+ window.addEventListener('pointerup',finish,{capture:true});
+ window.addEventListener('pointercancel',finish,{capture:true});
 }
 function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>{if(r.error)throw new Error(r.error);(r.apps||[]).forEach(a=>{if(apps[a.id])return;
  apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id).then(r=>r&&r.error&&alert('Could not open '+(a.name||a.id)+':\n'+r.error)),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)})})
  .catch(error=>console.error('Could not load installed Store apps:',error))}
 const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#b4bac6"/></linearGradient></defs><rect width="100" height="100" fill="url(#glp)"/>'+[['#ff5f57','#febc2e','#28c840'],['#5ac8fa','#0a84ff','#af52de'],['#ff2d92','#ff9500','#34c759']].map((r,y)=>r.map((c,x)=>`<rect x="${20+x*22}" y="${20+y*22}" width="16" height="16" rx="4.500" fill="${c}"/>`).join('')).join('')+'</svg>';
-{const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.draggable=true;d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-label','Launchpad. Drag to reorder.');d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>{if(Date.now()>=ignoreReorderClickUntil)launchpad()};d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launchpad()}};dock.prepend(d);icons.unshift(d);applySavedOrder(dock,'.ic','dockOrder')}
+{const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.draggable=false;d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-label','Launchpad. Drag to reorder.');d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launchpad()}};dock.prepend(d);icons.unshift(d);applySavedOrder(dock,'.ic','dockOrder')}
 setupIconReordering(dock,'.ic','dockOrder');
 function refreshDockIndicators(){icons.forEach(icon=>icon.classList.toggle('on',!!wins[icon.dataset.id]&&wins[icon.dataset.id].dataset.space===String(activeSpace)&&!wins[icon.dataset.id].classList.contains('min')))}
-async function switchSpace(index,syncSystem=true){
+let spaceGesture=null,spaceSettleTimer=null,spaceTransition=null;
+function updateSpaceGesture(state,progress){
+ state.progress=Math.max(0,Math.min(1,progress));
+ const width=innerWidth,offset=state.progress*width,direction=state.direction;
+ $('#wall').style.setProperty('--space-swipe-x',`${-direction*offset}px`);
+ state.incomingWall.style.setProperty('--space-swipe-x',`${direction*(width-offset)}px`);
+ Object.values(wins).forEach(win=>{
+  if(!win.classList.contains('space-swipe'))return;
+  const isOutgoing=Number(win.dataset.space)===state.from;
+  win.style.setProperty('--space-swipe-x',`${isOutgoing?-direction*offset:direction*(width-offset)}px`)
+ })
+}
+function clearSpaceGesture(state){
+ document.body.classList.remove('space-swipe-active','space-swipe-settling');
+ $('#wall').classList.remove('space-swipe-outgoing');
+ $('#wall').style.removeProperty('--space-swipe-x');
+ state.incomingWall.remove();
+ Object.values(wins).forEach(win=>{
+  win.classList.remove('space-swipe','space-swipe-settling');
+  win.style.removeProperty('--space-swipe-x');
+  if(Number(win.dataset.space)===activeSpace&&!win.classList.contains('min'))win.classList.remove('space-hidden');
+  else win.classList.add('space-hidden')
+ });
+ if(spaceTransition===state)spaceTransition=null;
+ spaceSettleTimer=null
+}
+function beginSpaceGesture(direction){
+ if(lpOn()||![-1,1].includes(direction))return null;
+ if(spaceGesture)finishSpaceGesture(false,true);
+ if(spaceSettleTimer&&spaceTransition){clearTimeout(spaceSettleTimer);clearSpaceGesture(spaceTransition)}
+ const wall=$('#wall'),incomingWall=document.createElement('div');
+ incomingWall.className='space-swipe-wall-incoming';incomingWall.style.background=getComputedStyle(wall).background;
+ document.body.insertBefore(incomingWall,$('#menubar'));
+ const state={from:activeSpace,to:(activeSpace+direction+4)%4,direction,progress:0,incomingWall};
+ spaceGesture=spaceTransition=state;document.body.classList.add('space-swipe-active');wall.classList.add('space-swipe-outgoing');
+ Object.values(wins).forEach(win=>{
+  const desktop=Number(win.dataset.space);
+  if((desktop===state.from||desktop===state.to)&&!win.classList.contains('min')&&!win.classList.contains('closing')){
+   win.classList.remove('space-hidden','space-leaving','space-entering');win.style.display='';win.classList.add('space-swipe')
+  }
+ });
+ updateSpaceGesture(state,0);
+ return state
+}
+function finishSpaceGesture(commit,immediate=false){
+ const state=spaceGesture;if(!state)return;
+ spaceGesture=null;
+ const completed=commit&&state.progress>=.5;
+ if(completed){activeSpace=state.to;updateSpaceButton();refreshDockIndicators();if(lpOn())launchpad(false)}
+ if(immediate){clearSpaceGesture(state);return}
+ document.body.classList.add('space-swipe-settling');
+ Object.values(wins).forEach(win=>{if(win.classList.contains('space-swipe'))win.classList.add('space-swipe-settling')});
+ state.incomingWall.classList.add('space-swipe-settling');
+ updateSpaceGesture(state,completed?1:0);
+ if(completed&&window.silk?.platform==='linux'&&silk.workspaces){
+  silk.workspaces.switchTo(state.to).then(result=>{if(!result?.ok)console.error('Could not switch desktop workspace:',result?.error||'unknown error')}).catch(error=>console.error('Could not switch desktop workspace:',error))
+ }
+ spaceSettleTimer=setTimeout(()=>clearSpaceGesture(state),340)
+}
+async function switchSpace(index,syncSystem=true,direction){
  if(!Number.isInteger(index)||index<0||index>3)return;
+ if(spaceGesture)finishSpaceGesture(false,true);
+ if(spaceSettleTimer&&spaceTransition){clearTimeout(spaceSettleTimer);clearSpaceGesture(spaceTransition)}
  const previous=activeSpace;if(index===previous){updateSpaceButton();return}
+ const travel=direction|| (index>previous?1:-1);
  activeSpace=index;
  Object.entries(wins).forEach(([id,win])=>{
+  win.style.setProperty('--space-exit-x',`${-travel*18}px`);win.style.setProperty('--space-enter-x',`${travel*18}px`);
   if(win.dataset.space===String(index)){
    win.classList.remove('space-hidden','space-leaving');win.style.display='';
    if(!win.classList.contains('min')&&!cfg.reduceMotion){win.classList.add('space-entering');void win.offsetWidth;requestAnimationFrame(()=>win.classList.remove('space-entering'))}
   }else if(win.dataset.space===String(previous)&&!win.classList.contains('min')&&!cfg.reduceMotion){
-   win.classList.add('space-leaving');setTimeout(()=>{if(activeSpace!==Number(win.dataset.space)){win.classList.add('space-hidden');win.classList.remove('space-leaving')}},220)
+   win.classList.add('space-leaving');setTimeout(()=>{if(activeSpace!==Number(win.dataset.space)){win.classList.add('space-hidden');win.classList.remove('space-leaving')}},280)
   }else{win.classList.add('space-hidden');win.classList.remove('space-leaving','space-entering')}
  });
  if(lpOn())launchpad(false);
@@ -1102,6 +1180,7 @@ const IC={
  airdrop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.3 9.1a12.3 12.3 0 0 1 17.4 0M6.5 12.2a7.8 7.8 0 0 1 11 0M9.6 15.3a3.4 3.4 0 0 1 4.8 0"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg>',
  keyboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 9h.01M10 9h.01M13 9h.01M16 9h.01M7 12h.01M10 12h.01M13 12h.01M16 12h.01M8 15.5h8"/></svg>',
  mirror:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="13" height="12" rx="2"/><path d="M7 20h5m-2-4v4m7-12h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4"/></svg>',
+ lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg>',
  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>',
  sunLow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42"/></svg>',
  volumeLow:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/></svg>',
@@ -1253,16 +1332,56 @@ function setVolume(value,immediate=false,statusEl=null){
  },immediate);
 }
 function ccEl(){const el=document.createElement('div');el.className='cc';
- el.innerHTML=`<div class="cc-head"><div><h5>Control Center</h5><p>Quick system controls</p></div></div><div class="cc-toggles"><div class="cc-network"><button class="cc-service" data-service="wifi"><span class="cc-glyph">${IC.wifi}</span><span class="cc-tile-copy"><strong>Wi-Fi</strong><small>Checking…</small></span></button><button class="cc-service" data-service="bluetooth"><span class="cc-glyph">${IC.bluetooth}</span><span class="cc-tile-copy"><strong>Bluetooth</strong><small>Checking…</small></span></button><button class="cc-service" disabled aria-label="AirDrop is not available on Linux"><span class="cc-glyph">${IC.airdrop}</span><span class="cc-tile-copy"><strong>AirDrop</strong><small>Not available on Linux</small></span></button></div><div class="cc-feature-stack"><button class="cc-feature${cfg.quietMode?' active':''}" data-feature="quiet" aria-pressed="${!!cfg.quietMode}"><span class="cc-glyph">${IC.moon}</span><span class="cc-tile-copy"><strong>Do Not Disturb</strong><small>${cfg.quietMode?'On':'Off'}</small></span></button><label class="cc-feature cc-kbd"><span class="cc-glyph">${IC.keyboard}</span><span class="cc-tile-copy"><strong>Keyboard Brightness</strong><small class="cc-kbd-value">Checking…</small></span><input class="cc-kbd-range" type="range" min="0" max="100" value="0" aria-label="Keyboard brightness" disabled></label><button class="cc-feature" disabled aria-label="Screen mirroring is not available in this desktop build"><span class="cc-glyph">${IC.mirror}</span><span class="cc-tile-copy"><strong>Screen Mirroring</strong><small>Not available in this build</small></span></button></div></div><section class="cc-section"><div class="cc-section-head"><span>Display</span><small class="cc-bright-value">${bri}%</small></div><div class="cc-range-row"><span aria-hidden="true">${IC.sunLow}</span><input class="sl cc-brightness" type="range" min="5" max="100" value="${bri}" aria-label="Brightness"><span aria-hidden="true">${IC.sun}</span></div></section><section class="cc-section"><div class="cc-section-head"><span>Sound</span><small class="cc-volume-value">Loading…</small></div><div class="cc-range-row"><span aria-hidden="true">${IC.volumeLow}</span><input class="sl cc-volume" type="range" min="0" max="100" value="${volume}" aria-label="Volume"><span aria-hidden="true">${IC.volumeHigh}</span></div></section><section class="cc-media"><span class="cc-media-art">${IC.music}</span><span class="cc-media-meta"><strong class="cc-track">No media playing</strong><small class="cc-artist">Open a player to see controls</small></span><span class="cc-media-actions"><button data-media="previous" aria-label="Previous track" disabled>${IC.previous}</button><button data-media="play-pause" aria-label="Play or pause" disabled>${IC.play}</button><button data-media="next" aria-label="Next track" disabled>${IC.next}</button></span></section><p class="cc-status" role="status" aria-live="polite"></p>`;
+ el.innerHTML=`<div class="cc-head"><div><h5>Control Center</h5><p>Quick system controls</p></div></div><div class="cc-toggles"><div class="cc-network"><button class="cc-service" data-service="wifi"><span class="cc-glyph">${IC.wifi}</span><span class="cc-tile-copy"><strong>Wi-Fi</strong><small>Checking…</small></span></button><button class="cc-service" data-service="bluetooth"><span class="cc-glyph">${IC.bluetooth}</span><span class="cc-tile-copy"><strong>Bluetooth</strong><small>Checking…</small></span></button><button class="cc-service" disabled aria-label="AirDrop is not available on Linux"><span class="cc-glyph">${IC.airdrop}</span><span class="cc-tile-copy"><strong>AirDrop</strong><small>Not available on Linux</small></span></button></div><div class="cc-feature-stack"><button class="cc-feature${cfg.quietMode?' active':''}" data-feature="quiet" aria-pressed="${!!cfg.quietMode}"><span class="cc-glyph">${IC.moon}</span><span class="cc-tile-copy"><strong>Do Not Disturb</strong><small>${cfg.quietMode?'On':'Off'}</small></span></button><label class="cc-feature cc-kbd"><span class="cc-glyph">${IC.keyboard}</span><span class="cc-tile-copy"><strong>Keyboard Brightness</strong><small class="cc-kbd-value">Checking…</small></span><input class="cc-kbd-range" type="range" min="0" max="100" value="0" aria-label="Keyboard brightness" disabled></label><button class="cc-feature" disabled aria-label="Screen mirroring is not available in this desktop build"><span class="cc-glyph">${IC.mirror}</span><span class="cc-tile-copy"><strong>Screen Mirroring</strong><small>Not available in this build</small></span></button><button class="cc-feature" data-feature="lock"><span class="cc-glyph">${IC.lock}</span><span class="cc-tile-copy"><strong>Lock Screen</strong><small>Lock this session</small></span></button></div></div><section class="cc-section"><div class="cc-section-head"><span>Display</span><small class="cc-bright-value">${bri}%</small></div><div class="cc-range-row"><span aria-hidden="true">${IC.sunLow}</span><input class="sl cc-brightness" type="range" min="5" max="100" value="${bri}" aria-label="Brightness"><span aria-hidden="true">${IC.sun}</span></div></section><section class="cc-section"><div class="cc-section-head"><span>Sound</span><small class="cc-volume-value">Loading…</small></div><div class="cc-range-row"><span aria-hidden="true">${IC.volumeLow}</span><input class="sl cc-volume" type="range" min="0" max="100" value="${volume}" aria-label="Volume"><span aria-hidden="true">${IC.volumeHigh}</span></div></section><section class="cc-media"><span class="cc-media-art">${IC.music}</span><span class="cc-media-meta"><strong class="cc-track">No media playing</strong><small class="cc-artist">Open a player to see controls</small></span><span class="cc-media-actions"><button data-media="previous" aria-label="Previous track" disabled>${IC.previous}</button><button data-media="play-pause" aria-label="Play or pause" disabled>${IC.play}</button><button data-media="next" aria-label="Next track" disabled>${IC.next}</button></span></section><p class="cc-status" role="status" aria-live="polite"></p>`;
+ el.querySelector('.cc-toggles').insertAdjacentHTML('afterend',`<div class="cc-radio-actions"><button type="button" data-radio-open="wifi">Choose Wi-Fi network…</button><button type="button" data-radio-open="bluetooth">Nearby Bluetooth devices…</button></div><section class="cc-radio-pane" data-radio-pane="wifi" hidden><div class="cc-radio-head"><strong>Wi-Fi Networks</strong><button type="button" data-radio-refresh="wifi">Scan</button><button type="button" data-radio-close aria-label="Close">×</button></div><p class="cc-radio-info" data-radio-info="wifi">Scan for nearby networks.</p><div class="cc-radio-list" data-radio-list="wifi"></div><form class="cc-wifi-join" hidden><strong></strong><input type="password" name="password" autocomplete="current-password" aria-label="Wi-Fi password" placeholder="Password"><button type="submit">Join</button><button type="button" data-wifi-cancel>Cancel</button></form></section><section class="cc-radio-pane" data-radio-pane="bluetooth" hidden><div class="cc-radio-head"><strong>Bluetooth Devices</strong><button type="button" data-radio-refresh="bluetooth">Scan</button><button type="button" data-radio-close aria-label="Close">×</button></div><p class="cc-radio-info" data-radio-info="bluetooth">Scan for nearby devices.</p><div class="cc-radio-list" data-radio-list="bluetooth"></div></section>`);
  const status=el.querySelector('.cc-status'),brightness=el.querySelector('.cc-brightness'),volumeSlider=el.querySelector('.cc-volume');
  const setStatus=text=>{status.textContent=text||''};
  const service=(name,enabled,detail,available=true)=>{const button=el.querySelector(`[data-service="${name}"]`);button.classList.toggle('active',!!enabled);button.setAttribute('aria-pressed',String(!!enabled));button.disabled=!available;button.querySelector('small').textContent=detail};
- const refreshWifi=async()=>{if(!window.silk||silk.platform!=='linux'||!silk.wifi){service('wifi',false,'Unavailable',false);return}try{const result=await silk.wifi();if(!result||!result.available){service('wifi',false,'Network service unavailable',false);return}service('wifi',result.enabled,result.enabled?(result.connected?(result.name||'Connected'):'Not connected'):'Off')}catch(error){console.error('Could not read Wi-Fi status:',error);service('wifi',false,'Could not read status',false)}};
- const refreshBluetooth=async()=>{if(!window.silk||silk.platform!=='linux'||!silk.bluetooth){service('bluetooth',false,'Unavailable',false);return}try{const result=await silk.bluetooth();if(!result?.available){service('bluetooth',false,'No Bluetooth adapter',false);return}service('bluetooth',result.powered,result.powered?'On':'Off')}catch(error){console.error('Could not read Bluetooth status:',error);service('bluetooth',false,'Could not read status',false)}};
- const toggleRadio=async(name,read,write)=>{const button=el.querySelector(`[data-service="${name}"]`),label=button.querySelector('small'),wasEnabled=button.getAttribute('aria-pressed')==='true';button.disabled=true;label.textContent='Updating…';try{const result=await write(!wasEnabled);if(!result?.available){label.textContent='Control unavailable';setStatus(`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);await read();return}await read();setStatus('')}catch(error){console.error(`Could not change ${name} state:`,error);label.textContent='Could not change';setStatus(`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);button.disabled=false}};
+ const refreshWifi=async()=>{if(!window.silk||silk.platform!=='linux'||!silk.wifi){service('wifi',false,'Unavailable',false);return}try{const result=await silk.wifi();if(!result||!result.available){service('wifi',false,result?.error||'Network service unavailable',false);return}service('wifi',result.enabled,result.enabled?(result.connected?(result.name||'Connected'):'Not connected'):'Off')}catch(error){console.error('Could not read Wi-Fi status:',error);service('wifi',false,'Could not read status',false)}};
+ const refreshBluetooth=async()=>{if(!window.silk||silk.platform!=='linux'||!silk.bluetooth){service('bluetooth',false,'Unavailable',false);return}try{const result=await silk.bluetooth();if(!result?.available){service('bluetooth',false,result?.error||'No Bluetooth adapter',false);return}service('bluetooth',result.powered,result.powered?'On':'Off')}catch(error){console.error('Could not read Bluetooth status:',error);service('bluetooth',false,'Could not read status',false)}};
+ const toggleRadio=async(name,read,write)=>{const button=el.querySelector(`[data-service="${name}"]`),label=button.querySelector('small'),wasEnabled=button.getAttribute('aria-pressed')==='true';button.disabled=true;label.textContent='Updating…';try{const result=await write(!wasEnabled);if(!result?.available){setStatus(result?.error||`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);await read();return}await read();setStatus('')}catch(error){console.error(`Could not change ${name} state:`,error);label.textContent='Could not change';setStatus(`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);button.disabled=false}};
+ const radioPane=name=>el.querySelector(`[data-radio-pane="${name}"]`);
+ const openRadioPane=name=>{el.querySelectorAll('.cc-radio-pane').forEach(pane=>pane.hidden=pane.dataset.radioPane!==name);if(name==='wifi')loadWifiNetworks();else loadBluetoothDevices()};
+ const wifiList=el.querySelector('[data-radio-list="wifi"]'),wifiInfo=el.querySelector('[data-radio-info="wifi"]'),wifiForm=el.querySelector('.cc-wifi-join'),wifiPassword=wifiForm.querySelector('input');
+ async function connectToWifi(ssid,password=''){
+  wifiInfo.textContent=`Connecting to ${ssid}…`;
+  try{const result=await silk.connectWifi(ssid,password);if(!result?.ok)throw new Error(result?.error||'Could not connect to this network.');wifiInfo.textContent=`Connected to ${ssid}.`;wifiForm.hidden=true;wifiPassword.value='';await refreshWifi()}
+  catch(error){console.error('Could not connect to Wi-Fi:',error);wifiInfo.textContent=error.message||'Could not connect to this network.'}
+ }
+ async function loadWifiNetworks(){
+  wifiInfo.textContent='Scanning for Wi-Fi networks…';wifiList.replaceChildren();wifiForm.hidden=true;
+  if(!window.silk||silk.platform!=='linux'||!silk.wifiNetworks){wifiInfo.textContent='Wi-Fi scanning requires the Linux desktop app.';return}
+  try{
+   const result=await silk.wifiNetworks();if(!result?.available)throw new Error(result?.error||'Wi-Fi is unavailable.');
+   if(!result.enabled){wifiInfo.textContent='Turn Wi-Fi on to scan for networks.';return}
+   if(!result.networks?.length){wifiInfo.textContent='No Wi-Fi networks found. Try scanning again.';return}
+   wifiInfo.textContent='Select a network to connect.';
+   result.networks.forEach(network=>{
+    const item=document.createElement('button');item.type='button';item.className='cc-radio-item';item.innerHTML='<span></span><small></small>';item.querySelector('span').textContent=network.ssid;item.querySelector('small').textContent=`${network.signal}%${network.security?' · '+network.security:' · Open'}${network.active?' · Connected':''}`;
+    item.onclick=()=>{wifiForm.querySelector('strong').textContent=network.ssid;wifiPassword.hidden=!network.security;wifiPassword.required=!!network.security;wifiPassword.value='';wifiForm.hidden=false;if(network.security)wifiPassword.focus();else connectToWifi(network.ssid)};wifiList.appendChild(item)
+   })
+  }catch(error){console.error('Could not scan for Wi-Fi networks:',error);wifiInfo.textContent=error.message||'Could not scan for Wi-Fi networks.'}
+ }
+ wifiForm.onsubmit=event=>{event.preventDefault();connectToWifi(wifiForm.querySelector('strong').textContent,wifiPassword.value)};
+ wifiForm.querySelector('[data-wifi-cancel]').onclick=()=>{wifiForm.hidden=true;wifiPassword.value=''};
+ const bluetoothList=el.querySelector('[data-radio-list="bluetooth"]'),bluetoothInfo=el.querySelector('[data-radio-info="bluetooth"]');
+ async function loadBluetoothDevices(){
+  bluetoothInfo.textContent='Scanning for Bluetooth devices…';bluetoothList.replaceChildren();
+  if(!window.silk||silk.platform!=='linux'||!silk.bluetoothDevices){bluetoothInfo.textContent='Bluetooth scanning requires the Linux desktop app.';return}
+  try{
+   const result=await silk.bluetoothDevices();if(!result?.available)throw new Error(result?.error||'Bluetooth scanning is unavailable.');
+   if(!result.devices?.length){bluetoothInfo.textContent='No nearby devices found. Put your device in pairing mode and scan again.';return}
+   bluetoothInfo.textContent='Select a device to pair or connect.';
+   result.devices.forEach(device=>{const item=document.createElement('button');item.type='button';item.className='cc-radio-item';item.innerHTML='<span></span><small>Connect</small>';item.querySelector('span').textContent=device.name;item.onclick=async()=>{item.disabled=true;bluetoothInfo.textContent=`Connecting to ${device.name}…`;try{const connected=await silk.connectBluetooth(device.address);if(!connected?.ok)throw new Error(connected?.error||'Could not connect to the Bluetooth device.');bluetoothInfo.textContent=`Connected to ${device.name}.`}catch(error){console.error('Could not connect Bluetooth device:',error);bluetoothInfo.textContent=error.message||'Could not connect to the Bluetooth device.'}finally{item.disabled=false}};bluetoothList.appendChild(item)})
+  }catch(error){console.error('Could not scan for Bluetooth devices:',error);bluetoothInfo.textContent=error.message||'Could not scan for Bluetooth devices.'}
+ }
+ el.querySelectorAll('[data-radio-open]').forEach(button=>button.onclick=()=>openRadioPane(button.dataset.radioOpen));
+ el.querySelectorAll('[data-radio-refresh]').forEach(button=>button.onclick=()=>button.dataset.radioRefresh==='wifi'?loadWifiNetworks():loadBluetoothDevices());
+ el.querySelectorAll('[data-radio-close]').forEach(button=>button.onclick=()=>{radioPane('wifi').hidden=true;radioPane('bluetooth').hidden=true});
  el.querySelector('[data-service="wifi"]').onclick=()=>toggleRadio('wifi',refreshWifi,enabled=>silk.wifi(enabled));
  el.querySelector('[data-service="bluetooth"]').onclick=()=>toggleRadio('bluetooth',refreshBluetooth,enabled=>silk.bluetooth(enabled));
  const quiet=el.querySelector('[data-feature="quiet"]');quiet.onclick=()=>{cfg.quietMode=!cfg.quietMode;quiet.classList.toggle('active',cfg.quietMode);quiet.setAttribute('aria-pressed',String(cfg.quietMode));quiet.querySelector('small').textContent=cfg.quietMode?'On':'Off';saveSettings(true)};
+ el.querySelector('[data-feature="lock"]').onclick=()=>lockScreen();
  const kbd=el.querySelector('.cc-kbd-range'),kbdValue=el.querySelector('.cc-kbd-value');
  if(window.silk&&silk.platform==='linux'&&silk.keyboardBrightness)silk.keyboardBrightness().then(result=>{if(!el.isConnected)return;if(!result?.available){kbd.disabled=true;kbdValue.textContent='Not available';return}kbd.disabled=false;kbd.value=String(result.value);kbdValue.textContent=`${result.value}%`}).catch(error=>{console.error('Could not read keyboard brightness:',error);kbd.disabled=true;kbdValue.textContent='Unavailable'});
  else{kbd.disabled=true;kbdValue.textContent='Unavailable'}
@@ -1328,42 +1447,112 @@ const lpOn=()=>lp.classList.contains('on');
 function lpList(){const v=lpi.value.trim().toLowerCase();return Object.keys(apps).filter(k=>!v||apps[k].n.toLowerCase().includes(v))}
 function lpDraw(){const l=lpList(),q=!!lpi.value.trim();
  const ordered=orderedIconIds(l,'launchpadOrder');
- lpg.innerHTML=ordered.length?ordered.map((k,i)=>`<div class="lpa${q&&!i?' sel':''}" data-id="${esc(k)}" role="button" tabindex="0" aria-label="Launch ${esc(apps[k].n)}. Drag to reorder." style="--lp-delay:${Math.min(i,24)*16}ms;--lp-out-delay:${Math.max(0,Math.min(24,ordered.length-i-1))*12}ms"><b style="background:${apps[k].c}">${apps[k].svg||apps[k].i}</b><span>${esc(apps[k].n)}</span></div>`).join(''):'<div class="lpe">No Results</div>';
- const icon=dockIcon('launchpad'),origin=icon&&icon.getBoundingClientRect();
- lpg.querySelectorAll('.lpa').forEach(item=>{const rect=item.getBoundingClientRect();item.style.setProperty('--lp-dx',origin?`${origin.left+origin.width/2-rect.left-rect.width/2}px`:'0px');item.style.setProperty('--lp-dy',origin?`${origin.top+origin.height/2-rect.top-rect.height/2}px`:'0px')})}
-function launchpad(on=!lpOn()){if(on===lpOn())return;
+ lpg.innerHTML=ordered.length?ordered.map((k,i)=>`<div class="lpa${q&&!i?' sel':''}" data-id="${esc(k)}" role="button" tabindex="0" aria-label="Launch ${esc(apps[k].n)}. Drag to reorder." style="--lp-delay:${Math.min(i,16)*12}ms;--lp-out-delay:${Math.max(0,Math.min(16,ordered.length-i-1))*10}ms"><b style="background:${apps[k].c}">${apps[k].svg||apps[k].i}</b><span>${esc(apps[k].n)}</span></div>`).join(''):'<div class="lpe">No Results</div>'}
+function setLaunchpadGestureProgress(progress){
+ const value=Math.max(0,Math.min(1,progress));
+ lp.style.setProperty('--lp-progress',String(value));
+ lp.style.setProperty('--lp-blur',`${30*value}px`);
+ lp.style.setProperty('--lp-grid-y',`${10*(1-value)}px`);
+ lp.style.setProperty('--lp-grid-scale',String(.96+.04*value));
+ lp.style.setProperty('--lp-icon-y',`${10*(1-value)}px`);
+ lp.style.setProperty('--lp-icon-scale',String(.96+.04*value));
+}
+function beginLaunchpadGesture(startOpen,progress){
+ if(!startOpen){closeDd(true);spot(false);mx=null;lpi.value='';lpDraw()}
+ document.body.classList.add('launchpad-open');lp.classList.add('gesture-active');setLaunchpadGestureProgress(progress)
+}
+function clearLaunchpadGesture(open){
+ lp.style.setProperty('--lp-progress',open?'1':'0');
+ lp.style.setProperty('--lp-blur',open?'30px':'0px');
+ lp.classList.remove('gesture-active');
+ ['--lp-progress','--lp-grid-y','--lp-grid-scale','--lp-icon-y','--lp-icon-scale'].forEach(property=>lp.style.removeProperty(property));
+ if(!lpOn())document.body.classList.remove('launchpad-open');
+}
+function launchpad(on=!lpOn()){
+ if(lp.classList.contains('gesture-active'))clearLaunchpadGesture(on);
+ if(on===lpOn())return;
+ lp.style.setProperty('--lp-blur',on?'30px':'0px');
  if(on){closeDd(true);spot(false);mx=null;document.body.classList.add('launchpad-open');lpi.value='';lpDraw();void lp.offsetWidth;lp.classList.add('on');setTimeout(()=>lpi.focus(),30)}
  else{lp.classList.remove('on');document.body.classList.remove('launchpad-open');lpi.blur()}}
 function lpGo(id){launchpad(false);setTimeout(()=>launch(id),cfg.reduceMotion?20:500+Math.min(24,lpg.querySelectorAll('.lpa').length)*14)}
 setupIconReordering(lpg,'.lpa','launchpadOrder');
-lp.onclick=e=>{const a=e.target.closest('.lpa');if(a){if(Date.now()>=ignoreReorderClickUntil)lpGo(a.dataset.id)}else if(!e.target.closest('input'))launchpad(false)};
+lp.onclick=e=>{const a=e.target.closest('.lpa');if(a)lpGo(a.dataset.id);else if(!e.target.closest('input'))launchpad(false)};
 lp.onkeydown=e=>{const a=e.target.closest('.lpa');if(a&&(e.key==='Enter'||e.key===' ')){e.preventDefault();lpGo(a.dataset.id)}};
 lpi.oninput=lpDraw;
 lpi.onkeydown=e=>{if(e.key==='Enter'){const l=orderedIconIds(lpList(),'launchpadOrder');if(l.length)lpGo(l[0])}else if(e.key==='Escape')launchpad(false)};
 let touchGesture=null;
+let touchpadGesture=null;
+function handleTouchpadGesture(gesture){
+ if(!gesture)return;
+ if(gesture.type==='swipe'){
+  if(touchGesture?.fingers===4)return;
+  if(gesture.phase==='begin'){
+   const direction=gesture.direction==='left'?1:-1,state=beginSpaceGesture(direction);
+   touchpadGesture={type:'swipe',direction,ignored:!state};
+   return
+  }
+  if(!touchpadGesture||touchpadGesture.type!=='swipe')return;
+  if(touchpadGesture.ignored){if(gesture.phase==='end')touchpadGesture=null;return}
+  const active=touchpadGesture;
+  if(gesture.direction!==(active.direction===1?'left':'right'))return;
+  if(spaceGesture)updateSpaceGesture(spaceGesture,gesture.progress);
+  if(gesture.phase==='end'){touchpadGesture=null;finishSpaceGesture(gesture.progress>=.5)}
+  return
+ }
+ if(touchGesture?.fingers===5)return;
+ if(gesture.phase==='begin'){
+  const startOpen=lpOn(),opening=gesture.direction==='in',ignored=opening?startOpen:!startOpen;
+  touchpadGesture={type:'pinch',direction:gesture.direction,ignored};
+  if(!ignored)beginLaunchpadGesture(startOpen,opening?0:1);
+  return
+ }
+ if(!touchpadGesture||touchpadGesture.type!=='pinch')return;
+ const active=touchpadGesture;
+ if(active.ignored){if(gesture.phase==='end')touchpadGesture=null;return}
+ const progress=active.direction==='in'?gesture.progress:1-gesture.progress;
+ setLaunchpadGestureProgress(progress);
+ if(gesture.phase==='end'){touchpadGesture=null;launchpad(progress>=.5)}
+}
+if(window.silk?.onTouchpadGesture)silk.onTouchpadGesture(handleTouchpadGesture);
 function touchCenter(touches){const points=[...touches];return points.reduce((point,touch)=>({x:point.x+touch.clientX/points.length,y:point.y+touch.clientY/points.length}),{x:0,y:0})}
 function touchSpread(touches,center){const points=[...touches];return points.reduce((total,touch)=>total+Math.hypot(touch.clientX-center.x,touch.clientY-center.y),0)/points.length}
 document.addEventListener('touchstart',event=>{
  if(event.touches.length!==4&&event.touches.length!==5)return;
- const center=touchCenter(event.touches);touchGesture={fingers:event.touches.length,start:center,last:center,spread:touchSpread(event.touches,center)};
+ const center=touchCenter(event.touches),spread=touchSpread(event.touches,center);
+ touchGesture={fingers:event.touches.length,start:center,last:center,spread};
+ if(event.touches.length===5){
+  touchGesture.startOpen=lpOn();touchGesture.progress=touchGesture.startOpen?1:0;
+  beginLaunchpadGesture(touchGesture.startOpen,touchGesture.progress)
+ }
 },{passive:true});
 document.addEventListener('touchmove',event=>{
  if(!touchGesture||event.touches.length!==touchGesture.fingers)return;
  touchGesture.last=touchCenter(event.touches);touchGesture.lastPoints=[...event.touches].map(touch=>({clientX:touch.clientX,clientY:touch.clientY}));event.preventDefault();
+ if(touchGesture.fingers===4){
+  const dx=touchGesture.last.x-touchGesture.start.x,dy=touchGesture.last.y-touchGesture.start.y;
+  if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.1){
+   const direction=dx<0?1:-1;
+   if(touchGesture.spaceDirection!==direction){
+    if(spaceGesture)finishSpaceGesture(false,true);
+    touchGesture.spaceDirection=direction;beginSpaceGesture(direction)
+   }
+   if(spaceGesture){touchGesture.spaceProgress=Math.min(1,Math.abs(dx)/(innerWidth*.35));updateSpaceGesture(spaceGesture,touchGesture.spaceProgress)}
+  }else if(spaceGesture){finishSpaceGesture(false,true);touchGesture.spaceDirection=0}
+ }
+ if(touchGesture.fingers===5){
+  const spread=touchSpread(touchGesture.lastPoints,touchGesture.last),delta=touchGesture.startOpen?spread-touchGesture.spread:touchGesture.spread-spread;
+  touchGesture.progress=Math.max(0,Math.min(1,(delta+8)/Math.max(80,touchGesture.spread*.85)));
+  setLaunchpadGestureProgress(touchGesture.progress)
+ }
 },{passive:false});
 document.addEventListener('touchend',event=>{
  if(!touchGesture||event.touches.length>=touchGesture.fingers)return;
  const gesture=touchGesture;touchGesture=null;
  if(gesture.fingers===4){
-  const dx=gesture.last.x-gesture.start.x,dy=gesture.last.y-gesture.start.y;
-  if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.25)switchSpace((activeSpace+(dx<0?1:3))%4);
- }else{
-  const center=gesture.last,spread=gesture.lastPoints?touchSpread(gesture.lastPoints,center):gesture.spread;
-  if(gesture.spread-spread>Math.max(28,gesture.spread*.3))launchpad(true);
-  else if(spread-gesture.spread>Math.max(28,gesture.spread*.3))launchpad(false);
- }
+  if(gesture.spaceDirection)finishSpaceGesture(gesture.spaceProgress>=.5);
+ }else launchpad(gesture.progress>=.5);
 },{passive:true});
-document.addEventListener('touchcancel',()=>{touchGesture=null},{passive:true});
+document.addEventListener('touchcancel',()=>{const gesture=touchGesture;touchGesture=null;if(gesture?.fingers===5)launchpad(gesture.startOpen);else if(gesture?.fingers===4)finishSpaceGesture(false)},{passive:true});
 dock.addEventListener('click',e=>{if(lpOn()&&!e.target.closest('[data-id=launchpad]'))launchpad(false)});
 document.addEventListener('pointerdown',e=>{if(dd&&!e.target.closest('.dd,.mi'))closeDd();if(sp.classList.contains('on')&&!e.target.closest('#spot,[data-k=srch]'))spot(false)});
 addEventListener('blur',()=>closeDd());
@@ -1390,10 +1579,10 @@ function finishWindowSwitch(commit){
  const id=commit?switchState.ids[switchState.index]:null;switchState=null;switcher.classList.remove('on');
  if(id&&wins[id]){const win=wins[id];if(win.classList.contains('min'))restore(win,id);focus(win,id)}
 }
-function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4);if(k==='space-right')return switchSpace((activeSpace+1)%4);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
+function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4,true,-1);if(k==='space-right')return switchSpace((activeSpace+1)%4,true,1);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
  if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='d')b.addBm()}
 if(window.silk&&silk.onShortcut)silk.onShortcut(shortcut);
-document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad()}else if(e.key==='Escape'){if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false)}});
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Escape'){if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false)}});
 if(!window.silk){
  document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='Tab'){e.preventDefault();cycleWindows(e.shiftKey)}else if(e.key==='Escape'&&switchState){e.preventDefault();finishWindowSwitch(false)}});
  document.addEventListener('keyup',e=>{if(e.key==='Alt'||e.key==='AltGraph')finishWindowSwitch(true)});
@@ -1404,7 +1593,7 @@ const ENG={google:{n:'Google',u:'https://www.google.com/search?q='},ddg:{n:'Duck
 function searchURL(v){return(ENG[cfg.engine]||ENG.google).u+encodeURIComponent(v)}
 const WALLS=[['Aurora','radial-gradient(60% 60% at 20% 20%,#7aa7ff,transparent),radial-gradient(50% 50% at 80% 30%,#ff8fc7,transparent),radial-gradient(60% 60% at 60% 90%,#ffc27a,transparent),#3b3b8f'],['Sunset','radial-gradient(70% 60% at 30% 100%,#ff5e62,transparent),radial-gradient(60% 60% at 80% 20%,#ffc371,transparent),#5b2a86'],['Ocean','radial-gradient(60% 60% at 20% 30%,#4facfe,transparent),radial-gradient(60% 70% at 85% 80%,#00f2c3,transparent),#0b2a5b'],['Forest','radial-gradient(60% 60% at 25% 25%,#9be15d,transparent),radial-gradient(60% 60% at 80% 80%,#00a99d,transparent),#0f3d2e'],['Graphite','radial-gradient(60% 60% at 30% 20%,#6b7280,transparent),radial-gradient(60% 60% at 80% 90%,#374151,transparent),#111827']];
 function applyCfg(){const R=document.documentElement,dark=cfg.theme==='dark'||(cfg.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme==='auto'?R.removeAttribute('data-theme'):R.setAttribute('data-theme',cfg.theme);R.style.setProperty('--accent',cfg.accent);updateCursorSize();
- $('#wall').style.background=WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('static-wallpaper',!cfg.wallpaperMotion);document.body.classList.toggle('lite',!!cfg.lite);
+ const wall=$('#wall');wall.style.background=cfg.wallpaperImage?`center / cover no-repeat url("${cfg.wallpaperImage}")`:WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('static-wallpaper',!cfg.wallpaperMotion);document.body.classList.toggle('lite',!!cfg.lite);
  document.body.classList.toggle('reduce-motion',!!cfg.reduceMotion);document.body.classList.toggle('high-contrast',!!cfg.highContrast);document.body.classList.toggle('high-contrast-dark',!!cfg.highContrast&&dark);
  const dockWrap=$('#dockwrap');dockWrap.classList.remove('pos-left','pos-right');if(cfg.dockPosition!=='bottom')dockWrap.classList.add('pos-'+cfg.dockPosition);
  base=cfg.dock;maxS=cfg.mag?cfg.magAmt:1;dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;clk()}
@@ -1447,7 +1636,7 @@ function settingsInit(el){
  const sel=(k,l,options)=>`<label class="rw"><span>${l}</span><select data-pref="${k}">${options.map(([v,n])=>`<option value="${v}"${cfg[k]===v?' selected':''}>${n}</option>`).join('')}</select></label>`;
  const P={
   gen:()=>'<h2>General</h2><h3>About this Mac</h3><div class="grp">'+rw('SilkOS','Version 1.0')+rw('Engine',(navigator.userAgent.match(/Electron\/[\d.]+/)||['Web preview'])[0])+rw('Processor cores',navigator.hardwareConcurrency||'Not reported')+rw('Memory',navigator.deviceMemory?'≥ '+navigator.deviceMemory+' GB':'Not reported')+rw('Display',screen.width+' × '+screen.height)+'</div><h3>Reset</h3><div class="grp"><div class="rw"><span>Restore all SilkOS settings to defaults</span><button class="btn" data-a="reset">Reset Settings</button></div></div>',
-  app:()=>'<h2>Appearance</h2><h3>Interface style</h3><div class="grp"><div class="tiles">'+[['auto','Auto'],['light','Light'],['dark','Dark']].map(t=>`<div class="tl2${cfg.theme===t[0]?' on':''}" data-th="${t[0]}"><div class="pv ${t[0]}"></div><span>${t[1]}</span></div>`).join('')+'</div></div><h3>Accent color</h3><div class="grp"><div class="acs">'+['#0a60ff','#af52de','#ff2d92','#ff3b30','#ff9500','#34c759','#8e8e93'].map(c=>`<div class="ac${cfg.accent===c?' on':''}" data-ac="${c}" style="background:${c}" aria-label="Accent ${c}"></div>`).join('')+'</div></div><h3>Wallpaper</h3><div class="grp"><div class="wps">'+WALLS.map((w,i)=>`<div class="wp${cfg.wall===i?' on':''}" data-w="${i}" style="background:${w[1]}"><span>${w[0]}</span></div>`).join('')+tg('wallpaperMotion','Animate wallpaper')+'</div></div><div class="grp">'+tg('lite','Reduce transparency')+'</div>',
+  app:()=>'<h2>Appearance</h2><h3>Interface style</h3><div class="grp"><div class="tiles">'+[['auto','Auto'],['light','Light'],['dark','Dark']].map(t=>`<div class="tl2${cfg.theme===t[0]?' on':''}" data-th="${t[0]}"><div class="pv ${t[0]}"></div><span>${t[1]}</span></div>`).join('')+'</div></div><h3>Accent color</h3><div class="grp"><div class="acs">'+['#0a60ff','#af52de','#ff2d92','#ff3b30','#ff9500','#34c759','#8e8e93'].map(c=>`<div class="ac${cfg.accent===c?' on':''}" data-ac="${c}" style="background:${c}" aria-label="Accent ${c}"></div>`).join('')+'</div></div><h3>Wallpaper</h3><div class="grp"><div class="wps">'+WALLS.map((w,i)=>`<div class="wp${!cfg.wallpaperImage&&cfg.wall===i?' on':''}" data-w="${i}" style="background:${w[1]}"><span>${w[0]}</span></div>`).join('')+tg('wallpaperMotion','Animate wallpaper')+'</div><div class="rw"><span class="wallpaper-selected">Choose an image from this device</span><span><button class="btn" data-a="wallpaper-select">Choose Image…</button> <button class="btn" data-a="wallpaper-reset" disabled>Use Built-in</button></span></div><p class="lock-settings-status wallpaper-status" role="status" aria-live="polite"></p></div><div class="grp">'+tg('lite','Reduce transparency')+'</div>',
   session:()=>'<h2>Startup & Sessions</h2><h3>When SilkOS opens</h3><div class="grp">'+tg('startBrowser','Open Browser at startup')+tg('restoreWindows','Reopen apps from the previous session')+'</div><p class="lock-settings-note">Session restore remembers open SilkOS app windows on this device. Native Linux app windows are managed by the desktop and are not restored here.</p>',
   desk:()=>'<h2>Desktop & Dock</h2><h3>Dock</h3><div class="grp">'+sel('dockPosition','Position',[['bottom','Bottom'],['left','Left'],['right','Right']])+sl('dock','Icon size',40,80,cfg.dock)+tg('mag','Magnify icons on hover')+sl('magAmt','Magnification',12,20,Math.round(cfg.magAmt*10),.1)+tg('hide','Automatically hide the Dock')+'</div><h3>Menu bar</h3><div class="grp">'+tg('showDate','Show date in menu bar')+tg('clock24','Use 24-hour time')+tg('clockSeconds','Show seconds')+'</div>',
   win:()=>'<h2>Windows</h2><h3>New windows</h3><div class="grp">'+sl('windowScale','Default window size',70,130,Math.round(cfg.windowScale*100))+tg('centerWindows','Center new windows')+tg('rememberWindows','Remember window sizes and positions')+'</div><h3>Window actions</h3><div class="grp">'+tg('titlebarDoubleClick','Double-click title bar to zoom')+tg('confirmClose','Confirm before closing a window')+'</div>',
@@ -1457,20 +1646,31 @@ function settingsInit(el){
   files:()=>'<h2>Files</h2><h3>Finder</h3><div class="grp">'+sel('finderLocation','Open new Finder windows in',[['home','Home'],['desktop','Desktop'],['documents','Documents'],['downloads','Downloads'],['last','Last opened folder']])+sel('finderSort','Sort items by',[['folders','Folders first · A to Z'],['name','Name · A to Z'],['name-desc','Name · Z to A']])+tg('showHiddenFiles','Show hidden files and folders')+tg('hideFileExtensions','Hide filename extensions')+'</div>',
   stor:()=>'<h2>Storage</h2><div class="grp">'+rw('Saving','Checking…')+'</div>',
   web:()=>'<h2>Browser</h2><h3>Search engine</h3><div class="grp">'+Object.entries(ENG).map(([k,e])=>`<div class="rw pick" data-e="${k}"><span>${e.n}</span><span class="ck">${cfg.engine===k?'✓':''}</span></div>`).join('')+'</div><div class="grp">'+tg('sugg','Show live search suggestions')+'</div><h3>Data</h3><div class="grp"><div class="rw"><span>History · '+store.get('hist').length+' items</span><button class="btn" data-a="clrh">Clear</button></div><div class="rw"><span>Bookmarks · '+store.get('bm').length+' items</span><button class="btn" data-a="clrb">Clear</button></div></div>',
-  sec:()=>'<h2>Security</h2><div class="grp"><p class="lock-settings-note">Set a separate SilkOS screen-lock password. Any non-empty password is accepted; there is no 8-character minimum. The password is stored as a salted hash.</p><form class="lock-settings"><label class="lock-current-row" hidden>Current password<input name="current" type="password" autocomplete="current-password"></label><label>New password<input name="password" type="password" autocomplete="new-password" required></label><label>Confirm new password<input name="confirm" type="password" autocomplete="new-password" required></label><button class="btn" type="submit">Save Password</button><p class="lock-settings-status" role="status" aria-live="polite"></p></form></div>'};
+  sec:()=>'<h2>Security</h2><div class="grp"><p class="lock-settings-note">Set a separate SilkOS screen-lock password. Any non-empty password is accepted; there is no 8-character minimum. The password is stored as a salted hash.</p><form class="lock-settings"><label class="lock-current-row" hidden>Current password<input name="current" type="password" autocomplete="current-password"></label><label>New password<input name="password" type="password" autocomplete="new-password" required></label><label>Confirm new password<input name="confirm" type="password" autocomplete="new-password" required></label><button class="btn" type="submit">Save Password</button><p class="lock-settings-status" role="status" aria-live="polite"></p></form><div class="rw"><span>Lock this screen now</span><button class="btn" data-a="lock-now">Lock Screen</button></div></div>'};
  async function refreshLockSettings(){const note=pane.querySelector('.lock-settings-note'),status=pane.querySelector('.lock-settings-status'),current=pane.querySelector('.lock-current-row');
   if(!window.silk||!silk.lock){note.textContent='Screen-lock settings are available in the SilkOS desktop app.';return}
   try{const result=await silk.lock.status();if(!result.ok)throw new Error(result.error||'Could not read screen-lock settings.');lockConfigured=result.configured;current.hidden=!lockConfigured;status.textContent=lockConfigured?'A screen-lock password is set.':'No screen-lock password is set yet.'}
   catch(error){console.error('Could not load screen-lock settings:',error);status.textContent=error.message||'Could not load screen-lock settings.'}}
- function draw(k){cp=k;body.querySelectorAll('.it').forEach(n=>n.classList.toggle('on',n.dataset.p===k));const t=pane.scrollTop;pane.innerHTML=`<div class="settings-content">${P[k]()}</div>`;pane.scrollTop=t;if(k==='stor')stor();if(k==='sec')refreshLockSettings();if(k==='display'){const slider=pane.querySelector('[data-r=volume]'),mute=pane.querySelector('[data-t=muted]'),status=pane.querySelector('.volume-status');if(!window.silk||silk.platform!=='linux'||!silk.volume){slider.disabled=true;mute.disabled=true;status.textContent='Requires Linux audio'}else silk.volume().then(actual=>{if(cp!=='display')return;if(!Number.isFinite(actual)){slider.disabled=true;mute.disabled=true;status.textContent='Audio output control is unavailable.';return}volume=cfg.volume=actual;cfg.muted=actual===0;if(actual>0)lastAudibleVolume=cfg.lastAudibleVolume=actual;slider.value=String(actual);mute.classList.toggle('on',cfg.muted);status.textContent='Connected Linux audio';save()})}}
+ function draw(k){cp=k;body.querySelectorAll('.it').forEach(n=>n.classList.toggle('on',n.dataset.p===k));const t=pane.scrollTop;pane.innerHTML=`<div class="settings-content">${P[k]()}</div>`;pane.scrollTop=t;if(k==='app'){pane.querySelector('.wallpaper-selected').textContent=cfg.wallpaperImage?'Custom image selected':'Choose an image from this device';pane.querySelector('[data-a="wallpaper-reset"]').disabled=!cfg.wallpaperImage}if(k==='stor')stor();if(k==='sec')refreshLockSettings();if(k==='display'){const slider=pane.querySelector('[data-r=volume]'),mute=pane.querySelector('[data-t=muted]'),status=pane.querySelector('.volume-status');if(!window.silk||silk.platform!=='linux'||!silk.volume){slider.disabled=true;mute.disabled=true;status.textContent='Requires Linux audio'}else silk.volume().then(actual=>{if(cp!=='display')return;if(!Number.isFinite(actual)){slider.disabled=true;mute.disabled=true;status.textContent='Audio output control is unavailable.';return}volume=cfg.volume=actual;cfg.muted=actual===0;if(actual>0)lastAudibleVolume=cfg.lastAudibleVolume=actual;slider.value=String(actual);mute.classList.toggle('on',cfg.muted);status.textContent='Connected Linux audio';save()})}}
  async function stor(){const g=pane.querySelector('.grp'),S=window.silk&&silk.persist;if(!S||silk.platform!=='linux'){g.innerHTML=rw('Saving','Only when SilkOS runs on Linux');return}let r;try{r=await S.status()}catch(error){console.error('Could not inspect storage devices:',error);if(cp==='stor')g.innerHTML=rw('Saving',error.message||'Could not inspect storage devices.');return}if(cp!=='stor')return;if(r.error){g.innerHTML=rw('Saving',r.error);return}
   g.innerHTML=r.on?rw('Saving','On: your files, settings and apps are kept'):r.has?rw('Saving','Ready. Restart SilkOS to turn it on'):r.disk?`<div class="rw"><span>Save everything on empty disk ${esc(r.disk.name)} (${esc(r.disk.size)})</span><button class="stb" data-a="pers" data-d="${esc(r.disk.name)}">Set up</button></div>`:rw('Saving','Off')+'<div class="rw"><span class="mut">Add a second, empty virtual disk (8 GB or more) to this VM, restart, then come back here.</span></div>'}
  nav.onclick=e=>{const n=e.target.closest('.it');if(n)draw(n.dataset.p)};
  search.oninput=()=>{const q=search.value.trim().toLowerCase();nav.querySelectorAll('.it').forEach(n=>n.hidden=!!q&&!n.dataset.terms.includes(q))};
  search.onkeydown=e=>{if(e.key==='Enter'){const n=nav.querySelector('.it:not([hidden])');if(n)draw(n.dataset.p)}};
- pane.onclick=e=>{const t=e.target.closest('[data-th],[data-ac],[data-w],[data-t],[data-e],[data-a]');if(!t)return;const d=t.dataset;
+ pane.onclick=async e=>{const t=e.target.closest('[data-th],[data-ac],[data-w],[data-t],[data-e],[data-a]');if(!t)return;const d=t.dataset;
+  if(d.a==='wallpaper-select'){
+   const status=pane.querySelector('.wallpaper-status');
+   if(!window.silk||!silk.selectWallpaper){status.textContent='Custom wallpapers are available in the SilkOS desktop app.';return}
+   t.disabled=true;status.textContent='Choose an image…';
+   try{const result=await silk.selectWallpaper();if(result?.cancelled){status.textContent='';return}if(!result?.ok)throw new Error(result?.error||'Could not select an image.');cfg.wallpaperImage=result.url;save();applyCfg();draw(cp)}
+   catch(error){console.error('Could not set custom wallpaper:',error);status.textContent=error.message||'Could not set custom wallpaper.'}
+   finally{if(t.isConnected)t.disabled=false}
+   return
+  }
+  if(d.a==='wallpaper-reset'){cfg.wallpaperImage='';save();applyCfg();draw(cp);return}
+  if(d.a==='lock-now'){closeDd(true);lockScreen();return}
   if(d.a==='pers'){if(!confirm('Set up disk '+d.d+' for saving? Anything on it will be erased.'))return;t.disabled=true;t.textContent='Setting up…';silk.persist.setup(d.d).then(r=>{if(r.ok)stor();else{t.disabled=false;t.textContent='Retry';alert('Setup failed: '+(r.error||'unknown error'))}});return}
-  if(d.th)cfg.theme=d.th;else if(d.ac)cfg.accent=d.ac;else if(d.w)cfg.wall=+d.w;else if(d.e)cfg.engine=d.e;
+  if(d.th)cfg.theme=d.th;else if(d.ac)cfg.accent=d.ac;else if(d.w!==undefined){cfg.wall=+d.w;cfg.wallpaperImage=''}else if(d.e)cfg.engine=d.e;
   else if(d.t==='fs')toggleFS();else if(d.t==='muted'){cfg.muted=!cfg.muted;const next=cfg.muted?0:(cfg.lastAudibleVolume||lastAudibleVolume||cfg.volume||50);setVolume(next,true,pane.querySelector('.volume-status'));save();t.classList.toggle('on',cfg.muted);const slider=pane.querySelector('[data-r=volume]');if(slider)slider.value=String(next);return}else if(d.t)cfg[d.t]=!cfg[d.t];
   else if(d.a==='reset'){Object.assign(cfg,DEF);cfg.dockOrder=[...Object.keys(apps),'launchpad'];cfg.launchpadOrder=Object.keys(apps);applySavedOrder(dock,'.ic','dockOrder');lpDraw();try{localStorage.removeItem('silk.windows');localStorage.removeItem('silk.session')}catch(error){console.error('Could not clear saved app settings:',error)}setBrightness(cfg.bri,true);setVolume(cfg.volume,true)}else if(d.a==='clrh')store.set('hist',[]);else if(d.a==='clrb')store.set('bm',[]);
   if(d.t==='restoreWindows'){if(cfg.restoreWindows)saveSessionWindows();else try{localStorage.removeItem('silk.session')}catch(error){console.error('Could not clear the saved app session:',error)}}
@@ -1489,7 +1689,7 @@ function settingsInit(el){
  el._go=draw;draw('gen')}
 document.addEventListener('contextmenu',e=>{if(e.target.closest('.win,.dd,#dockwrap,#menubar'))return;e.preventDefault();closeDd(true);
  const open=p=>{launch('settings');setTimeout(()=>wins.settings&&wins.settings._go(p),60)};
- const el=listEl([['Change Wallpaper…',()=>open('desk')],['Use '+(document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches)?'Light':'Dark')+' Mode',()=>{const dk=document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme=dk?'light':'dark';save();applyCfg()}],'-',['Open Browser',()=>launch('browser')],['Spotlight Search',()=>spot(true),'Ctrl+K'],['Settings…',()=>open('gen')]]);
+const el=listEl([['Change Wallpaper…',()=>open('app')],['Use '+(document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches)?'Light':'Dark')+' Mode',()=>{const dk=document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme=dk?'light':'dark';save();applyCfg()}],'-',['Open Browser',()=>launch('browser')],['Spotlight Search',()=>spot(true),'Ctrl+K'],['Settings…',()=>open('gen')]]);
  ddKey='ctx';dd=el;el.classList.add('dd');document.body.appendChild(el);fitPopup(el,e.clientX,e.clientY);requestAnimationFrame(()=>el.classList.add('on'))});
 applyCfg();
 buildBar();
