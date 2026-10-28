@@ -28,7 +28,7 @@ body.lite #menubar{backdrop-filter:none;background:var(--win)}
 .body{flex:1;overflow:auto;position:relative}
 #dockwrap{position:fixed;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:9500;pointer-events:none}
 #dock{display:flex;align-items:flex-end;gap:8px;padding:8px 10px;border-radius:22px;pointer-events:auto;box-shadow:0 10px 40px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.25)}
-.ic{width:52px;height:52px;border-radius:13px;display:grid;place-items:center;font-size:26px;color:#fff;cursor:pointer;position:relative;flex:none;box-shadow:0 4px 10px rgba(0,0,0,.25)}
+.ic{width:52px;height:52px;border-radius:13px;display:grid;place-items:center;font-size:26px;color:#fff;cursor:pointer;position:relative;flex:none;box-shadow:0 4px 10px rgba(0,0,0,.25);touch-action:none}
 .ic i{font-style:normal;pointer-events:none;line-height:1}
 .ic.on::after{content:"";position:absolute;bottom:-7px;width:4px;height:4px;border-radius:50%;background:var(--text);opacity:.8}
 .ic .tip{position:absolute;top:-34px;padding:3px 10px;border-radius:7px;font-size:12px;background:var(--glass);color:var(--text);opacity:0;transform:translateY(6px);transition:.2s var(--ease);pointer-events:none;white-space:nowrap}
@@ -93,6 +93,9 @@ textarea{width:100%;height:100%;border:0;outline:0;resize:none;padding:14px;font
 :root{--spring:linear(0,0.016,0.059,0.122,0.199,0.285,0.375,0.465,0.554,0.638,0.716,0.786,0.849,0.903,0.95,0.988,1.018,1.042,1.06,1.072,1.08,1.083,1.083,1.081,1.076,1.071,1.064,1.056,1.049,1.041,1.034,1.027,1.021,1.015,1.011,1.006,1.003,1,0.998,0.996,1);--soft:linear(0,0.008,0.031,0.066,0.108,0.156,0.208,0.263,0.318,0.373,0.427,0.479,0.529,0.577,0.621,0.663,0.702,0.737,0.77,0.799,0.826,0.85,0.872,0.891,0.908,0.923,0.936,0.948,0.958,0.967,0.974,0.98,0.986,0.99,0.994,0.997,0.999,1.001,1.003,1.004,1)}
 .win{border-radius:18px;transform:scale(.92) translateY(14px);box-shadow:0 24px 70px rgba(0,0,0,.38),0 0 0 .5px rgba(0,0,0,.35);transition:transform .6s var(--spring),opacity .25s var(--ease),box-shadow .4s var(--ease)}
 .win.show{transform:none}
+.win.space-hidden{display:none!important}
+.win.space-leaving{opacity:0;transform:translateX(-22px) scale(.98);pointer-events:none;transition:opacity .2s var(--ease),transform .22s var(--ease)}
+.win.space-entering{opacity:0;transform:translateX(22px) scale(.98)}
 .win.min{transform:scale(.04);transition:transform .55s cubic-bezier(.6,0,.25,1),opacity .45s cubic-bezier(.6,0,.25,1)}
 .win.closing{transform:scale(.9);transition:transform .25s var(--ease),opacity .25s}
 .win.inactive{box-shadow:0 12px 36px rgba(0,0,0,.22),0 0 0 .5px rgba(0,0,0,.3)}
@@ -106,6 +109,7 @@ textarea{width:100%;height:100%;border:0;outline:0;resize:none;padding:14px;font
 #menubar{padding:0 8px;gap:0}#mleft,#mright{display:flex;align-items:center}#mright{margin-left:auto}#clock{margin-left:0}
 .mi{border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:0 10px;height:22px;border-radius:7px;display:flex;align-items:center;gap:6px;transition:background .12s}
 .mi:empty{display:none}.mi.bold{font-weight:700}.mi:hover,.mi.on{background:rgba(128,128,128,.28)}
+.spaces-label{font-size:11px;opacity:.82;white-space:nowrap}
 .dd{position:fixed;z-index:9800;min-width:230px;padding:6px;border-radius:14px;background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 14px 44px rgba(0,0,0,.35),0 0 0 .5px var(--line);transform-origin:top left;transform:scale(.92) translateY(-6px);opacity:0;transition:transform .3s var(--spring),opacity .15s;font-size:13px}
 .dd.on{transform:none;opacity:1}body.lite .dd,body.lite #spot{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--win)}
 .di{display:flex;justify-content:space-between;gap:30px;padding:5px 11px;border-radius:7px}.di:hover:not(.dis){background:var(--accent);color:#fff}.di em{font-style:normal;opacity:.55}.dis{opacity:.4;cursor:var(--cur)}
@@ -191,14 +195,22 @@ body.reduce-motion .sbn .it,body.reduce-motion .settings-content,body.reduce-mot
 .wps{display:grid;grid-template-columns:repeat(auto-fill,108px);gap:14px;padding:14px}.wp{height:68px;border-radius:12px;position:relative;cursor:var(--curp);border:2px solid transparent;box-shadow:0 0 0 1px var(--line);transition:transform .3s var(--spring)}.wp:hover{transform:scale(1.05)}.wp.on{border-color:var(--accent)}
 .wp span{position:absolute;bottom:4px;left:8px;font-size:11px;color:#fff;text-shadow:0 1px 3px #0008}
 .rw.pick{cursor:var(--curp)}.rw.pick .ck{color:var(--accent);font-weight:700}
-#lp{position:fixed;inset:0;z-index:9400;display:flex;flex-direction:column;align-items:center;padding:56px 6vw 150px;background:rgba(18,18,28,.32);-webkit-backdrop-filter:blur(40px) saturate(1.5);backdrop-filter:blur(40px) saturate(1.5);opacity:0;pointer-events:none;transform:scale(1.08);transition:opacity .3s var(--ease),transform .45s var(--ease)}
-#lp.on{opacity:1;pointer-events:auto;transform:none}
-body.lite #lp{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(18,18,28,.92)}
+#lp{position:fixed;inset:0;z-index:9400;display:flex;flex-direction:column;align-items:center;padding:56px 6vw 150px;background:transparent;opacity:0;pointer-events:none;transition:opacity .38s var(--ease);will-change:opacity}
+#lp::before{content:"";position:absolute;inset:0;background:rgba(24,28,44,.3);-webkit-backdrop-filter:blur(30px) saturate(1.55);backdrop-filter:blur(30px) saturate(1.55);opacity:0;transition:opacity .38s var(--ease);pointer-events:none}
+#lp.on{opacity:1;pointer-events:auto}
+#lp>*{position:relative;z-index:1}
+body.lite #lp::before{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(18,18,28,.92)}
+body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 #lp input{width:240px;height:30px;border:0;outline:0;border-radius:9px;padding:0 12px;font-size:14px;text-align:center;color:#fff;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3);user-select:text;transition:box-shadow .2s}
 #lp input::placeholder{color:rgba(255,255,255,.6)}#lp input:focus{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3),0 0 0 3px rgba(255,255,255,.22)}
 .lpg{flex:1;width:100%;max-width:1080px;margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,130px);justify-content:center;gap:44px 28px;align-content:start;overflow:auto}
-.lpa{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:0;transform:scale(.8);transition:opacity .3s var(--ease),transform .5s var(--spring);cursor:var(--curp)}
-#lp.on .lpa{opacity:1;transform:none}
+.lpa{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:0;transform:translate(var(--lp-dx,0px),var(--lp-dy,0px)) scale(.18) rotate(-8deg);transform-origin:center center;transition:opacity .24s var(--ease),transform .48s var(--spring);transition-delay:var(--lp-out-delay,0ms);cursor:grab;touch-action:none}
+#lp.on::before{opacity:1}
+#lp.on .lpa{opacity:1;transform:none;transition-delay:var(--lp-delay,0ms)}
+.lpa.dragging,.ic.dragging{opacity:.42;cursor:grabbing}
+.lpa.drop-target b{box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 28px rgba(255,255,255,.5),0 8px 22px rgba(0,0,0,.35)}
+.ic.drop-target{filter:brightness(1.2);transform:scale(1.08)}
+.icon-drag-ghost{position:fixed;z-index:10001;pointer-events:none;opacity:.94;filter:drop-shadow(0 16px 24px rgba(0,0,0,.36));transition:none!important}
 .lpa b{width:96px;height:96px;border-radius:22%;overflow:hidden;display:grid;place-items:center;font-size:44px;box-shadow:0 8px 22px rgba(0,0,0,.35);transition:transform .25s var(--spring),filter .15s}
 .lpa b svg{width:100%;height:100%;display:block}
 .lpa:hover b{transform:scale(1.06)}.lpa:active b{transform:scale(.92);filter:brightness(.75)}
@@ -405,7 +417,7 @@ body.high-contrast .win{box-shadow:0 0 0 2px var(--text)}
 <div id="desk"></div>
 <div id="dockwrap"><div id="dock" class="glass"></div></div>
 <script>
-const $=s=>document.querySelector(s),desk=$('#desk'),dock=$('#dock');let icons=[];
+const $=s=>document.querySelector(s),desk=$('#desk'),dock=$('#dock');let icons=[],iconOrderReady=false,ignoreReorderClickUntil=0;
 const apps={
  finder:{n:'Finder',i:'🗂️',c:'linear-gradient(#6fd0ff,#1a7cff)',w:760,h:480,html:()=>'<div></div>',init:finderInit},
  browser:{n:'Browser',i:'🧭',c:'linear-gradient(#5ac8fa,#0a60ff)',w:1000,h:640,html:()=>`<div class="bwrap"><div class="stabs"></div><div class="main"><div class="side"><div></div></div><div class="pages"><div class="start"></div></div></div><div class="ov"></div></div>`,init:browserInit},
@@ -447,21 +459,94 @@ apps.finder.svg=`<svg viewBox="0 0 100 100"><defs><linearGradient id="face" x1="
 let z=10,wins={};
 function dockIcon(id){return dock.querySelector(`[data-id="${CSS.escape(id)}"]`)}
 function addIcon(id){const a=apps[id];
- const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.style.background=a.c;d._s=1;
- d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);dock.appendChild(d);icons.push(d)}
+ const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-label',`${a.n}. Drag to reorder.`);d.style.background=a.c;d._s=1;
+ d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>{if(Date.now()>=ignoreReorderClickUntil)launch(id)};d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launch(id)}};dock.appendChild(d);icons.push(d);if(iconOrderReady)applySavedOrder(dock,'.ic','dockOrder')}
 Object.keys(apps).forEach(addIcon);
-const DEF={theme:'auto',accent:'#0a60ff',wall:0,lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,engine:'google',sugg:true,bri:100,
+const DEF={theme:'auto',accent:'#0a60ff',wall:0,lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,dockOrder:[],launchpadOrder:[],engine:'google',sugg:true,bri:100,
  clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false};
 const cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('silk.cfg'))||{}}catch(e){return{}}})());
+let activeSpace=0,spacesAvailable=false,workspaceNames=Array.from({length:4},(_,index)=>`Desktop ${index+1}`);
+function normalizedIconOrder(order,ids){const available=new Set(ids);return[...new Set((Array.isArray(order)?order:[]).filter(id=>typeof id==='string'&&available.has(id))),...ids.filter(id=>!Array.isArray(order)||!order.includes(id))]}
+function orderedIconIds(ids,key){const available=new Set(ids),order=Array.isArray(cfg[key])?cfg[key]:[];return[...order.filter(id=>available.has(id)),...ids.filter(id=>!order.includes(id))]}
+function applySavedOrder(container,selector,key){const ids=[...container.querySelectorAll(selector)].map(item=>item.dataset.id),order=normalizedIconOrder(cfg[key],ids),nodes=new Map([...container.querySelectorAll(selector)].map(item=>[item.dataset.id,item]));order.forEach(id=>container.appendChild(nodes.get(id)));cfg[key]=order}
+iconOrderReady=true;applySavedOrder(dock,'.ic','dockOrder');
+function setupIconReordering(container,selector,key){
+ let state=null;
+ const items=()=>[...container.querySelectorAll(selector)];
+ const animateReflow=before=>items().forEach(item=>{const old=before.get(item);if(!old)return;const rect=item.getBoundingClientRect(),dx=old.left-rect.left,dy=old.top-rect.top;if(Math.abs(dx)+Math.abs(dy)<1)return;item.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})});
+ const reorderAt=(x,y)=>{
+  const target=document.elementFromPoint(x,y)?.closest(selector);
+  if(!target||target===state.item||!container.contains(target))return;
+  const rect=target.getBoundingClientRect(),vertical=container===dock&&cfg.dockPosition!=='bottom';
+  const after=vertical?y>rect.top+rect.height/2:x>rect.left+rect.width/2;
+  if(after?state.item.nextElementSibling===target:target.nextElementSibling===state.item)return;
+  const before=new Map(items().map(item=>[item,item.getBoundingClientRect()]));
+  container.insertBefore(state.item,after?target.nextSibling:target);
+  animateReflow(before);
+ };
+ container.addEventListener('pointerdown',event=>{
+  if(event.button!==0||event.target.closest('button,input,textarea,select')||!event.target.closest(selector))return;
+  const item=event.target.closest(selector);state={item,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,ghost:null};
+  item.setPointerCapture(event.pointerId);
+ });
+ container.addEventListener('pointermove',event=>{
+  if(!state||event.pointerId!==state.pointerId)return;
+  state.x=event.clientX;state.y=event.clientY;
+  if(container===dock)mx=cfg.dockPosition==='bottom'?event.clientX:event.clientY;
+  if(!state.moved&&Math.hypot(event.clientX-state.startX,event.clientY-state.startY)<6)return;
+  if(!state.moved){
+   state.moved=true;ignoreReorderClickUntil=Date.now()+500;state.item.classList.add('dragging');
+   const icon=state.item.getBoundingClientRect();state.ghost=state.item.cloneNode(true);state.ghost.classList.add('icon-drag-ghost');state.ghost.classList.remove('on','dragging','drop-target');state.ghost.style.cssText+=`;left:${state.startX-icon.width/2}px;top:${state.startY-icon.height/2}px;width:${icon.width}px;height:${icon.height}px`;
+   document.body.appendChild(state.ghost);
+   if(container===dock)state.item.setPointerCapture(event.pointerId);
+  }
+  if(state.ghost)state.ghost.style.transform=`translate(${event.clientX-state.startX}px,${event.clientY-state.startY}px) scale(1.08)`;
+  reorderAt(event.clientX,event.clientY);
+ });
+ const finish=event=>{
+  if(!state||event.pointerId!==state.pointerId)return;
+  if(state.moved){ignoreReorderClickUntil=Date.now()+500;state.item.classList.remove('dragging');state.ghost?.remove();cfg[key]=items().map(item=>item.dataset.id);save()}
+  state=null;
+ };
+ container.addEventListener('pointerup',finish);container.addEventListener('pointercancel',finish);
+ container.addEventListener('lostpointercapture',event=>{if(state&&event.pointerId===state.pointerId)finish(event)});
+}
 function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>{if(r.error)throw new Error(r.error);(r.apps||[]).forEach(a=>{if(apps[a.id])return;
  apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id).then(r=>r&&r.error&&alert('Could not open '+(a.name||a.id)+':\n'+r.error)),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)})})
  .catch(error=>console.error('Could not load installed Store apps:',error))}
 const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f4"/><stop offset="1" stop-color="#b4bac6"/></linearGradient></defs><rect width="100" height="100" fill="url(#glp)"/>'+[['#ff5f57','#febc2e','#28c840'],['#5ac8fa','#0a84ff','#af52de'],['#ff2d92','#ff9500','#34c759']].map((r,y)=>r.map((c,x)=>`<rect x="${20+x*22}" y="${20+y*22}" width="16" height="16" rx="4.500" fill="${c}"/>`).join('')).join('')+'</svg>';
-{const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();dock.prepend(d);icons.unshift(d)}
+{const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.draggable=true;d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-label','Launchpad. Drag to reorder.');d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>{if(Date.now()>=ignoreReorderClickUntil)launchpad()};d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launchpad()}};dock.prepend(d);icons.unshift(d);applySavedOrder(dock,'.ic','dockOrder')}
+setupIconReordering(dock,'.ic','dockOrder');
+function refreshDockIndicators(){icons.forEach(icon=>icon.classList.toggle('on',!!wins[icon.dataset.id]&&wins[icon.dataset.id].dataset.space===String(activeSpace)&&!wins[icon.dataset.id].classList.contains('min')))}
+async function switchSpace(index,syncSystem=true){
+ if(!Number.isInteger(index)||index<0||index>3)return;
+ const previous=activeSpace;if(index===previous){updateSpaceButton();return}
+ activeSpace=index;
+ Object.entries(wins).forEach(([id,win])=>{
+  if(win.dataset.space===String(index)){
+   win.classList.remove('space-hidden','space-leaving');win.style.display='';
+   if(!win.classList.contains('min')&&!cfg.reduceMotion){win.classList.add('space-entering');void win.offsetWidth;requestAnimationFrame(()=>win.classList.remove('space-entering'))}
+  }else if(win.dataset.space===String(previous)&&!win.classList.contains('min')&&!cfg.reduceMotion){
+   win.classList.add('space-leaving');setTimeout(()=>{if(activeSpace!==Number(win.dataset.space)){win.classList.add('space-hidden');win.classList.remove('space-leaving')}},220)
+  }else{win.classList.add('space-hidden');win.classList.remove('space-leaving','space-entering')}
+ });
+ if(lpOn())launchpad(false);
+ refreshDockIndicators();updateSpaceButton();
+ if(switchState)paintSwitcher();
+ if(syncSystem&&window.silk?.platform==='linux'&&silk.workspaces){
+  try{const result=await silk.workspaces.switchTo(index);if(!result?.ok)console.error('Could not switch desktop workspace:',result?.error||'unknown error')}
+  catch(error){console.error('Could not switch desktop workspace:',error)}
+ }
+}
+async function syncSystemWorkspace(){
+ if(window.silk?.platform!=='linux'||!silk.workspaces)return;
+ try{const result=await silk.workspaces.list();spacesAvailable=!!result?.available;if(result?.available){workspaceNames=Array.from({length:4},(_,index)=>result.workspaces[index]?.name||`Desktop ${index+1}`);updateSpaceButton();if(Number.isInteger(result.current)&&result.current!==activeSpace)switchSpace(result.current,false)}}
+ catch(error){console.error('Could not read desktop workspace:',error);spacesAvailable=false}
+}
 function launch(id){
  if(apps[id].run){apps[id].run();return}
  const ic=dockIcon(id),w=wins[id];
- if(w){ if(w.classList.contains('min')){restore(w,id)} focus(w,id); return }
+ if(w){ if(Number(w.dataset.space)!==activeSpace){switchSpace(Number(w.dataset.space))}if(w.classList.contains('min')){restore(w,id)}focus(w,id); return }
  ic.classList.remove('bounce');void ic.offsetWidth;ic.classList.add('bounce');ic.classList.add('on');
  const a=apps[id],el=document.createElement('div');el.className='win';
  const n=Object.keys(wins).length,minWidth=Math.min(260,Math.max(160,innerWidth-16)),width=Math.min(a.w*cfg.windowScale,Math.max(minWidth,innerWidth-16)),height=Math.min(a.h*cfg.windowScale,Math.max(120,innerHeight-110)),saved=cfg.rememberWindows?getWindowBounds(id):null;
@@ -470,7 +555,7 @@ function launch(id){
  const restoredWidth=saved?Math.min(innerWidth-16,Math.max(minWidth,Number(saved.width)||width)):width,restoredHeight=saved?Math.min(innerHeight-36,Math.max(120,Number(saved.height)||height)):height;
  el.style.cssText=`min-width:${minWidth}px;width:${restoredWidth}px;height:${restoredHeight}px;left:${Math.max(8,Math.min(innerWidth-restoredWidth-8,left))}px;top:${Math.max(28,Math.min(innerHeight-restoredHeight-8,top))}px`;
  el.innerHTML=`<div class="tb"><button class="dot r"></button><button class="dot y"></button><button class="dot g"></button><span class="t">${a.n}</span></div><div class="body">${a.html()}</div>`;
- desk.appendChild(el);wins[id]=el;saveSessionWindows();
+ el.dataset.space=String(activeSpace);desk.appendChild(el);wins[id]=el;saveSessionWindows();
  setTimeout(()=>{el.classList.add('show');focus(el,id)},180);
  a.init&&a.init(el);
  const [r,y,g]=el.querySelectorAll('.dot');
@@ -1107,6 +1192,12 @@ function menusFor(id){
  m.Window=[['Minimize',()=>w&&minimize(w,id),'',x],['Zoom',()=>w&&maxToggle(w),'',x],'-'].concat(Object.keys(wins).map(k=>[(k===id?'✓ ':'    ')+apps[k].n,()=>launch(k)]));
  m.Help=[['Search',()=>spot(true),'Ctrl+K'],['SilkOS Help',()=>launch('settings')]];
  return m}
+function updateSpaceButton(){
+ const button=$('#spaces');if(!button)return;
+ button.innerHTML=uiIcon('window')+`<span class="spaces-label">${esc(workspaceNames[activeSpace]||`Desktop ${activeSpace+1}`)}</span>`;
+ button.title=`${workspaceNames[activeSpace]||`Desktop ${activeSpace+1}`} · swipe four fingers or press Ctrl+Alt+←/→`;
+ button.setAttribute('aria-label',`Current desktop: ${workspaceNames[activeSpace]||`Desktop ${activeSpace+1}`}`);
+}
 function buildBar(){
  const id=curApp&&wins[curApp]?curApp:null;curMenus=menusFor(id);
  mleft.innerHTML='<button class="mi" data-k="apple">'+IC.logo+'</button>'+Object.keys(curMenus).map((k,i)=>`<button class="mi${i?'':' bold'}" data-k="${esc(k)}">${esc(k)}</button>`).join('');
@@ -1201,6 +1292,7 @@ function fitPopup(el,x,y,alignRight=false){
 }
 function openK(b){const k=b.dataset.k,right=b.parentNode===mright;let el;
  if(k==='apple')el=listEl([['About SilkOS',()=>launch('settings')],'-',[(document.body.classList.contains('lite')?'✓ ':'    ')+'Lite Mode (no blur)',toggleLite],['Enter Full Screen',toggleFS,'F11'],'-',['Lock Screen',lockScreen],['Sleep',()=>power('sleep')],['Restart…',()=>power('restart')],['Shut Down…',()=>power('off')]]);
+ else if(k==='spaces')el=listEl([...workspaceNames.map((name,index)=>[(index===activeSpace?'✓ ':'    ')+name,()=>switchSpace(index),index===activeSpace?'Current':'Ctrl+Alt+'+(index<activeSpace?'←':'→'),index===activeSpace]),'-',['Swipe with four fingers to switch desktops',null,'',true]]);
  else if(k==='cc')el=ccEl();else if(k==='clock')el=calEl();
  else if(k==='wifi')el=listEl([[wfInfo?(wfInfo.connected?(wfInfo.type==='wifi'?'Wi-Fi: ':'Network: ')+(wfInfo.name||'Connected'):'Not connected'):'Wi-Fi: '+(navigator.onLine?'Connected':'Not connected'),null,'',true]]);
  else if(k==='bat')el=listEl([[batInfo?Math.round(batInfo.level*100)+'% · '+(batInfo.charging?'Charging':'On battery'):'Battery',null,'',true]]);
@@ -1209,11 +1301,13 @@ function openK(b){const k=b.dataset.k,right=b.parentNode===mright;let el;
  const r=b.getBoundingClientRect();fitPopup(el,right?r.right:r.left,r.bottom+4,right);
  requestAnimationFrame(()=>el.classList.add('on'))}
 function closeDd(now){if(!dd)return;const d=dd;dd=null;ddKey=null;document.querySelectorAll('.mi.on').forEach(x=>x.classList.remove('on'));d.classList.remove('on');setTimeout(()=>d.remove(),now?0:220)}
-mright.innerHTML='<button class="mi" id="bat" data-k="bat"></button><button class="mi" data-k="wifi">'+IC.wifi+'</button><button class="mi" data-k="srch">'+IC.srch+'</button><button class="mi" data-k="cc">'+IC.cc+'</button><button class="mi" id="clock" data-k="clock"></button>';
+mright.innerHTML='<button class="mi" id="spaces" data-k="spaces" aria-label="Desktop spaces"></button><button class="mi" id="bat" data-k="bat"></button><button class="mi" data-k="wifi">'+IC.wifi+'</button><button class="mi" data-k="srch">'+IC.srch+'</button><button class="mi" data-k="cc">'+IC.cc+'</button><button class="mi" id="clock" data-k="clock"></button>';
 wire(mright);
+updateSpaceButton();
 if(window.silk&&silk.platform==='linux'&&silk.battery){const pb=()=>silk.battery().then(r=>{if(!r){$('#bat').style.display='none';return}batInfo={level:r.level/100,charging:r.charging};$('#bat').style.display='';$('#bat').innerHTML=IC.bat+'<span>'+r.level+'%</span>'});pb();setInterval(pb,30000)}else if(navigator.getBattery)navigator.getBattery().then(b=>{batInfo=b;const u=()=>{$('#bat').innerHTML=IC.bat+'<span>'+Math.round(b.level*100)+'%</span>'};u();b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u)}).catch(()=>{});
 let wfInfo=null;const wf=mright.querySelector('[data-k=wifi]'),wfu=()=>wf.style.opacity=(wfInfo?wfInfo.connected:navigator.onLine)?1:.4;wfu();addEventListener('online',wfu);addEventListener('offline',wfu);
 if(window.silk&&silk.platform==='linux'&&silk.wifi){const pw2=()=>silk.wifi().then(r=>{wfInfo=r;wfu()});pw2();setInterval(pw2,10000)}
+if(window.silk?.platform==='linux'&&silk.workspaces){syncSystemWorkspace();setInterval(syncSystemWorkspace,900)}
 /* spotlight */
 document.body.insertAdjacentHTML('beforeend','<div id="spot" class="glass"><input placeholder="Spotlight Search" spellcheck="false" autocomplete="off"><div class="srs"></div></div>');
 const sp=$('#spot'),spi=sp.querySelector('input'),srs=sp.querySelector('.srs');let sres=[],si=0;
@@ -1233,14 +1327,43 @@ const lp=$('#lp'),lpi=lp.querySelector('input'),lpg=lp.querySelector('.lpg');
 const lpOn=()=>lp.classList.contains('on');
 function lpList(){const v=lpi.value.trim().toLowerCase();return Object.keys(apps).filter(k=>!v||apps[k].n.toLowerCase().includes(v))}
 function lpDraw(){const l=lpList(),q=!!lpi.value.trim();
- lpg.innerHTML=l.length?l.map((k,i)=>`<div class="lpa${q&&!i?' sel':''}" data-id="${k}" style="transition-delay:${Math.min(i,24)*18}ms"><b style="background:${apps[k].c}">${apps[k].svg||apps[k].i}</b><span>${esc(apps[k].n)}</span></div>`).join(''):'<div class="lpe">No Results</div>'}
+ const ordered=orderedIconIds(l,'launchpadOrder');
+ lpg.innerHTML=ordered.length?ordered.map((k,i)=>`<div class="lpa${q&&!i?' sel':''}" data-id="${esc(k)}" role="button" tabindex="0" aria-label="Launch ${esc(apps[k].n)}. Drag to reorder." style="--lp-delay:${Math.min(i,24)*16}ms;--lp-out-delay:${Math.max(0,Math.min(24,ordered.length-i-1))*12}ms"><b style="background:${apps[k].c}">${apps[k].svg||apps[k].i}</b><span>${esc(apps[k].n)}</span></div>`).join(''):'<div class="lpe">No Results</div>';
+ const icon=dockIcon('launchpad'),origin=icon&&icon.getBoundingClientRect();
+ lpg.querySelectorAll('.lpa').forEach(item=>{const rect=item.getBoundingClientRect();item.style.setProperty('--lp-dx',origin?`${origin.left+origin.width/2-rect.left-rect.width/2}px`:'0px');item.style.setProperty('--lp-dy',origin?`${origin.top+origin.height/2-rect.top-rect.height/2}px`:'0px')})}
 function launchpad(on=!lpOn()){if(on===lpOn())return;
- if(on){closeDd(true);spot(false);lpi.value='';lpDraw();void lp.offsetWidth;lp.classList.add('on');setTimeout(()=>lpi.focus(),30)}
- else{lp.classList.remove('on');lpi.blur()}}
-function lpGo(id){launchpad(false);setTimeout(()=>launch(id),160)}
-lp.onclick=e=>{const a=e.target.closest('.lpa');if(a)lpGo(a.dataset.id);else if(!e.target.closest('input'))launchpad(false)};
+ if(on){closeDd(true);spot(false);mx=null;document.body.classList.add('launchpad-open');lpi.value='';lpDraw();void lp.offsetWidth;lp.classList.add('on');setTimeout(()=>lpi.focus(),30)}
+ else{lp.classList.remove('on');document.body.classList.remove('launchpad-open');lpi.blur()}}
+function lpGo(id){launchpad(false);setTimeout(()=>launch(id),cfg.reduceMotion?20:500+Math.min(24,lpg.querySelectorAll('.lpa').length)*14)}
+setupIconReordering(lpg,'.lpa','launchpadOrder');
+lp.onclick=e=>{const a=e.target.closest('.lpa');if(a){if(Date.now()>=ignoreReorderClickUntil)lpGo(a.dataset.id)}else if(!e.target.closest('input'))launchpad(false)};
+lp.onkeydown=e=>{const a=e.target.closest('.lpa');if(a&&(e.key==='Enter'||e.key===' ')){e.preventDefault();lpGo(a.dataset.id)}};
 lpi.oninput=lpDraw;
-lpi.onkeydown=e=>{if(e.key==='Enter'){const l=lpList();if(l.length)lpGo(l[0])}else if(e.key==='Escape')launchpad(false)};
+lpi.onkeydown=e=>{if(e.key==='Enter'){const l=orderedIconIds(lpList(),'launchpadOrder');if(l.length)lpGo(l[0])}else if(e.key==='Escape')launchpad(false)};
+let touchGesture=null;
+function touchCenter(touches){const points=[...touches];return points.reduce((point,touch)=>({x:point.x+touch.clientX/points.length,y:point.y+touch.clientY/points.length}),{x:0,y:0})}
+function touchSpread(touches,center){const points=[...touches];return points.reduce((total,touch)=>total+Math.hypot(touch.clientX-center.x,touch.clientY-center.y),0)/points.length}
+document.addEventListener('touchstart',event=>{
+ if(event.touches.length!==4&&event.touches.length!==5)return;
+ const center=touchCenter(event.touches);touchGesture={fingers:event.touches.length,start:center,last:center,spread:touchSpread(event.touches,center)};
+},{passive:true});
+document.addEventListener('touchmove',event=>{
+ if(!touchGesture||event.touches.length!==touchGesture.fingers)return;
+ touchGesture.last=touchCenter(event.touches);touchGesture.lastPoints=[...event.touches].map(touch=>({clientX:touch.clientX,clientY:touch.clientY}));event.preventDefault();
+},{passive:false});
+document.addEventListener('touchend',event=>{
+ if(!touchGesture||event.touches.length>=touchGesture.fingers)return;
+ const gesture=touchGesture;touchGesture=null;
+ if(gesture.fingers===4){
+  const dx=gesture.last.x-gesture.start.x,dy=gesture.last.y-gesture.start.y;
+  if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.25)switchSpace((activeSpace+(dx<0?1:3))%4);
+ }else{
+  const center=gesture.last,spread=gesture.lastPoints?touchSpread(gesture.lastPoints,center):gesture.spread;
+  if(gesture.spread-spread>Math.max(28,gesture.spread*.3))launchpad(true);
+  else if(spread-gesture.spread>Math.max(28,gesture.spread*.3))launchpad(false);
+ }
+},{passive:true});
+document.addEventListener('touchcancel',()=>{touchGesture=null},{passive:true});
 dock.addEventListener('click',e=>{if(lpOn()&&!e.target.closest('[data-id=launchpad]'))launchpad(false)});
 document.addEventListener('pointerdown',e=>{if(dd&&!e.target.closest('.dd,.mi'))closeDd();if(sp.classList.contains('on')&&!e.target.closest('#spot,[data-k=srch]'))spot(false)});
 addEventListener('blur',()=>closeDd());
@@ -1267,10 +1390,10 @@ function finishWindowSwitch(commit){
  const id=commit?switchState.ids[switchState.index]:null;switchState=null;switcher.classList.remove('on');
  if(id&&wins[id]){const win=wins[id];if(win.classList.contains('min'))restore(win,id);focus(win,id)}
 }
-function shortcut(k){if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
+function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4);if(k==='space-right')return switchSpace((activeSpace+1)%4);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
  if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='d')b.addBm()}
 if(window.silk&&silk.onShortcut)silk.onShortcut(shortcut);
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad()}else if(e.key==='Escape'){if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false)}});
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad()}else if(e.key==='Escape'){if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false)}});
 if(!window.silk){
  document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='Tab'){e.preventDefault();cycleWindows(e.shiftKey)}else if(e.key==='Escape'&&switchState){e.preventDefault();finishWindowSwitch(false)}});
  document.addEventListener('keyup',e=>{if(e.key==='Alt'||e.key==='AltGraph')finishWindowSwitch(true)});
@@ -1328,7 +1451,7 @@ function settingsInit(el){
   session:()=>'<h2>Startup & Sessions</h2><h3>When SilkOS opens</h3><div class="grp">'+tg('startBrowser','Open Browser at startup')+tg('restoreWindows','Reopen apps from the previous session')+'</div><p class="lock-settings-note">Session restore remembers open SilkOS app windows on this device. Native Linux app windows are managed by the desktop and are not restored here.</p>',
   desk:()=>'<h2>Desktop & Dock</h2><h3>Dock</h3><div class="grp">'+sel('dockPosition','Position',[['bottom','Bottom'],['left','Left'],['right','Right']])+sl('dock','Icon size',40,80,cfg.dock)+tg('mag','Magnify icons on hover')+sl('magAmt','Magnification',12,20,Math.round(cfg.magAmt*10),.1)+tg('hide','Automatically hide the Dock')+'</div><h3>Menu bar</h3><div class="grp">'+tg('showDate','Show date in menu bar')+tg('clock24','Use 24-hour time')+tg('clockSeconds','Show seconds')+'</div>',
   win:()=>'<h2>Windows</h2><h3>New windows</h3><div class="grp">'+sl('windowScale','Default window size',70,130,Math.round(cfg.windowScale*100))+tg('centerWindows','Center new windows')+tg('rememberWindows','Remember window sizes and positions')+'</div><h3>Window actions</h3><div class="grp">'+tg('titlebarDoubleClick','Double-click title bar to zoom')+tg('confirmClose','Confirm before closing a window')+'</div>',
-  key:()=>'<h2>Keyboard</h2><h3>Window switcher</h3><div class="grp">'+sel('switcherStyle','Switcher layout',[['grid','App grid'],['list','Compact list']])+sel('switcherOrder','Cycle order',[['recent','Most recently used'],['alphabetical','Alphabetical']])+tg('showSwitcherIcons','Show app icons')+tg('includeMinimized','Include minimized windows')+'</div><h3>Shortcuts</h3><div class="grp">'+rw('Switch between SilkOS windows','Alt + Tab')+rw('Switch in reverse','Alt + Shift + Tab')+rw('Search apps','Ctrl + K')+rw('Open Launchpad','F4')+'</div>',
+  key:()=>'<h2>Keyboard</h2><h3>Window switcher</h3><div class="grp">'+sel('switcherStyle','Switcher layout',[['grid','App grid'],['list','Compact list']])+sel('switcherOrder','Cycle order',[['recent','Most recently used'],['alphabetical','Alphabetical']])+tg('showSwitcherIcons','Show app icons')+tg('includeMinimized','Include minimized windows')+'</div><h3>Shortcuts & gestures</h3><div class="grp">'+rw('Switch between SilkOS windows','Alt + Tab')+rw('Switch in reverse','Alt + Shift + Tab')+rw('Switch desktops','Ctrl + Alt + ← / → · four-finger swipe')+rw('Open Launchpad','F4 · five-finger pinch inward')+rw('Search apps','Ctrl + K')+'</div>',
   access:()=>'<h2>Accessibility</h2><h3>Visual comfort</h3><div class="grp">'+tg('reduceMotion','Reduce motion and animations')+tg('highContrast','Increase interface contrast')+sl('cursorSize','Cursor size',80,160,Math.round(cfg.cursorSize*100),.01)+'</div><p class="lock-settings-note">Cursor size applies to SilkOS and web content inside the built-in Browser.</p>',
   display:()=>'<h2>Display & Sound</h2><h3>Display</h3><div class="grp">'+sl('bri','Brightness',5,100,cfg.bri)+'<div class="rw"><span>Full screen</span><button class="tg'+(document.fullscreenElement?' on':'')+'" data-t="fs"></button></div></div><h3>Sound</h3><div class="grp">'+sl('volume','Output volume',0,100,cfg.volume)+tg('muted','Mute output')+'<div class="rw"><span>Volume control</span><span class="mut volume-status">'+(window.silk&&silk.platform==='linux'?'Checking audio output…':'Requires Linux audio')+'</span></div></div>',
   files:()=>'<h2>Files</h2><h3>Finder</h3><div class="grp">'+sel('finderLocation','Open new Finder windows in',[['home','Home'],['desktop','Desktop'],['documents','Documents'],['downloads','Downloads'],['last','Last opened folder']])+sel('finderSort','Sort items by',[['folders','Folders first · A to Z'],['name','Name · A to Z'],['name-desc','Name · Z to A']])+tg('showHiddenFiles','Show hidden files and folders')+tg('hideFileExtensions','Hide filename extensions')+'</div>',
@@ -1349,7 +1472,7 @@ function settingsInit(el){
   if(d.a==='pers'){if(!confirm('Set up disk '+d.d+' for saving? Anything on it will be erased.'))return;t.disabled=true;t.textContent='Setting up…';silk.persist.setup(d.d).then(r=>{if(r.ok)stor();else{t.disabled=false;t.textContent='Retry';alert('Setup failed: '+(r.error||'unknown error'))}});return}
   if(d.th)cfg.theme=d.th;else if(d.ac)cfg.accent=d.ac;else if(d.w)cfg.wall=+d.w;else if(d.e)cfg.engine=d.e;
   else if(d.t==='fs')toggleFS();else if(d.t==='muted'){cfg.muted=!cfg.muted;const next=cfg.muted?0:(cfg.lastAudibleVolume||lastAudibleVolume||cfg.volume||50);setVolume(next,true,pane.querySelector('.volume-status'));save();t.classList.toggle('on',cfg.muted);const slider=pane.querySelector('[data-r=volume]');if(slider)slider.value=String(next);return}else if(d.t)cfg[d.t]=!cfg[d.t];
-  else if(d.a==='reset'){Object.assign(cfg,DEF);try{localStorage.removeItem('silk.windows');localStorage.removeItem('silk.session')}catch(error){console.error('Could not clear saved app settings:',error)}setBrightness(cfg.bri,true);setVolume(cfg.volume,true)}else if(d.a==='clrh')store.set('hist',[]);else if(d.a==='clrb')store.set('bm',[]);
+  else if(d.a==='reset'){Object.assign(cfg,DEF);cfg.dockOrder=[...Object.keys(apps),'launchpad'];cfg.launchpadOrder=Object.keys(apps);applySavedOrder(dock,'.ic','dockOrder');lpDraw();try{localStorage.removeItem('silk.windows');localStorage.removeItem('silk.session')}catch(error){console.error('Could not clear saved app settings:',error)}setBrightness(cfg.bri,true);setVolume(cfg.volume,true)}else if(d.a==='clrh')store.set('hist',[]);else if(d.a==='clrb')store.set('bm',[]);
   if(d.t==='restoreWindows'){if(cfg.restoreWindows)saveSessionWindows();else try{localStorage.removeItem('silk.session')}catch(error){console.error('Could not clear the saved app session:',error)}}
   save();applyCfg();draw(cp);if(switchState)paintSwitcher();if(['showHiddenFiles','hideFileExtensions','finderLocation','finderSort'].includes(d.t))Object.values(wins).forEach(w=>w._refresh&&w._refresh());if(d.a==='clrb')Object.values(wins).forEach(w=>w._b&&w._b.rebuild&&w._b.rebuild())};
  pane.onchange=e=>{const key=e.target.dataset.pref;if(!key)return;cfg[key]=e.target.value;save();applyCfg();if(switchState)paintSwitcher();draw(cp);if(key==='finderLocation')Object.values(wins).forEach(w=>w._setFinderLocation&&w._setFinderLocation());else if(key==='finderSort')Object.values(wins).forEach(w=>w._refresh&&w._refresh())};
