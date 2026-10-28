@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+TOUCHEGG_VERSION=2.0.18
+TOUCHEGG_DEB=/tmp/touchegg_${TOUCHEGG_VERSION}_amd64.deb
+TOUCHEGG_URL="https://github.com/JoseExposito/touchegg/releases/download/${TOUCHEGG_VERSION}/touchegg_${TOUCHEGG_VERSION}_amd64.deb"
+TOUCHEGG_SHA256=8e76be8b3bcbd62f0710b8686d896aa9abe22de3a81ab8c4013799ca8522ab5c
+
+apt-get install -y curl
+curl --fail --location --silent --show-error --retry 3 "$TOUCHEGG_URL" --output "$TOUCHEGG_DEB"
+printf '%s  %s\n' "$TOUCHEGG_SHA256" "$TOUCHEGG_DEB" | sha256sum --check -
+apt-get install -y "$TOUCHEGG_DEB"
+rm -f "$TOUCHEGG_DEB"
+
+install -d -m 0755 /etc/skel/.config/touchegg
+install -m 0644 /usr/share/silkos/touchegg.conf /etc/skel/.config/touchegg/touchegg.conf

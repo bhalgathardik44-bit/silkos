@@ -402,6 +402,25 @@ ipcMain.handle('fs:open', (_, p) => {
 ipcMain.handle('sys:terminal', () => {
   if (IS_LINUX) detach('xterm', ['-fa', 'DejaVu Sans Mono', '-fs', '11', '-bg', '#1e1e1e', '-fg', '#e6e6e6', '-geometry', '100x30', '-T', 'Terminal'], os.homedir());
 });
+const getLinuxWorkspaces = async () => {
+  if (!IS_LINUX) return { available: false, workspaces: [], current: 0 };
+  const output = await run('wmctrl', ['-d']);
+  if (output === null) return { available: false, workspaces: [], current: 0, error: 'Could not read desktop workspaces.' };
+  const workspaces = output.split('\n').map(line => {
+    const match = line.match(/^\s*(\d+)\s+([*-])\s+/);
+    if (!match) return null;
+    const index = Number(match[1]);
+    const named = line.match(/\bN\/A\s+(.+)$/);
+    return { index, name: named?.[1]?.trim() || `Desktop ${index + 1}`, active: match[2] === '*' };
+  }).filter(Boolean);
+  return { available: workspaces.length > 0, workspaces, current: workspaces.find(workspace => workspace.active)?.index ?? 0 };
+};
+ipcMain.handle('sys:workspaces', getLinuxWorkspaces);
+ipcMain.handle('sys:workspace:set', async (_, index) => {
+  if (!IS_LINUX || !Number.isInteger(index) || index < 0 || index > 3) return { ok: false, error: 'Invalid desktop workspace.' };
+  const result = await run('wmctrl', ['-s', String(index)]);
+  return result === null ? { ok: false, error: 'Could not switch desktop workspace.' } : { ok: true, index };
+});
 if (IS_LINUX) {
   app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
   if (process.env.SILKOS_SOFTWARE === '1') { app.disableHardwareAcceleration(); app.commandLine.appendSwitch('disable-gpu'); }
@@ -412,17 +431,45 @@ app.whenReady().then(() => {
     width: 1280, height: 800, show: false, backgroundColor: '#3b3b8f', autoHideMenuBar: true,
     webPreferences: { webviewTag: true, contextIsolation: true, preload: path.join(__dirname, 'preload.js') }
   });
+  win.setTitle('SilkOS');
   win.maximize();
   if (IS_LINUX && process.env.SILKOS_KIOSK === '1') win.setFullScreen(true);
   win.loadFile(path.join(__dirname, 'app', 'index.html'));
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    if (IS_LINUX) {
+      const keepShellVisible = async (attempt = 0) => {
+        const result = await run('wmctrl', ['-r', 'SilkOS', '-b', 'add,sticky']);
+        if (result === null && attempt < 8 && !win.isDestroyed()) setTimeout(() => keepShellVisible(attempt + 1), 250);
+      };
+      void keepShellVisible();
+    }
+  });
   let localWindowSwitchPending = false;
   let windowSwitchTimer = null;
   if (IS_LINUX && globalShortcut) {
-    for (const [accelerator, shortcut] of [['Alt+Tab', 'alt-tab'], ['Alt+Shift+Tab', 'alt-tab-reverse']]) {
+    for (const [accelerator, shortcut] of [['Alt+Tab', 'alt-tab'], ['Alt+Shift+Tab', 'alt-tab-reverse'], ['Ctrl+Alt+Left', 'space-left'], ['Ctrl+Alt+Right', 'space-right'], ['F4', 'lp']]) {
       try {
-        if (globalShortcut.register(accelerator, () => {
+        if (globalShortcut.register(accelerator, async () => {
           if (screenLocked) return;
+          if (shortcut === 'lp') {
+            win.restore();
+            win.show();
+            win.focus();
+            win.webContents.send('shortcut', shortcut);
+            return;
+          }
+          if (shortcut === 'space-left' || shortcut === 'space-right') {
+            if (win.isFocused()) win.webContents.send('shortcut', shortcut);
+            else {
+              const spaces = await getLinuxWorkspaces();
+              if (!spaces.available) return;
+              const delta = shortcut === 'space-right' ? 1 : -1;
+              const next = (spaces.current + delta + spaces.workspaces.length) % spaces.workspaces.length;
+              await run('wmctrl', ['-s', String(next)]);
+            }
+            return;
+          }
           if (win.isFocused()) {
             win.webContents.send('shortcut', shortcut);
             clearTimeout(windowSwitchTimer);

@@ -31,6 +31,15 @@ until wmctrl -m >/dev/null 2>&1; do
   tries=$((tries + 1))
   sleep 0.1
 done
+wmctrl -n 4
+if command -v touchegg >/dev/null 2>&1; then
+  GESTURE_CONFIG="$HOME/.config/touchegg/touchegg.conf"
+  if [ ! -f "$GESTURE_CONFIG" ] && [ -r /usr/share/silkos/touchegg.conf ]; then
+    mkdir -p "$(dirname "$GESTURE_CONFIG")"
+    cp /usr/share/silkos/touchegg.conf "$GESTURE_CONFIG"
+  fi
+  touchegg >/tmp/touchegg.log 2>&1 &
+fi
 
 # X11 window managers draw frames but cannot round their corners. Match the
 # 18 CSS-pixel SilkOS window radius at the current Xft display scale.
