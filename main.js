@@ -1,18 +1,50 @@
-const { app, BrowserWindow, Menu, ipcMain, shell, globalShortcut } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, globalShortcut, dialog } = require('electron');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { promisify } = require('util');
 const { execFile, spawn } = require('child_process');
+const { pathToFileURL } = require('url');
+const { createToucheggGestureParser } = require('./touchpad-gestures');
 const IS_LINUX = process.platform === 'linux';
 const scrypt = promisify(crypto.scrypt);
 const run = (cmd, args, ms = 4000) => new Promise(res => execFile(cmd, args, { timeout: ms }, (e, out) => res(e ? null : String(out))));
+const runDetailed = (cmd, args, ms = 4000) => new Promise(resolve => execFile(cmd, args, { timeout: ms }, (error, out, stderr) => resolve({
+  ok: !error,
+  out: String(out || ''),
+  error: error ? String(stderr || error.message) : ''
+})));
+const splitNmcliRow = line => {
+  const fields = [];
+  let value = '', escaped = false;
+  for (const char of line) {
+    if (escaped) { value += char; escaped = false; }
+    else if (char === '\\') escaped = true;
+    else if (char === ':') { fields.push(value); value = ''; }
+    else value += char;
+  }
+  if (escaped) value += '\\';
+  fields.push(value);
+  return fields;
+};
+const invokeWifiStatus = async () => {
+  const out = await run('nmcli', ['-t', '--escape', 'yes', '-f', 'TYPE,STATE,CONNECTION', 'device', 'status']);
+  if (out === null) return { available: false, error: 'NetworkManager is unavailable.' };
+  const wifiDevices = out.trim().split(/\r?\n/).filter(Boolean).map(splitNmcliRow).filter(row => row[0] === 'wifi');
+  const radio = await run('nmcli', ['radio', 'wifi']);
+  if (radio === null) return { available: false, error: 'Could not read Wi-Fi radio state.' };
+  if (!wifiDevices.length) return { available: false, enabled: radio.trim() === 'enabled', connected: false, error: 'No Wi-Fi adapter was detected.' };
+  const connected = wifiDevices.find(row => /^connected(?:\s|$)/i.test(row[1] || ''));
+  return { available: true, enabled: radio.trim() === 'enabled', connected: !!connected, name: connected?.[2] || null };
+};
 let mainWindow = null;
 let screenLocked = false;
+let isQuitting = false;
 let lockFailures = 0;
 let lockRetryAt = 0;
 const globalWindowShortcuts = new Set();
+let touchpadGestureMonitor = null;
 const lockFile = () => path.join(app.getPath('userData'), 'screen-lock.json');
 const readLock = async () => {
   try {
@@ -159,6 +191,10 @@ ipcMain.handle('lock:window', (_, locked) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
   screenLocked = Boolean(locked);
   mainWindow.setAlwaysOnTop(screenLocked);
+  if (screenLocked) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
   return true;
 });
 
@@ -181,20 +217,101 @@ ipcMain.handle('sys:battery', async () => {
 });
 ipcMain.handle('sys:wifi', async (_, enabled) => {
   if (!IS_LINUX) return null;
-  if (typeof enabled === 'boolean' && await run('nmcli', ['radio', 'wifi', enabled ? 'on' : 'off']) === null) return null;
-  const out = await run('nmcli', ['-t', '-f', 'TYPE,STATE,CONNECTION', 'device']);
-  if (!out) return null;
-  const rows = out.trim().split('\n').map(l => l.split(':'));
-  const up = rows.find(r => r[1] === 'connected');
-  const radio = await run('nmcli', ['radio', 'wifi']);
-  return { available: radio !== null, enabled: radio ? radio.trim() === 'enabled' : false, connected: !!up, type: up ? up[0] : null, name: up ? up[2] : null };
+  if (typeof enabled === 'boolean' && await run('nmcli', ['radio', 'wifi', enabled ? 'on' : 'off']) === null) {
+    return { available: false, error: 'NetworkManager could not change Wi-Fi radio state.' };
+  }
+  return invokeWifiStatus();
+});
+ipcMain.handle('sys:wifi:networks', async () => {
+  if (!IS_LINUX) return { available: false, error: 'Wi-Fi scanning is only available on Linux.' };
+  const status = await invokeWifiStatus();
+  if (!status.available) return status;
+  if (!status.enabled) return { available: true, enabled: false, networks: [] };
+  const result = await runDetailed('nmcli', ['-t', '--escape', 'yes', '-f', 'IN-USE,SSID,SIGNAL,SECURITY', 'device', 'wifi', 'list', '--rescan', 'yes'], 18000);
+  if (!result.ok) return { available: false, error: result.error || 'Could not scan for Wi-Fi networks.' };
+  const found = new Map();
+  for (const line of result.out.trim().split(/\r?\n/).filter(Boolean)) {
+    const [active, ssid, signal, security] = splitNmcliRow(line);
+    if (!ssid) continue;
+    const network = { ssid, signal: Number(signal) || 0, security: security && security !== '--' ? security : '', active: active.trim() === '*' };
+    const existing = found.get(ssid);
+    if (!existing || network.signal > existing.signal) found.set(ssid, network);
+  }
+  return { available: true, enabled: true, networks: [...found.values()].sort((a, b) => Number(b.active) - Number(a.active) || b.signal - a.signal).slice(0, 40) };
+});
+ipcMain.handle('sys:wifi:connect', async (_, ssid, password = '') => {
+  if (!IS_LINUX) return { ok: false, error: 'Wi-Fi connections are only available on Linux.' };
+  if (typeof ssid !== 'string' || !ssid.trim() || Buffer.byteLength(ssid, 'utf8') > 32 || typeof password !== 'string' || Buffer.byteLength(password, 'utf8') > 128) {
+    return { ok: false, error: 'Invalid Wi-Fi network or password.' };
+  }
+  const args = ['device', 'wifi', 'connect', ssid];
+  if (password) args.push('password', password);
+  const result = await runDetailed('nmcli', args, 30000);
+  return result.ok ? { ok: true } : { ok: false, error: result.error || 'Could not connect to the Wi-Fi network.' };
 });
 ipcMain.handle('sys:bluetooth', async (_, enabled) => {
   if (!IS_LINUX) return null;
-  if (typeof enabled === 'boolean' && await run('bluetoothctl', ['power', enabled ? 'on' : 'off']) === null) return null;
+  if (typeof enabled === 'boolean' && await run('bluetoothctl', ['power', enabled ? 'on' : 'off']) === null) {
+    return { available: false, error: 'BlueZ could not change Bluetooth power state.' };
+  }
   const out = await run('bluetoothctl', ['show']);
-  if (!out || !/Controller\s+[0-9A-F:]+/i.test(out)) return { available: false, powered: false };
+  if (!out || !/Controller\s+[0-9A-F:]+/i.test(out)) return { available: false, powered: false, error: 'No Bluetooth controller was detected.' };
   return { available: true, powered: /^\s*Powered:\s*yes/im.test(out) };
+});
+ipcMain.handle('sys:bluetooth:devices', async () => {
+  if (!IS_LINUX) return { available: false, error: 'Bluetooth is only available on Linux.' };
+  const status = await run('bluetoothctl', ['show']);
+  if (!status || !/Controller\s+[0-9A-F:]+/i.test(status)) return { available: false, error: 'No Bluetooth controller was detected.' };
+  if (!/^\s*Powered:\s*yes/im.test(status)) return { available: false, error: 'Turn Bluetooth on to scan for devices.' };
+  const scan = await runDetailed('bluetoothctl', ['--timeout', '8', 'scan', 'on'], 12000);
+  if (!scan.ok) return { available: false, error: scan.error || 'Could not scan for Bluetooth devices.' };
+  const devices = await run('bluetoothctl', ['devices']);
+  if (devices === null) return { available: false, error: 'Could not list Bluetooth devices.' };
+  const result = devices.split(/\r?\n/).map(line => {
+    const match = line.match(/^Device\s+([0-9A-F:]{17})\s+(.+)$/i);
+    return match ? { address: match[1], name: match[2] } : null;
+  }).filter(Boolean);
+  return { available: true, devices: result.slice(0, 40) };
+});
+ipcMain.handle('sys:bluetooth:connect', async (_, address) => {
+  if (!IS_LINUX || typeof address !== 'string' || !/^[0-9A-F]{2}(?::[0-9A-F]{2}){5}$/i.test(address)) {
+    return { ok: false, error: 'Invalid Bluetooth device.' };
+  }
+  const details = await run('bluetoothctl', ['info', address]);
+  if (!details) return { ok: false, error: 'Could not read Bluetooth device information.' };
+  if (!/^\s*Paired:\s*yes/im.test(details)) {
+    const paired = await runDetailed('bluetoothctl', ['pair', address], 20000);
+    if (!paired.ok) return { ok: false, error: paired.error || 'Pairing failed. Check the device and try again.' };
+  }
+  const trusted = await runDetailed('bluetoothctl', ['trust', address], 10000);
+  if (!trusted.ok) return { ok: false, error: trusted.error || 'Could not trust the Bluetooth device.' };
+  const connected = await runDetailed('bluetoothctl', ['connect', address], 20000);
+  return connected.ok ? { ok: true } : { ok: false, error: connected.error || 'Could not connect to the Bluetooth device.' };
+});
+ipcMain.handle('wallpaper:select', async () => {
+  const options = {
+    title: 'Choose a wallpaper',
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }]
+  };
+  const result = mainWindow && !mainWindow.isDestroyed()
+    ? await dialog.showOpenDialog(mainWindow, options)
+    : await dialog.showOpenDialog(options);
+  if (result.canceled || !result.filePaths.length) return { cancelled: true };
+  const source = result.filePaths[0];
+  const extension = path.extname(source).toLowerCase();
+  if (!['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'].includes(extension)) return { ok: false, error: 'Choose a supported image file.' };
+  try {
+    const stat = await fs.promises.stat(source);
+    if (!stat.isFile() || stat.size > 50 * 1024 * 1024) return { ok: false, error: 'Wallpaper images must be files smaller than 50 MB.' };
+    const directory = path.join(app.getPath('userData'), 'wallpapers');
+    await fs.promises.mkdir(directory, { recursive: true });
+    const destination = path.join(directory, `${crypto.randomUUID()}${extension}`);
+    await fs.promises.copyFile(source, destination);
+    return { ok: true, url: pathToFileURL(destination).href };
+  } catch (error) {
+    return { ok: false, error: `Could not save the selected wallpaper: ${error.message}` };
+  }
 });
 ipcMain.handle('sys:keyboard-brightness', async (_, value) => {
   if (!IS_LINUX) return null;
@@ -421,6 +538,39 @@ ipcMain.handle('sys:workspace:set', async (_, index) => {
   const result = await run('wmctrl', ['-s', String(index)]);
   return result === null ? { ok: false, error: 'Could not switch desktop workspace.' } : { ok: true, index };
 });
+const startTouchpadGestureMonitor = win => {
+  if (!IS_LINUX) return;
+  const parser = createToucheggGestureParser(gesture => {
+    if (!win.isDestroyed()) win.webContents.send('touchpad-gesture', gesture);
+  });
+  let child;
+  try {
+    child = spawn('dbus-monitor', [
+      '--address', 'unix:abstract=touchegg',
+      "type='signal',interface='io.github.joseexposito.Touchegg'"
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (error) {
+    console.error('Could not start Touchégg gesture monitoring:', error);
+    return;
+  }
+  let diagnostic = '';
+  child.stdout.setEncoding('utf8');
+  child.stdout.on('data', data => parser.write(data));
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-2000); });
+  child.once('error', error => console.error('Could not monitor Touchégg gestures:', error));
+  child.once('close', (code, signal) => {
+    touchpadGestureMonitor = null;
+    if (code !== 0 && !isQuitting) {
+      console.error(`Touchégg gesture monitor stopped (${signal || `exit ${code}`}): ${diagnostic.trim() || 'no diagnostic output'}`);
+    }
+  });
+  touchpadGestureMonitor = child;
+};
+app.on('will-quit', () => {
+  isQuitting = true;
+  if (touchpadGestureMonitor && !touchpadGestureMonitor.killed) touchpadGestureMonitor.kill();
+});
 if (IS_LINUX) {
   app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
   if (process.env.SILKOS_SOFTWARE === '1') { app.disableHardwareAcceleration(); app.commandLine.appendSwitch('disable-gpu'); }
@@ -438,6 +588,7 @@ app.whenReady().then(() => {
   win.once('ready-to-show', () => {
     win.show();
     if (IS_LINUX) {
+      startTouchpadGestureMonitor(win);
       const keepShellVisible = async (attempt = 0) => {
         const result = await run('wmctrl', ['-r', 'SilkOS', '-b', 'add,sticky']);
         if (result === null && attempt < 8 && !win.isDestroyed()) setTimeout(() => keepShellVisible(attempt + 1), 250);

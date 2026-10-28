@@ -15,7 +15,7 @@
   "build": {
     "appId": "com.silkos.app",
     "productName": "SilkOS",
-    "files": ["main.js", "preload.js", "app/**"],
+    "files": ["main.js", "preload.js", "touchpad-gestures.js", "app/**"],
     "linux": {
       "target": ["deb"],
       "category": "Utility",
