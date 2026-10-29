@@ -38,7 +38,13 @@ if command -v touchegg >/dev/null 2>&1; then
     mkdir -p "$(dirname "$GESTURE_CONFIG")"
     cp /usr/share/silkos/touchegg.conf "$GESTURE_CONFIG"
   fi
-  touchegg >/tmp/touchegg.log 2>&1 &
+  # Touchégg broadcasts gestures only from its daemon; bare "touchegg" starts the client, which
+  # just executes touchegg.conf actions. SilkOS animates gestures itself from the daemon stream.
+  # The daemon's abstract socket is the thing SilkOS needs, so look for it rather than a process.
+  if ! grep -q '@touchegg$' /proc/net/unix 2>/dev/null; then
+    echo "Touchégg daemon was not running; starting it from the session" >>/tmp/touchegg.log
+    touchegg --daemon >>/tmp/touchegg.log 2>&1 &
+  fi
 fi
 
 # X11 window managers draw frames but cannot round their corners. Match the

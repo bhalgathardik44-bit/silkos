@@ -14,3 +14,20 @@ rm -f "$TOUCHEGG_DEB"
 
 install -d -m 0755 /etc/skel/.config/touchegg
 install -m 0644 /usr/share/silkos/touchegg.conf /etc/skel/.config/touchegg/touchegg.conf
+
+# Gestures reach SilkOS over the daemon's D-Bus stream, so the daemon has to run. It ships as a
+# system service that reads /dev/input as root with Group=input, which the live user cannot do.
+# systemctl cannot talk to a running manager inside the build chroot, so enable the unit by
+# linking it the way systemd does.
+UNIT=""
+for candidate in /etc/systemd/system/touchegg.service /lib/systemd/system/touchegg.service /usr/lib/systemd/system/touchegg.service; do
+  if [ -z "$UNIT" ] && [ -f "$candidate" ]; then
+    UNIT="$candidate"
+  fi
+done
+if [ -n "$UNIT" ]; then
+  install -d -m 0755 /etc/systemd/system/multi-user.target.wants
+  ln -sf "$UNIT" /etc/systemd/system/multi-user.target.wants/touchegg.service
+else
+  echo "Touchégg ships no systemd unit; gestures rely on the session fallback in silkos-xsession" >&2
+fi

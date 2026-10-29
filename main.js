@@ -671,34 +671,53 @@ ipcMain.handle('sys:workspace:set', async (_, index) => {
   const result = await run('wmctrl', ['-s', String(index)]);
   return result === null ? { ok: false, error: 'Could not switch desktop workspace.' } : { ok: true, index };
 });
+const GESTURE_MONITOR_ATTEMPTS = 10;
+const GESTURE_MONITOR_RETRY_MS = 2000;
 const startTouchpadGestureMonitor = win => {
   if (!IS_LINUX) return;
-  const parser = createToucheggGestureParser(gesture => {
-    if (!win.isDestroyed()) win.webContents.send('touchpad-gesture', gesture);
-  });
-  let child;
-  try {
-    child = spawn('dbus-monitor', [
-      '--address', 'unix:abstract=touchegg',
-      "type='signal',interface='io.github.joseexposito.Touchegg'"
-    ], { stdio: ['ignore', 'pipe', 'pipe'] });
-  } catch (error) {
-    console.error('Could not start Touchégg gesture monitoring:', error);
-    return;
-  }
-  let diagnostic = '';
-  child.stdout.setEncoding('utf8');
-  child.stdout.on('data', data => parser.write(data));
-  child.stderr.setEncoding('utf8');
-  child.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-2000); });
-  child.once('error', error => console.error('Could not monitor Touchégg gestures:', error));
-  child.once('close', (code, signal) => {
-    touchpadGestureMonitor = null;
-    if (code !== 0 && !isQuitting) {
-      console.error(`Touchégg gesture monitor stopped (${signal || `exit ${code}`}): ${diagnostic.trim() || 'no diagnostic output'}`);
+  let sawGesture = false;
+  let attempts = 0;
+  const startMonitor = () => {
+    if (isQuitting) return;
+    attempts += 1;
+    // A fresh parser per attempt, so a half-read line from a dead monitor cannot blend into
+    // the next monitor's output and invent a gesture.
+    const parser = createToucheggGestureParser(gesture => {
+      sawGesture = true;
+      if (!win.isDestroyed()) win.webContents.send('touchpad-gesture', gesture);
+    });
+    let child;
+    try {
+      child = spawn('dbus-monitor', [
+        '--address', 'unix:abstract=touchegg',
+        "type='signal',interface='io.github.joseexposito.Touchegg'"
+      ], { stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (error) {
+      console.error('Could not start Touchégg gesture monitoring:', error);
+      return;
     }
-  });
-  touchpadGestureMonitor = child;
+    let diagnostic = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', data => parser.write(data));
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-2000); });
+    child.once('error', error => {
+      if (attempts >= GESTURE_MONITOR_ATTEMPTS) console.error('Could not monitor Touchégg gestures:', error);
+    });
+    // Touchégg's daemon owns the bus SilkOS listens on, so a monitor that dies before the first
+    // gesture usually means the daemon is still coming up. Retry quietly, then report once.
+    child.once('close', (code, signal) => {
+      touchpadGestureMonitor = null;
+      if (isQuitting) return;
+      if (!sawGesture && attempts < GESTURE_MONITOR_ATTEMPTS) {
+        setTimeout(startMonitor, GESTURE_MONITOR_RETRY_MS);
+        return;
+      }
+      if (code !== 0) console.error(`Touchégg gesture monitor stopped (${signal || `exit ${code}`}): ${diagnostic.trim() || 'no diagnostic output'}`);
+    });
+    touchpadGestureMonitor = child;
+  };
+  startMonitor();
 };
 app.on('will-quit', () => {
   isQuitting = true;
