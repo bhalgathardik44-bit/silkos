@@ -753,39 +753,94 @@ function dragify(el,h){
   const mv=ev=>{const left=Math.max(8,Math.min(innerWidth-el.offsetWidth-8,ev.clientX-sx)),top=Math.max(28,Math.min(innerHeight-el.offsetHeight-8,ev.clientY-sy));el.style.left=left+'px';el.style.top=top+'px'};
   const up=()=>{el.classList.remove('drag');h.style.cursor='';saveWindowBounds(Object.keys(wins).find(id=>wins[id]===el),el);h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up)};
   h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up)})}
-/* dock magnification — distances are measured against each icon's resting position so that
-   growing an icon cannot move the point it is measured from (that feedback loop caused wobble). */
-let baseWanted=56,base=56,mx=null,magRaf=null,dockGeom=null;
-const MAG_BELL_SUM=5.4,ICON_GLYPH=26/56;
+/* Dock magnification follows the macOS model: the bell is measured in icon slots rather
+   than pixels and stops at a fixed radius, and the enlarged icon is held under the pointer
+   by sliding the whole dock — which is what keeps the ends of the dock usable. */
+const MAG_RADIUS=2.15,MAG_BELL_SUM=2.2,ICON_GLYPH=26/56;
+let baseWanted=56,base=56,mx=null,magRaf=null,dockGeom=null,shiftCur=0,magLast=0;
+/* Dragging a dock icon reorders the DOM, and the bell has to follow visual order, not insertion order. */
+function syncIconOrder(){
+ const ordered=[...dock.children].filter(node=>node.classList&&node.classList.contains('ic'));
+ if(ordered.length!==icons.length||ordered.some((node,index)=>node!==icons[index])){
+  icons=ordered;
+  icons.forEach(ic=>{if(ic._s===undefined)ic._s=1});
+ }
+}
 icons.forEach(i=>i._s=1);
+function magnifyAmount(){return cfg.mag?cfg.magAmt:1}
 function measureDock(){
+ syncIconOrder();
  const cs=getComputedStyle(dock),vertical=cfg.dockPosition!=='bottom',
   gap=parseFloat(vertical?cs.rowGap:cs.columnGap)||0,
-  lead=parseFloat(vertical?cs.paddingTop:cs.paddingLeft)||0,
-  side=parseFloat(vertical?cs.paddingLeft:cs.paddingTop)||0,
-  room=Math.max(160,(vertical?innerHeight:innerWidth)-2*side-24);
- /* Shrink the resting size when the dock cannot fit, then cap magnification so the bell stays on screen. */
- const fit=Math.floor((room-Math.max(0,icons.length-1)*gap)/Math.max(1,icons.length));
+  padStart=parseFloat(vertical?cs.paddingTop:cs.paddingLeft)||0,
+  padEnd=parseFloat(vertical?cs.paddingBottom:cs.paddingRight)||0,
+  along=vertical?innerHeight:innerWidth,room=Math.max(180,along-24),count=Math.max(1,icons.length),
+  fit=Math.floor((room-padStart-padEnd-(count-1)*gap)/count);
+ /* Shrink the resting size when the dock cannot fit, then cap the peak so it never overflows. */
  base=Math.max(28,Math.min(baseWanted,fit));
- const span=Math.max(0,icons.length*base+(icons.length-1)*gap),roomForBell=Math.max(0,room-span);
- dockGeom={vertical,pitch:base+gap,lead,span,mid:vertical?innerHeight/2:innerWidth/2,
+ const rest=count*base+(count-1)*gap,roomForBell=Math.max(0,room-padStart-padEnd-rest);
+ dockGeom={vertical,gap,padStart,padEnd,along,mid:along/2,pitch:base+gap,
   mag:1+Math.min(magnifyAmount()-1,roomForBell/(base*MAG_BELL_SUM))};
  icons.forEach(ic=>{ic._w=null})
 }
-function magnifyAmount(){return cfg.mag?cfg.magAmt:1}
-function restCenter(index){const g=dockGeom;return g.mid-g.span/2+g.lead+index*g.pitch+base/2}
-function magTick(){
- magRaf=null;let busy=false;
+function bellScale(distance,peak){
+ const a=Math.abs(distance);
+ return a>=MAG_RADIUS?1:1+(peak-1)*.5*(1+Math.cos(Math.PI*a/MAG_RADIUS))
+}
+/* Which slot the pointer sits over, as a fractional index, given the widths that magnification produced. */
+function slotUnderCursor(cursor,widths,gap){
+ let offset=0;
+ for(let i=0;i<widths.length;i++){
+  const end=offset+widths[i];
+  if(cursor<end)return{i,fraction:Math.max(0,Math.min(1,(cursor-offset)/widths[i]))};
+  if(cursor<end+gap)return{i,fraction:1};
+  offset=end+gap;
+ }
+ return{i:widths.length-1,fraction:1}
+}
+function magSolve(){
+ syncIconOrder();
+ const g=dockGeom,n=icons.length;
+ if(!n||!g)return{scales:[],shift:0};
+ if(mx==null||cfg.reduceMotion||g.mag<=1)return{scales:new Array(n).fill(1),shift:0};
+ const peak=g.mag,widths=new Array(n);
+ let focus=(mx-(g.mid-(n*g.pitch-g.gap+g.padStart+g.padEnd)/2+g.padStart)-base/2)/g.pitch;
+ let shift=0;
+ for(let pass=0;pass<3;pass++){
+  let total=0;
+  for(let i=0;i<n;i++){widths[i]=base*bellScale(i-focus,peak);total+=widths[i]}
+  const pill=total+(n-1)*g.gap+g.padStart+g.padEnd,left=g.mid-pill/2;
+  const anchor=Math.max(0,Math.min(n-1,Math.round(focus)));
+  let peakCenter=g.padStart+left;
+  for(let i=0;i<anchor;i++)peakCenter+=widths[i]+g.gap;
+  peakCenter+=widths[anchor]/2;
+  /* Slide the dock so the enlarged icon sits under the pointer, unless that pushes it off screen. */
+  const wanted=Math.max(8,Math.min(g.along-pill-8,left+(mx-peakCenter)));
+  shift=pill>g.along-16?0:wanted-left;
+  const {i,fraction}=slotUnderCursor(mx-(wanted+g.padStart),widths,g.gap);
+  focus=Math.max(.5-MAG_RADIUS,Math.min(n-.5,i+fraction-.5));
+ }
+ return{scales:widths.map(width=>width/base),shift:Math.abs(shift)<.5?0:shift}
+}
+function magTick(ts){
+ magRaf=null;
+ syncIconOrder();
+ /* Frame-rate independent follow: a fixed per-frame factor would feel twice as slow on a 120 Hz panel. */
+ const dt=Math.max(4,Math.min(60,ts-magLast)),k=1-Math.pow(.7,dt/16.7);magLast=ts;
+ const {scales,shift}=magSolve(),wrap=dock.parentElement;let busy=false;
  icons.forEach((ic,index)=>{
-  let target=1;
-  if(mx!=null&&!cfg.reduceMotion){const radius=dockGeom.pitch*2.3,d=mx-restCenter(index);target=1+(dockGeom.mag-1)*Math.exp(-(d*d)/(2*radius*radius))}
-  if(cfg.reduceMotion)ic._s=1;else{ic._s+=(target-ic._s)*.3;if(Math.abs(target-ic._s)>.0015)busy=true}
+  const target=scales[index]??1;
+  ic._s+=(target-ic._s)*k;
+  if(Math.abs(target-ic._s)>.0015)busy=true;else ic._s=target;
   const size=base*ic._s;
   if(Math.abs(size-(ic._w||0))>.25){ic._w=size;ic.style.width=ic.style.height=size+'px';ic.firstChild.style.fontSize=(size*ICON_GLYPH).toFixed(1)+'px'}
  });
+ shiftCur+=(shift-shiftCur)*k;
+ if(Math.abs(shift-shiftCur)>.2)busy=true;else shiftCur=shift;
+ if(wrap)wrap.style.transform=dockGeom&&dockGeom.vertical?`translateY(${shiftCur}px)`:`translateX(${shiftCur}px)`;
  if(busy)magRaf=requestAnimationFrame(magTick)
 }
-function kickMagnify(){if(magRaf==null)magRaf=requestAnimationFrame(magTick)}
+function kickMagnify(){if(magRaf==null){magLast=performance.now();magRaf=requestAnimationFrame(magTick)}}
 dock.addEventListener('pointermove',e=>{mx=dockGeom&&dockGeom.vertical?e.clientY:e.clientX;kickMagnify()});
 dock.addEventListener('pointerleave',()=>{mx=null;kickMagnify()});
 measureDock();kickMagnify();
