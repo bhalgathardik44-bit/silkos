@@ -142,7 +142,7 @@ app.on('web-contents-created', (_, c) => {
       if (i.type === 'keyUp' && /^Alt/.test(i.key) && c._silkWindowSwitchPending) { c._silkWindowSwitchPending = false; c.hostWebContents.send('shortcut', 'alt-release'); return; }
       if (i.type === 'keyDown' && i.key === 'F4') { e.preventDefault(); c.hostWebContents.send('shortcut', 'lp'); return; }
       const k = i.key.toLowerCase();
-      if (i.type === 'keyDown' && (i.control || i.meta) && !i.shift && !i.alt && ['t', 'w', 'l', 'r', 'k', 'd', ' '].includes(k)) {
+      if (i.type === 'keyDown' && (i.control || i.meta) && !i.shift && !i.alt && ['t', 'w', 'l', 'r', 'f', 'k', 'd', ' '].includes(k)) {
         e.preventDefault(); c.hostWebContents.send('shortcut', k);
       }
     });
@@ -439,6 +439,58 @@ const fpFailure = (result, action) => {
   const details = fpDetails(result);
   return `${action}${details ? `: ${details}` : '.'}`;
 };
+/* flatpak paints its progress with \r-separated updates; read them as one line at a time. */
+const fpProgressLine = line => {
+  const text = line.replace(/\s+$/, '');
+  const bar = text.match(/\[([^\]]*)\]/);
+  const numeric = text.match(/(\d+(?:[.,]\d+)?)\s*%/);
+  let percent = numeric ? parseFloat(numeric[1].replace(',', '.')) : null;
+  if (percent === null && bar && bar[1].length >= 6) percent = bar[1].replace(/ /g, '').length / bar[1].length * 100;
+  const label = text.replace(/\[[^\]]*\].*$/, '').replace(/[:\s|-]+$/, '').trim().slice(0, 70);
+  if (!label && percent === null) return null;
+  return { label, percent: percent === null ? null : Math.max(0, Math.min(100, Math.round(percent))) };
+};
+/* Run flatpak while streaming its progress to the Store window, so long downloads show a real bar. */
+const fpStream = (sender, id, args, ms) => new Promise(resolve => {
+  let child;
+  try { child = spawn('flatpak', args, { stdio: ['ignore', 'pipe', 'pipe'] }); }
+  catch (e) { resolve({ ok: false, out: '', err: String((e && e.message) || e) }); return; }
+  let out = '', err = '', tail = '', lastLabel = '', lastPercent = null, sentAt = 0, timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, ms);
+  const report = line => {
+    const step = fpProgressLine(line);
+    if (!step) return;
+    const changed = step.label !== lastLabel || step.percent !== lastPercent;
+    /* Smooth out percentage ticks only; a new stage must always reach the UI. */
+    if (!changed || (step.label === lastLabel && Date.now() - sentAt < 120)) return;
+    lastLabel = step.label; lastPercent = step.percent; sentAt = Date.now();
+    try { if (sender) sender.send('store:progress', { id, label: step.label, percent: step.percent }); } catch {}
+  };
+  const feed = (chunk, isError) => {
+    const text = String(chunk);
+    if (isError) err += text; else out += text;
+    const lines = text.split(/[\r\n]/);
+    lines[0] = tail + lines[0];
+    tail = lines.pop() || '';
+    lines.forEach(report);
+  };
+  child.stdout.on('data', chunk => feed(chunk, false));
+  child.stderr.on('data', chunk => feed(chunk, true));
+  child.on('error', e => { clearTimeout(timer); resolve({ ok: false, out, err: `${err}${(e && e.message) || e}` }); });
+  child.on('close', code => {
+    clearTimeout(timer);
+    if (tail) report(tail);
+    resolve({ ok: code === 0 && !timedOut, out, err: timedOut ? `${err}The operation timed out.` : err });
+  });
+});
+const mapLimit = async (items, limit, fn) => {
+  const out = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (let i = next++; i < items.length; i = next++) out[i] = await fn(items[i]);
+  }));
+  return out;
+};
 let fpReady = null;
 const fpSetup = () => fpReady || (fpReady = (async () => {
   if (!IS_LINUX) return 'The Store works when SilkOS runs on Linux.';
@@ -454,9 +506,9 @@ const fpIcon = id => {
 };
 ipcMain.handle('store:installed', async () => {
   if (!IS_LINUX) return { error: 'The Store works when SilkOS runs on Linux.' };
-  const r = await fp(['list', '--user', '--app', '--columns=application,name'], 15000);
+  const r = await fp(['list', '--user', '--app', '--columns=application,name,version'], 15000);
   if (!r.ok) return { error: fpFailure(r, 'Could not list installed apps') };
-  return { apps: fpRows(r.out).map(([id, name]) => ({ id, name, icon: fpIcon(id) })) };
+  return { apps: fpRows(r.out).filter(row => okId(row[0])).map(([id, name, version]) => ({ id, name, version, icon: fpIcon(id) })) };
 });
 /* ---- Persistence: an empty disk becomes a live-boot "persistence" partition ---- */
 ipcMain.handle('persist:status', async () => {
@@ -484,12 +536,70 @@ ipcMain.handle('store:search', async (_, q) => {
   const seen = new Set();
   return { apps: fpRows(r.out).filter(x => okId(x[2]) && !seen.has(x[2]) && seen.add(x[2])).slice(0, 40).map(([name, desc, id]) => ({ id, name, desc })) };
 });
-ipcMain.handle('store:install', async (_, id) => {
+/* Flathub's appstream endpoint answers for any app ID and carries the real icons, screenshots and
+   release data. It is plain JSON over HTTPS, so it also works outside Linux for browsing. */
+const FH_APPSTREAM = 'https://flathub.org/api/v2/appstream/';
+const fhCache = new Map();
+const FH_KEEP = 600000, FH_KEEP_ERROR = 15000;
+ipcMain.handle('store:detail', async (_, id) => {
+  if (!okId(id)) return { error: 'Invalid app ID.' };
+  const hit = fhCache.get(id);
+  if (hit && Date.now() - hit.at < (hit.data ? FH_KEEP : FH_KEEP_ERROR)) return hit.data ? { data: hit.data } : { error: hit.error };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 9000);
+  try {
+    const reply = await fetch(FH_APPSTREAM + encodeURIComponent(id), { signal: ctrl.signal, headers: { accept: 'application/json' } });
+    if (!reply.ok) throw new Error(`HTTP ${reply.status}`);
+    const data = await reply.json();
+    fhCache.set(id, { at: Date.now(), data });
+    return { data };
+  } catch {
+    const error = 'Could not load the Flathub details for this app.';
+    fhCache.set(id, { at: Date.now(), error });
+    return { error };
+  } finally {
+    clearTimeout(timer);
+  }
+});
+ipcMain.handle('store:install', async (event, id) => {
   if (!okId(id)) return { ok: false, error: 'Invalid app ID.' };
   const setupError = await fpSetup();
   if (setupError) return { ok: false, error: setupError };
-  const r = await fp(['install', '--user', '-y', '--noninteractive', 'flathub', id], 30 * 60000);
+  const r = await fpStream(event.sender, id, ['install', '--user', '-y', '--noninteractive', 'flathub', id], 30 * 60000);
   return { ok: r.ok, error: r.ok ? '' : fpFailure(r, 'Could not install app') };
+});
+ipcMain.handle('store:uninstall', async (event, id) => {
+  if (!okId(id)) return { ok: false, error: 'Invalid app ID.' };
+  const setupError = await fpSetup();
+  if (setupError) return { ok: false, error: setupError };
+  const r = await fpStream(event.sender, id, ['uninstall', '--user', '-y', '--noninteractive', id], 10 * 60000);
+  return { ok: r.ok, error: r.ok ? '' : fpFailure(r, 'Could not uninstall app') };
+});
+/* Compare each installed app against the Flathub appstream catalog that is already on disk. */
+ipcMain.handle('store:updates', async () => {
+  const setupError = await fpSetup();
+  if (setupError) return { error: setupError };
+  const r = await fp(['list', '--user', '--app', '--columns=application,name,version'], 15000);
+  if (!r.ok) return { error: fpFailure(r, 'Could not check for updates') };
+  const apps = fpRows(r.out).filter(row => okId(row[0]));
+  if (!apps.length) return { updates: [] };
+  let failures = 0;
+  const results = await mapLimit(apps, 4, async ([id, name, version]) => {
+    const info = await fp(['remote-info', '--user', '--columns=version', 'flathub', id], 20000);
+    if (!info.ok) { failures++; return null; }
+    const to = (info.out || '').split('\n')[0].trim();
+    if (!to || to === 'unknown' || to === version) return null;
+    return { id, name, from: version || '', to };
+  });
+  if (failures === apps.length) return { error: 'Could not compare with the Flathub catalog.' };
+  return { updates: results.filter(Boolean) };
+});
+ipcMain.handle('store:update-all', async (event, id) => {
+  if (id !== undefined && id !== null && !okId(id)) return { ok: false, error: 'Invalid app ID.' };
+  const setupError = await fpSetup();
+  if (setupError) return { ok: false, error: setupError };
+  const r = await fpStream(event.sender, id || '', ['update', '--user', '--noninteractive', '-y', ...(id ? [id] : [])], 30 * 60000);
+  return { ok: r.ok, error: r.ok ? '' : fpFailure(r, id ? 'Could not update app' : 'Could not update apps') };
 });
 ipcMain.handle('store:run', (_, id) => IS_LINUX && okId(id) ? launchExt('flatpak', ['run', '--env=GTK_CSD=0', id], os.homedir()) : { ok: false, error: 'Not available here' });
 /* ---- Finder + Terminal ---- */
@@ -561,34 +671,53 @@ ipcMain.handle('sys:workspace:set', async (_, index) => {
   const result = await run('wmctrl', ['-s', String(index)]);
   return result === null ? { ok: false, error: 'Could not switch desktop workspace.' } : { ok: true, index };
 });
+const GESTURE_MONITOR_ATTEMPTS = 10;
+const GESTURE_MONITOR_RETRY_MS = 2000;
 const startTouchpadGestureMonitor = win => {
   if (!IS_LINUX) return;
-  const parser = createToucheggGestureParser(gesture => {
-    if (!win.isDestroyed()) win.webContents.send('touchpad-gesture', gesture);
-  });
-  let child;
-  try {
-    child = spawn('dbus-monitor', [
-      '--address', 'unix:abstract=touchegg',
-      "type='signal',interface='io.github.joseexposito.Touchegg'"
-    ], { stdio: ['ignore', 'pipe', 'pipe'] });
-  } catch (error) {
-    console.error('Could not start Touchégg gesture monitoring:', error);
-    return;
-  }
-  let diagnostic = '';
-  child.stdout.setEncoding('utf8');
-  child.stdout.on('data', data => parser.write(data));
-  child.stderr.setEncoding('utf8');
-  child.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-2000); });
-  child.once('error', error => console.error('Could not monitor Touchégg gestures:', error));
-  child.once('close', (code, signal) => {
-    touchpadGestureMonitor = null;
-    if (code !== 0 && !isQuitting) {
-      console.error(`Touchégg gesture monitor stopped (${signal || `exit ${code}`}): ${diagnostic.trim() || 'no diagnostic output'}`);
+  let sawGesture = false;
+  let attempts = 0;
+  const startMonitor = () => {
+    if (isQuitting) return;
+    attempts += 1;
+    // A fresh parser per attempt, so a half-read line from a dead monitor cannot blend into
+    // the next monitor's output and invent a gesture.
+    const parser = createToucheggGestureParser(gesture => {
+      sawGesture = true;
+      if (!win.isDestroyed()) win.webContents.send('touchpad-gesture', gesture);
+    });
+    let child;
+    try {
+      child = spawn('dbus-monitor', [
+        '--address', 'unix:abstract=touchegg',
+        "type='signal',interface='io.github.joseexposito.Touchegg'"
+      ], { stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (error) {
+      console.error('Could not start Touchégg gesture monitoring:', error);
+      return;
     }
-  });
-  touchpadGestureMonitor = child;
+    let diagnostic = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', data => parser.write(data));
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-2000); });
+    child.once('error', error => {
+      if (attempts >= GESTURE_MONITOR_ATTEMPTS) console.error('Could not monitor Touchégg gestures:', error);
+    });
+    // Touchégg's daemon owns the bus SilkOS listens on, so a monitor that dies before the first
+    // gesture usually means the daemon is still coming up. Retry quietly, then report once.
+    child.once('close', (code, signal) => {
+      touchpadGestureMonitor = null;
+      if (isQuitting) return;
+      if (!sawGesture && attempts < GESTURE_MONITOR_ATTEMPTS) {
+        setTimeout(startMonitor, GESTURE_MONITOR_RETRY_MS);
+        return;
+      }
+      if (code !== 0) console.error(`Touchégg gesture monitor stopped (${signal || `exit ${code}`}): ${diagnostic.trim() || 'no diagnostic output'}`);
+    });
+    touchpadGestureMonitor = child;
+  };
+  startMonitor();
 };
 app.on('will-quit', () => {
   isQuitting = true;

@@ -1,8 +1,15 @@
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const { test } = require('node:test');
+const { EventEmitter } = require('node:events');
 
-const replies = [
+const VLC = {
+  name: 'VLC', summary: 'The all-powerful media player', developer_name: 'VideoLAN', project_license: 'GPL-2.0+',
+  releases: [{ version: '3.0.23', timestamp: '1767225600' }], categories: ['AudioVideo'],
+  urls: { homepage: 'https://www.videolan.org/vlc/' }, icon: 'https://dl.flathub.org/icons/org.videolan.VLC.png',
+  screenshots: [], metadata: { 'flathub::verification::verified': 'verified' }, is_free_license: true
+};
+let replies = [
   { command: 'remote-add', stderr: '' },
   { command: 'update', stderr: 'Temporary network failure' },
   { command: 'remote-add', stderr: '' },
@@ -10,8 +17,10 @@ const replies = [
   { command: 'search', stderr: 'Search service unavailable' },
   { command: 'list', stderr: 'Permission denied' }
 ];
-const calls = [];
+let calls = [];
+const spawnArgs = [];
 const handlers = new Map();
+const children = [];
 let lsblkFails = false;
 const electron = {
   app: {
@@ -35,6 +44,16 @@ Module._load = function (request, parent, isMain) {
   if (request === 'child_process') {
     return {
       ...childProcess,
+      spawn: (command, args) => {
+        assert.equal(command, 'flatpak');
+        spawnArgs.push(args);
+        const child = new EventEmitter();
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        child.kill = () => { child.killed = true };
+        children.push(child);
+        return child;
+      },
       execFile: (command, args, options, callback) => {
         if (command === 'lsblk') {
           const output = JSON.stringify({ blockdevices: [
@@ -51,7 +70,7 @@ Module._load = function (request, parent, isMain) {
         calls.push(args[0]);
         process.nextTick(() => callback(
           reply.stderr ? new Error(reply.stderr) : null,
-          '',
+          reply.out || '',
           reply.stderr
         ));
       }
@@ -67,6 +86,8 @@ try {
 }
 
 const invoke = (name, ...args) => handlers.get(name)({}, ...args);
+const invokeFrom = (event, name, ...args) => handlers.get(name)(event, ...args);
+const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
 test('Store surfaces Flatpak failures and retries a failed app-catalog setup', async () => {
   assert.deepEqual(await invoke('store:search', 'Spotify'), {
@@ -92,4 +113,86 @@ test('Store surfaces Flatpak failures and retries a failed app-catalog setup', a
   });
   lsblkFails = true;
   assert.deepEqual(await invoke('persist:status'), { error: 'Could not inspect storage devices.' });
+});
+
+test('Store loads Flathub app details once and caches them', async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0, fetchFails = false;
+  globalThis.fetch = async () => {
+    fetchCount++;
+    if (fetchFails) throw new Error('offline');
+    return { ok: true, json: async () => VLC };
+  };
+  try {
+    assert.deepEqual(await invoke('store:detail', 'org.videolan.VLC'), { data: VLC });
+    assert.deepEqual(await invoke('store:detail', 'org.videolan.VLC'), { data: VLC });
+    assert.equal(fetchCount, 1, 'the second request must come from the cache');
+
+    fetchFails = true;
+    assert.deepEqual(await invoke('store:detail', 'org.gimp.GIMP'), {
+      error: 'Could not load the Flathub details for this app.'
+    });
+    assert.deepEqual(await invoke('store:detail', '../passwd'), { error: 'Invalid app ID.' });
+    assert.equal(fetchCount, 2, 'a failed lookup is cached too, and bad IDs never reach the network');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('Store compares installed apps against the Flathub catalog', async () => {
+  calls = [];
+  replies = [
+    { command: 'list', out: 'org.videolan.VLC\tVLC\t3.0.21\norg.gimp.GIMP\tGIMP\t2.10.36\n' },
+    { command: 'remote-info', out: '3.0.23\n' },
+    { command: 'remote-info', out: '2.10.36\n' }
+  ];
+  assert.deepEqual(await invoke('store:updates'), {
+    updates: [{ id: 'org.videolan.VLC', name: 'VLC', from: '3.0.21', to: '3.0.23' }]
+  });
+  assert.deepEqual(calls, ['list', 'remote-info', 'remote-info']);
+
+  replies = [{ command: 'list', out: 'org.videolan.VLC\tVLC\t3.0.21\n' }, { command: 'remote-info', stderr: 'No such ref' }];
+  assert.deepEqual(await invoke('store:updates'), { error: 'Could not compare with the Flathub catalog.' });
+});
+
+test('Store streams Flatpak install progress and reports how each job ended', async () => {
+  const steps = [];
+  const sender = { isDestroyed: () => false, send: (channel, payload) => steps.push({ channel, payload }) };
+  const event = { sender };
+
+  const working = invokeFrom(event, 'store:install', 'org.videolan.VLC');
+  await tick();
+  const child = children[children.length - 1];
+  child.stdout.emit('data', 'Installing appstream: flathub\n');
+  child.stdout.emit('data', 'Fetched 1.4 MB (12%)\nUpdating: org.videolan.VLC [1/4]\n');
+  child.stdout.emit('data', 'Fetched 9 MB (78%)\n');
+  child.emit('close', 0);
+  assert.deepEqual(await working, { ok: true, error: '' });
+  assert.deepEqual(spawnArgs.at(-1), ['install', '--user', '-y', '--noninteractive', 'flathub', 'org.videolan.VLC']);
+  assert.deepEqual(steps.map(step => step.payload.percent), [null, 12, null, 78]);
+  assert.deepEqual(steps.map(step => step.payload.id), ['org.videolan.VLC', 'org.videolan.VLC', 'org.videolan.VLC', 'org.videolan.VLC']);
+  assert.match(steps.at(-1).payload.label, /Fetched 9 MB/);
+
+  const removed = invokeFrom(event, 'store:uninstall', 'org.gimp.GIMP');
+  await tick();
+  children[children.length - 1].emit('close', 0);
+  assert.deepEqual(await removed, { ok: true, error: '' });
+  assert.deepEqual(spawnArgs.at(-1), ['uninstall', '--user', '-y', '--noninteractive', 'org.gimp.GIMP']);
+
+  const failed = invokeFrom(event, 'store:update-all', 'org.gimp.GIMP');
+  await tick();
+  const broken = children[children.length - 1];
+  broken.stderr.emit('data', 'error: Nothing to do, org.gimp.GIMP is up to date.\n');
+  broken.emit('close', 1);
+  assert.deepEqual(await failed, {
+    ok: false,
+    error: 'Could not update app: error: Nothing to do, org.gimp.GIMP is up to date.'
+  });
+  assert.deepEqual(spawnArgs.at(-1), ['update', '--user', '--noninteractive', '-y', 'org.gimp.GIMP']);
+
+  const missing = invokeFrom(event, 'store:install', 'org.blender.Blender');
+  await tick();
+  children[children.length - 1].emit('error', new Error('spawn flatpak ENOENT'));
+  assert.deepEqual(await missing, { ok: false, error: 'Flatpak is not installed.' });
+  assert.equal(replies.length, 0, 'progress reporting must not fall back to buffered execFile calls');
 });
