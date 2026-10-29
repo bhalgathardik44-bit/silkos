@@ -42,3 +42,21 @@ test('Touchégg reports four-finger horizontal swipe progress', () => {
     { phase: 'update', type: 'swipe', direction: 'right', progress: 0.56 }
   ]);
 });
+
+test('Touchégg reports four-finger vertical swipes for the switcher and desktop', () => {
+  const gestures = [];
+  const parser = createToucheggGestureParser(gesture => gestures.push(gesture));
+  parser.write(signal('OnGestureBegin', 1, 0, 4, 1) + signal('OnGestureUpdate', 1, 55, 4, 1) + signal('OnGestureEnd', 2, 100, 4, 1));
+  assert.deepEqual(gestures, [
+    { phase: 'begin', type: 'swipe', direction: 'up', progress: 0 },
+    { phase: 'update', type: 'swipe', direction: 'up', progress: 0.55 },
+    { phase: 'end', type: 'swipe', direction: 'down', progress: 1 }
+  ]);
+});
+
+test('Touchégg ignores vertical swipes from other finger counts', () => {
+  const gestures = [];
+  const parser = createToucheggGestureParser(gesture => gestures.push(gesture));
+  parser.write(signal('OnGestureUpdate', 1, 70, 3, 1) + signal('OnGestureUpdate', 2, 70, 5, 1));
+  assert.deepEqual(gestures, []);
+});

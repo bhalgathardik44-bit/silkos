@@ -1,9 +1,17 @@
 const SWIPE = 1;
 const PINCH = 2;
+const SWIPE_UP = 1;
+const SWIPE_DOWN = 2;
 const SWIPE_LEFT = 3;
 const SWIPE_RIGHT = 4;
 const PINCH_IN = 5;
 const PINCH_OUT = 6;
+const SWIPE_DIRECTIONS = {
+  [SWIPE_UP]: 'up',
+  [SWIPE_DOWN]: 'down',
+  [SWIPE_LEFT]: 'left',
+  [SWIPE_RIGHT]: 'right'
+};
 
 function createToucheggGestureParser(onGesture) {
   let buffer = '';
@@ -25,12 +33,12 @@ function createToucheggGestureParser(onGesture) {
 
     const [type, direction, percentage, fingers] = values;
     const isPinch = type === PINCH && fingers === 5 && (direction === PINCH_IN || direction === PINCH_OUT);
-    const isDesktopSwipe = type === SWIPE && fingers === 4 && (direction === SWIPE_LEFT || direction === SWIPE_RIGHT);
+    const isDesktopSwipe = type === SWIPE && fingers === 4 && SWIPE_DIRECTIONS[direction] !== undefined;
     if ((isPinch || isDesktopSwipe) && Number.isFinite(percentage)) {
       onGesture({
         phase: member === 'OnGestureBegin' ? 'begin' : member === 'OnGestureEnd' ? 'end' : 'update',
         type: isPinch ? 'pinch' : 'swipe',
-        direction: direction === PINCH_IN ? 'in' : direction === PINCH_OUT ? 'out' : direction === SWIPE_LEFT ? 'left' : 'right',
+        direction: isPinch ? (direction === PINCH_IN ? 'in' : 'out') : SWIPE_DIRECTIONS[direction],
         progress: Math.max(0, Math.min(1, percentage / 100))
       });
     }

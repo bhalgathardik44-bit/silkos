@@ -36,8 +36,8 @@ body.lite #menubar{backdrop-filter:none;background:var(--win)}
 .ic.bounce{animation:bounce .7s var(--ease)}
 @keyframes bounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-26px)}55%{transform:translateY(0)}72%{transform:translateY(-10px)}}
 .bwrap{display:flex;flex-direction:column;height:100%;position:relative;overflow:hidden}
-:root{--sbar:#e9e7ea;--sfield:rgba(0,0,0,.07)}
-@media (prefers-color-scheme:dark){:root{--sbar:#2f2f33;--sfield:rgba(255,255,255,.1)}}
+:root{--sbar:#e9e7ea;--sfield:rgba(0,0,0,.07);--cc-tile:rgba(255,255,255,.62);--cc-tile-line:rgba(255,255,255,.72);--cc-track:rgba(0,0,0,.14);--cc-fill:rgba(255,255,255,.96);--cc-hover:rgba(0,0,0,.06);--cc-off:#8e8e93}
+@media (prefers-color-scheme:dark){:root{--sbar:#2f2f33;--sfield:rgba(255,255,255,.1);--cc-tile:rgba(255,255,255,.16);--cc-tile-line:rgba(255,255,255,.13);--cc-track:rgba(0,0,0,.4);--cc-fill:rgba(255,255,255,.92);--cc-hover:rgba(255,255,255,.1);--cc-off:#8e8e93}}
 .win.safari .tb{height:52px;background:var(--sbar);font-weight:400;gap:10px;padding:0 14px}
 .win.safari .body{overflow:hidden}
 .tl,.tr{flex:1;display:flex;align-items:center;gap:4px}.tr{justify-content:flex-end}
@@ -97,12 +97,14 @@ textarea{width:100%;height:100%;border:0;outline:0;resize:none;padding:14px;font
 .win.space-leaving{opacity:0;transform:translateX(var(--space-exit-x,-18px)) scale(.99);pointer-events:none;transition:opacity .24s var(--ease),transform .28s var(--ease)}
 .win.space-entering{opacity:0;transform:translateX(var(--space-enter-x,18px)) scale(.99);transition:opacity .24s var(--ease),transform .28s var(--ease)}
 .win.space-swipe{transform:translate3d(var(--space-swipe-x),0,0);transition:none!important;pointer-events:none;will-change:transform}
-.win.space-swipe-settling{transition:transform .32s var(--ease)!important}
+.win.space-swipe-settling{transition:transform var(--space-settle,.32s) var(--ease)!important}
 .win.min{transform:scale(.04);transition:transform .55s cubic-bezier(.6,0,.25,1),opacity .45s cubic-bezier(.6,0,.25,1)}
 .win.closing{transform:scale(.9);transition:transform .25s var(--ease),opacity .25s}
 .win.inactive{box-shadow:0 12px 36px rgba(0,0,0,.22),0 0 0 .5px rgba(0,0,0,.3)}
 .win.inactive .dot{background:#9998!important}
 .win.drag{transform:scale(1.012);transition:box-shadow .2s}
+body.desk-expose .win.show{transform:translate3d(0,var(--desk-y,0),0) scale(var(--desk-scale,1));opacity:var(--desk-opacity,1);pointer-events:none;transition:none!important}
+body.desk-expose-settling .win.show{transition:transform var(--desk-settle,.3s) var(--ease),opacity var(--desk-settle,.3s) var(--ease)!important}
 .dot{display:grid;place-items:center}.dot::after{font-size:8px;font-weight:700;line-height:1;color:rgba(0,0,0,.55);opacity:0;transition:opacity .15s}
 .tb:hover .dot::after{opacity:1}.dot.r::after{content:'\2715'}.dot.y::after{content:'\2212'}.dot.g::after{content:'+'}
 .tb{cursor:var(--cur)}
@@ -157,8 +159,8 @@ body.lite #dock{background:var(--win)}
 @media (prefers-color-scheme:dark){.imp button{background:rgba(255,255,255,.15);color:#eee}}
 
 :root{--accent:#0a60ff}
-:root[data-theme=light]{--glass:rgba(255,255,255,.55);--text:#111;--bar:rgba(255,255,255,.45);--win:#fff;--line:rgba(0,0,0,.1);--sbar:#e9e7ea;--sfield:rgba(0,0,0,.07)}
-:root[data-theme=dark]{--glass:rgba(40,40,48,.6);--text:#eee;--bar:rgba(20,20,26,.45);--win:#2a2a32;--line:rgba(255,255,255,.12);--sbar:#2f2f33;--sfield:rgba(255,255,255,.1)}
+:root[data-theme=light]{--glass:rgba(255,255,255,.55);--text:#111;--bar:rgba(255,255,255,.45);--win:#fff;--line:rgba(0,0,0,.1);--sbar:#e9e7ea;--sfield:rgba(0,0,0,.07);--cc-tile:rgba(255,255,255,.62);--cc-tile-line:rgba(255,255,255,.72);--cc-track:rgba(0,0,0,.14);--cc-fill:rgba(255,255,255,.96);--cc-hover:rgba(0,0,0,.06);--cc-off:#8e8e93}
+:root[data-theme=dark]{--glass:rgba(40,40,48,.6);--text:#eee;--bar:rgba(20,20,26,.45);--win:#2a2a32;--line:rgba(255,255,255,.12);--sbar:#2f2f33;--sfield:rgba(255,255,255,.1);--cc-tile:rgba(255,255,255,.16);--cc-tile-line:rgba(255,255,255,.13);--cc-track:rgba(0,0,0,.4);--cc-fill:rgba(255,255,255,.92);--cc-hover:rgba(255,255,255,.1);--cc-off:#8e8e93}
 :root[data-theme=light] .start{color:#333;background:linear-gradient(160deg,#cfd9ff,#f3d6ff 55%,#ffe2c9)}
 :root[data-theme=dark] .start{color:#eee;background:linear-gradient(160deg,#1c2340,#2d1f3f 55%,#3a2a24)}
 :root[data-theme=light] .imp button{background:rgba(255,255,255,.6);color:#222}:root[data-theme=dark] .imp button{background:rgba(255,255,255,.15);color:#eee}
@@ -326,36 +328,96 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .resapp{display:flex;flex-direction:column;height:100%;min-height:0}.reshead{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);flex:none}.reshead h2{font-size:18px;font-weight:650}.reshead input{margin-left:auto;width:min(260px,45%);height:32px;border:0;border-radius:9px;padding:0 12px;background:var(--sfield);color:inherit;outline:0;user-select:text}.reshead input:focus{box-shadow:0 0 0 2px var(--accent)}.resrefresh{width:32px;height:32px;border:0;border-radius:9px;background:var(--sfield);color:inherit;font-size:18px}.resmetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px 16px}.resmetric{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--glass)}.resmetric small{display:block;font-size:12px;opacity:.65}.resmetric strong{display:block;margin-top:3px;font-size:22px;font-weight:650}.resmetric svg{width:100%;height:34px;margin-top:6px;overflow:visible}.reslist{display:flex;flex:1;min-height:0;flex-direction:column}.rescaption{padding:4px 18px 10px;font-size:13px;font-weight:600}.restablewrap{flex:1;min-height:0;overflow:auto}.restable{width:100%;border-collapse:collapse;font-size:12px}.restable th{position:sticky;top:0;padding:9px 14px;text-align:left;background:var(--sbar);font-weight:600;white-space:nowrap}.restable td{padding:7px 14px;border-bottom:1px solid var(--line);white-space:nowrap}.restable th[data-sort]{cursor:pointer}.restable td:first-child{max-width:330px;overflow:hidden;text-overflow:ellipsis}.restable td:not(:first-child),.restable th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}.restable tbody tr:hover{background:var(--sfield)}.resmessage{padding:30px;text-align:center;opacity:.65;font-size:13px}
 .dd{max-width:calc(100vw - 16px);max-height:calc(100vh - 40px);overflow:auto;overscroll-behavior:contain}
 .sl,input[type=range]{cursor:var(--curp)!important}.sl::-webkit-slider-thumb,input[type=range]::-webkit-slider-thumb{cursor:var(--curp)}
-.cc{width:min(390px,calc(100vw - 16px));max-width:100%;padding:14px}
-.cc-head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 12px}
-.cc-head h5{font-size:13px;font-weight:650}.cc-head p{margin-top:3px;font-size:11px;opacity:.58}
-.cc-toggles{display:grid;grid-template-columns:1.08fr .92fr;gap:8px;margin-bottom:8px}
-.cc-network,.cc-feature-stack{min-width:0;display:flex;flex-direction:column;gap:7px}
-.cc-network{padding:5px;border:1px solid var(--line);border-radius:14px;background:var(--sfield)}
-.cc-service{width:100%;min-width:0;min-height:42px;display:flex;align-items:center;gap:9px;padding:5px 7px;border:0;border-radius:11px;background:transparent;color:inherit;text-align:left;transition:background .18s,transform .2s var(--spring)}
-.cc-service:not(:disabled){cursor:var(--curp)}.cc-service:not(:disabled):hover{background:var(--glass);transform:translateY(-1px)}
-.cc-service.active{background:color-mix(in srgb,var(--accent) 19%,var(--sfield))}
-.cc-glyph{width:27px;height:27px;display:grid;place-items:center;flex:none;border-radius:50%;background:var(--glass);color:inherit}
-.cc-glyph svg{width:15px;height:15px;display:block}
-.cc-tile-copy{min-width:0;flex:1}.cc-tile-copy strong,.cc-tile-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cc-tile-copy strong{font-size:11px;font-weight:600}.cc-tile-copy small{margin-top:2px;font-size:9px;opacity:.62}
-.cc-feature{width:100%;min-width:0;min-height:45px;display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--line);border-radius:12px;background:var(--sfield);color:inherit;text-align:left}
-.cc-feature:not(:disabled){cursor:var(--curp);transition:background .18s,transform .2s var(--spring)}.cc-feature:not(:disabled):hover{background:color-mix(in srgb,var(--accent) 9%,var(--sfield));transform:translateY(-1px)}
-.cc-feature.active{background:color-mix(in srgb,var(--accent) 19%,var(--sfield));border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
-.cc-feature:disabled,.cc-service:disabled{opacity:.55;cursor:default}
-.cc-kbd{display:grid;grid-template-columns:auto minmax(35px,1fr);column-gap:7px;row-gap:2px;min-height:56px}
-.cc-kbd .cc-glyph{grid-row:1/3}.cc-kbd .cc-tile-copy{align-self:end}.cc-kbd input{width:100%;height:14px;grid-column:2;grid-row:2;accent-color:var(--accent)}
-.cc-section{padding:11px 12px 10px;margin-top:8px;border:1px solid var(--line);border-radius:13px;background:var(--sfield)}
-.cc-section{padding:11px 12px 10px;margin-top:8px;border:1px solid var(--line);border-radius:13px;background:var(--sfield)}
-.cc-section-head,.cc-range-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
-.cc-section-head{margin-bottom:9px;font-size:12px;font-weight:600}.cc-section-head small{font-size:10px;font-weight:400;opacity:.6}
-.cc-range-row>span{width:18px;height:18px;display:grid;place-items:center;flex:none;opacity:.72}.cc-range-row>span svg{width:15px;height:15px;display:block}
-.cc .sl{min-width:0;flex:1}.cc-status{min-height:14px;margin:8px 2px 0;font-size:10px;line-height:14px;opacity:.62}
-.cc-media{display:flex;align-items:center;gap:9px;min-height:55px;padding:8px 10px;margin-top:8px;border:1px solid var(--line);border-radius:13px;background:var(--sfield)}
-.cc-media-art{width:36px;height:36px;display:grid;place-items:center;flex:none;border-radius:7px;background:linear-gradient(145deg,#ee7899,#c82e61);color:#fff}.cc-media-art svg{width:19px;height:19px}
-.cc-media-meta{min-width:0;flex:1}.cc-media-meta strong,.cc-media-meta small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cc-media-meta strong{font-size:11px;font-weight:600}.cc-media-meta small{margin-top:3px;font-size:9px;opacity:.6}
-.cc-media-actions{display:flex;gap:3px}.cc-media-actions button{width:27px;height:27px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:inherit}.cc-media-actions button:hover:not(:disabled){background:var(--glass)}.cc-media-actions button:disabled{opacity:.35}.cc-media-actions svg{width:14px;height:14px}
-.cc-radio-actions{display:flex;gap:7px;margin:0 0 8px}.cc-radio-actions button,.cc-radio-pane button{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--sfield);color:inherit;font:inherit;font-size:10px;cursor:var(--curp)}.cc-radio-actions button{flex:1}.cc-radio-pane{padding:10px;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:var(--sfield)}.cc-radio-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}.cc-radio-head strong{flex:1;font-size:11px}.cc-radio-info{min-height:15px;margin-bottom:5px;font-size:10px;opacity:.65}.cc-radio-list{display:grid;gap:4px;max-height:150px;overflow:auto}.cc-radio-item{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;text-align:left}.cc-radio-item small{opacity:.6}.cc-wifi-join{display:flex;align-items:center;gap:6px;margin-top:8px}.cc-wifi-join strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;font-size:10px}.cc-wifi-join input{width:110px;min-width:50px;height:27px;padding:0 7px;border:1px solid var(--line);border-radius:7px;background:var(--win);color:inherit;font:inherit;font-size:10px;user-select:text}
-@media(max-width:380px){.cc{padding:11px}.cc-toggles{gap:6px}.cc-service{gap:6px;padding:4px}.cc-glyph{width:24px;height:24px}.cc-tile-copy strong{font-size:10px}.cc-feature{padding:6px}}
+/* Control Centre — macOS tile grid */
+.cc{--cc-blue:#0a84ff;--cc-purple:#5e5ce6;width:min(344px,calc(100vw - 16px));max-width:100%;padding:9px;border-radius:24px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cc-tile{min-width:0;border:1px solid var(--cc-tile-line);border-radius:15px;background:var(--cc-tile);color:inherit;font:inherit;text-align:left}
+.cc-radio{grid-column:1;grid-row:1/span 2;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:6px}
+.cc-service{position:relative;display:flex;align-items:center;min-width:0;border-radius:10px;transition:background .18s}
+.cc-service:hover{background:var(--cc-hover)}
+.cc-service-main{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:var(--curp)}
+.cc-service[data-off] .cc-service-main{cursor:default}
+.cc-service[data-off] .cc-service-main:hover{background:transparent}
+.cc-more{width:24px;height:24px;margin-right:3px;flex:none;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:inherit;opacity:.5;cursor:var(--curp);transition:opacity .16s,background .16s}
+.cc-more:hover{opacity:1;background:var(--cc-hover)}
+.cc-more svg{width:10px;height:10px;display:block}
+.cc-glyph{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--cc-off);color:#fff;transition:background .3s var(--ease),transform .35s var(--spring)}
+.cc-glyph svg{width:14px;height:14px;display:block}
+.cc-service.on>.cc-service-main>.cc-glyph{background:var(--cc-blue)}
+.cc-copy{min-width:0;flex:1}
+.cc-copy strong,.cc-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-copy strong{font-size:11.5px;font-weight:600}
+.cc-copy small{margin-top:1px;font-size:9.5px;opacity:.6}
+.cc-dnd{grid-column:2;grid-row:1;display:flex;align-items:center;gap:9px;padding:10px;cursor:var(--curp);transition:transform .18s var(--spring),background .2s}
+.cc-dnd:hover{background:color-mix(in srgb,var(--cc-tile) 72%,var(--cc-hover))}
+.cc-dnd:active{transform:scale(.98)}
+.cc-dnd.on .cc-glyph{background:var(--cc-purple)}
+.cc-duo{grid-column:2;grid-row:2;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cc-mini{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:9px 5px;text-align:center}
+.cc-mini span{font-size:9.5px;font-weight:600;line-height:1.2}
+.cc-mini .cc-glyph{width:24px;height:24px}
+.cc-mini:disabled{opacity:.55;cursor:default}
+.cc-mini small{font-size:9px;line-height:1.1;opacity:.55}
+.cc-mini input[type=range]{width:100%;height:10px;margin:0;border:0;background:transparent;outline:0;-webkit-appearance:none;appearance:none}
+.cc-mini input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:var(--cc-track)}
+.cc-mini input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;margin-top:-3px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.45)}
+.cc-mini input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:var(--cc-track)}
+.cc-mini input[type=range]::-moz-range-thumb{width:9px;height:9px;border:0;border-radius:50%;background:#fff}
+.cc-slider{grid-column:1/span 2;display:flex;flex-direction:column;gap:6px;padding:9px 10px}
+.cc-slider-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:600}
+.cc-slider-head small{font-size:9.5px;font-weight:500;opacity:.5;font-variant-numeric:tabular-nums}
+.cc-slider-row{display:flex;align-items:center;gap:8px}
+.cc-cap{position:relative;flex:1;min-width:0;height:25px;border-radius:13px;background:var(--cc-track);overflow:hidden}
+.cc-cap i{position:absolute;left:0;top:0;bottom:0;width:var(--fill,50%);background:var(--cc-fill);transition:width .09s linear}
+.cc-cap>svg{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:14px;height:14px;z-index:2;color:rgba(255,255,255,.95);pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+input.cc-range{position:relative;z-index:1;width:100%;height:25px;margin:0;border:0;background:transparent;outline:0;-webkit-appearance:none;appearance:none}
+input.cc-range::-webkit-slider-runnable-track{height:25px;background:transparent}
+input.cc-range::-webkit-slider-thumb{-webkit-appearance:none;width:21px;height:21px;margin-top:2px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.45),0 0 0 .5px rgba(0,0,0,.15);transition:transform .12s var(--spring)}
+input.cc-range:active::-webkit-slider-thumb{transform:scale(1.09)}
+input.cc-range::-moz-range-track{height:25px;background:transparent}
+input.cc-range::-moz-range-thumb{width:21px;height:21px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.45)}
+input.cc-range:disabled{cursor:default;opacity:.5}
+.cc-out{width:25px;height:25px;flex:none;display:grid;place-items:center;border:0;border-radius:50%;background:var(--cc-track);color:inherit;cursor:var(--curp);transition:transform .16s var(--spring),background .16s}
+.cc-out svg{width:13px;height:13px;display:block}
+.cc-out:hover{background:var(--cc-hover)}
+.cc-out:active{transform:scale(.9)}
+.cc-out.on{background:var(--cc-fill)}
+.cc-media{grid-column:1/span 2;display:flex;align-items:center;gap:10px;padding:9px 10px}
+.cc-media-art{width:44px;height:44px;display:grid;place-items:center;flex:none;border-radius:8px;background:linear-gradient(145deg,#ee7899,#c82e61);color:#fff;box-shadow:0 3px 9px rgba(0,0,0,.28)}
+.cc-media-art svg{width:20px;height:20px}
+.cc-media-meta{min-width:0;flex:1}
+.cc-media-meta strong,.cc-media-meta small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-media-meta strong{font-size:11.5px;font-weight:600}
+.cc-media-meta small{margin-top:2px;font-size:9.5px;opacity:.6}
+.cc-media-actions{display:flex;align-items:center;gap:1px}
+.cc-media-actions button{width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:inherit;cursor:var(--curp);transition:transform .16s var(--spring),background .16s}
+.cc-media-actions button:hover:not(:disabled){background:var(--cc-hover)}
+.cc-media-actions button:active:not(:disabled){transform:scale(.86)}
+.cc-media-actions button:disabled{opacity:.35;cursor:default}
+.cc-media-actions svg{width:15px;height:15px}
+.cc-pane{grid-column:1/span 2;padding:9px 10px}
+.cc-pane-head{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:650}
+.cc-pane-head strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-chip{border:0;border-radius:8px;padding:4px 9px;background:var(--cc-track);color:inherit;font:inherit;font-size:10px;font-weight:600;cursor:var(--curp)}
+.cc-chip:hover{background:var(--cc-hover)}
+.cc-pane-info{min-height:13px;margin:6px 0 3px;font-size:10px;line-height:1.35;opacity:.62}
+.cc-pane-list{display:grid;gap:1px;max-height:150px;overflow:auto;overscroll-behavior:contain}
+.cc-net{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;padding:5px 6px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:11px;text-align:left;cursor:var(--curp)}
+.cc-net:hover{background:var(--cc-hover)}
+.cc-net small{flex:none;opacity:.55;font-size:9.5px}
+.cc-join{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--cc-tile-line)}
+.cc-join strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+.cc-join input{width:96px;min-width:44px;height:25px;padding:0 7px;border:0;border-radius:8px;background:var(--cc-track);color:inherit;font:inherit;font-size:10.5px;user-select:text;outline:0}
+.cc-foot{grid-column:1/span 2;display:flex;align-items:center;gap:8px;padding:0 2px}
+.cc-status{flex:1;min-width:0;font-size:9.5px;line-height:1.3;opacity:.6}
+.cc-status:empty{display:none}
+.cc-lock{display:flex;align-items:center;gap:5px}
+.cc-lock svg{width:11px;height:11px;display:block}
+.cc-lock-icon{display:grid;place-items:center}
+@keyframes cc-pop{0%{transform:scale(.7)}58%{transform:scale(1.16)}100%{transform:scale(1)}}
+@keyframes cc-moon{0%{transform:rotate(-42deg) scale(.55);opacity:.25}100%{transform:none;opacity:1}}
+.cc-dnd.pulse .cc-glyph{animation:cc-pop .36s var(--spring)}
+.cc-dnd.pulse .cc-glyph svg{animation:cc-moon .36s var(--ease)}
+@media(max-width:380px){.cc{padding:7px;gap:7px;border-radius:20px}.cc-glyph{width:24px;height:24px}.cc-copy strong{font-size:11px}}
 .sl{cursor:var(--curp)!important;touch-action:pan-y}.sl::-webkit-slider-thumb{cursor:var(--curp)}
 .resapp{min-width:0;background:var(--win)}.reshead{min-width:0;justify-content:space-between;gap:16px;padding:16px 20px}
 .residentity{display:flex;align-items:center;gap:11px;min-width:0}.resbadge{width:38px;height:38px;display:grid;place-items:center;flex:none;border-radius:12px;background:linear-gradient(145deg,#45d483,#168b52);color:#fff;font-size:20px;box-shadow:0 5px 14px #168b5238}
@@ -394,6 +456,7 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 @media(max-height:560px){#lockscreen{gap:14px;padding:12px}.lock-time{font-size:clamp(48px,10vh,72px)}.lock-card{padding:16px}.lock-avatar{width:48px;height:48px;margin-bottom:8px}}
 .switcher{position:fixed;z-index:9800;top:50%;left:50%;width:min(720px,calc(100vw - 32px));max-height:min(420px,calc(100vh - 64px));padding:16px;border:1px solid #ffffff35;border-radius:20px;background:rgba(25,27,38,.88);color:#fff;box-shadow:0 24px 80px #0007;-webkit-backdrop-filter:blur(30px) saturate(1.35);backdrop-filter:blur(30px) saturate(1.35);opacity:0;pointer-events:none;transform:translate(-50%,-46%) scale(.97);transition:opacity .15s,transform .15s}
 .switcher.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.switcher.gesture{transition:none;opacity:var(--sw-progress,0);transform:translate(-50%,calc(-50% + (1 - var(--sw-progress,0))*26px)) scale(calc(.96 + .04*var(--sw-progress,0)))}
 .switcher-title{margin:0 4px 12px;color:#ffffffa8;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .switcher-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;max-height:min(340px,calc(100vh - 140px));overflow:auto}
 .switcher-item{min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px;border:1px solid transparent;border-radius:14px;color:#fff;text-align:center;cursor:var(--curp)}
@@ -408,7 +471,7 @@ body.reduce-motion *,body.reduce-motion *::before,body.reduce-motion *::after{sc
 body.static-wallpaper #wall{animation:none}
 body.space-swipe-active #wall{animation:none!important;transform:translate3d(var(--space-swipe-x),0,0)!important;z-index:0}
 .space-swipe-wall-incoming{position:fixed;inset:-10%;z-index:0;pointer-events:none;animation:none!important;transform:translate3d(var(--space-swipe-x),0,0)}
-body.space-swipe-settling #wall,.space-swipe-wall-incoming.space-swipe-settling{transition:transform .32s var(--ease)!important}
+body.space-swipe-settling #wall,.space-swipe-wall-incoming.space-swipe-settling{transition:transform var(--space-settle,.32s) var(--ease)!important}
 body.high-contrast{--text:#000;--bar:#fff;--win:#fff;--glass:#fff;--line:rgba(0,0,0,.4);--sbar:#e5e5e5;--sfield:#f0f0f0}
 body.high-contrast.high-contrast-dark{--text:#fff;--bar:#080808;--win:#111;--glass:#111;--line:rgba(255,255,255,.55);--sbar:#181818;--sfield:#252525}
 body.high-contrast .win{box-shadow:0 0 0 2px var(--text)}
@@ -474,7 +537,7 @@ let z=10,wins={};
 function dockIcon(id){return dock.querySelector(`[data-id="${CSS.escape(id)}"]`)}
 function addIcon(id){const a=apps[id];
  const d=document.createElement('div');d.className='ic';d.dataset.id=id;d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-label',`${a.n}. Drag to reorder.`);d.style.background=a.c;d._s=1;
- d.draggable=false;d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launch(id)}};dock.appendChild(d);icons.push(d);if(iconOrderReady)applySavedOrder(dock,'.ic','dockOrder')}
+ d.draggable=false;d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launch(id)}};dock.appendChild(d);icons.push(d);if(iconOrderReady){applySavedOrder(dock,'.ic','dockOrder');queueMicrotask(measureDock)}}
 Object.keys(apps).forEach(addIcon);
 const DEF={theme:'auto',accent:'#0a60ff',wall:0,wallpaperImage:'',lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,dockOrder:[],launchpadOrder:[],engine:'google',sugg:true,bri:100,
  clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false};
@@ -534,7 +597,18 @@ const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1
 setupIconReordering(dock,'.ic','dockOrder');
 function refreshDockIndicators(){icons.forEach(icon=>icon.classList.toggle('on',!!wins[icon.dataset.id]&&wins[icon.dataset.id].dataset.space===String(activeSpace)&&!wins[icon.dataset.id].classList.contains('min')))}
 let spaceGesture=null,spaceSettleTimer=null,spaceTransition=null;
+/* A gesture commits when the finger crosses half the screen, or sooner when it is clearly a flick. */
+const shouldCommit=state=>state.progress>=.5||state.progress>=.2&&state.speed>=.9;
+/* Only real finger movement counts: a paused finger lets the flick reading expire. */
+function trackGestureSpeed(state,progress){
+ const now=performance.now(),next=Math.max(0,Math.min(1,progress)),delta=Math.abs(next-state.progress);
+ if(delta>.002){
+  if(state.lastMove)state.speed=delta/(Math.max(8,now-state.lastMove)/1000);
+  state.lastMove=now
+ }else if(now-state.lastMove>140)state.speed=0
+}
 function updateSpaceGesture(state,progress){
+ trackGestureSpeed(state,progress);
  state.progress=Math.max(0,Math.min(1,progress));
  const width=innerWidth,offset=state.progress*width,direction=state.direction;
  $('#wall').style.setProperty('--space-swipe-x',`${-direction*offset}px`);
@@ -556,17 +630,18 @@ function clearSpaceGesture(state){
   if(Number(win.dataset.space)===activeSpace&&!win.classList.contains('min'))win.classList.remove('space-hidden');
   else win.classList.add('space-hidden')
  });
- if(spaceTransition===state)spaceTransition=null;
+ if(spaceTransition===state){spaceTransition=null;document.documentElement.style.removeProperty('--space-settle')}
  spaceSettleTimer=null
 }
 function beginSpaceGesture(direction){
  if(lpOn()||![-1,1].includes(direction))return null;
+ if(desktopExposed)restoreDesktop();
  if(spaceGesture)finishSpaceGesture(false,true);
  if(spaceSettleTimer&&spaceTransition){clearTimeout(spaceSettleTimer);clearSpaceGesture(spaceTransition)}
  const wall=$('#wall'),incomingWall=document.createElement('div');
  incomingWall.className='space-swipe-wall-incoming';incomingWall.style.background=getComputedStyle(wall).background;
  document.body.insertBefore(incomingWall,$('#menubar'));
- const state={from:activeSpace,to:(activeSpace+direction+4)%4,direction,progress:0,incomingWall};
+ const state={from:activeSpace,to:(activeSpace+direction+4)%4,direction,progress:0,speed:0,lastMove:0,incomingWall};
  spaceGesture=spaceTransition=state;document.body.classList.add('space-swipe-active');wall.classList.add('space-swipe-outgoing');
  Object.values(wins).forEach(win=>{
   const desktop=Number(win.dataset.space);
@@ -580,9 +655,11 @@ function beginSpaceGesture(direction){
 function finishSpaceGesture(commit,immediate=false){
  const state=spaceGesture;if(!state)return;
  spaceGesture=null;
- const completed=commit&&state.progress>=.5;
+ const completed=commit&&shouldCommit(state);
  if(completed){activeSpace=state.to;updateSpaceButton();refreshDockIndicators();if(lpOn())launchpad(false)}
  if(immediate){clearSpaceGesture(state);return}
+ const settle=Math.round(130+Math.abs((completed?1:0)-state.progress)*240);
+ document.documentElement.style.setProperty('--space-settle',`${settle}ms`);
  document.body.classList.add('space-swipe-settling');
  Object.values(wins).forEach(win=>{if(win.classList.contains('space-swipe'))win.classList.add('space-swipe-settling')});
  state.incomingWall.classList.add('space-swipe-settling');
@@ -590,10 +667,11 @@ function finishSpaceGesture(commit,immediate=false){
  if(completed&&window.silk?.platform==='linux'&&silk.workspaces){
   silk.workspaces.switchTo(state.to).then(result=>{if(!result?.ok)console.error('Could not switch desktop workspace:',result?.error||'unknown error')}).catch(error=>console.error('Could not switch desktop workspace:',error))
  }
- spaceSettleTimer=setTimeout(()=>clearSpaceGesture(state),340)
+ spaceSettleTimer=setTimeout(()=>clearSpaceGesture(state),settle+30)
 }
 async function switchSpace(index,syncSystem=true,direction){
  if(!Number.isInteger(index)||index<0||index>3)return;
+ if(desktopExposed)restoreDesktop();
  if(spaceGesture)finishSpaceGesture(false,true);
  if(spaceSettleTimer&&spaceTransition){clearTimeout(spaceSettleTimer);clearSpaceGesture(spaceTransition)}
  const previous=activeSpace;if(index===previous){updateSpaceButton();return}
@@ -618,7 +696,13 @@ async function switchSpace(index,syncSystem=true,direction){
 }
 async function syncSystemWorkspace(){
  if(window.silk?.platform!=='linux'||!silk.workspaces)return;
- try{const result=await silk.workspaces.list();spacesAvailable=!!result?.available;if(result?.available){workspaceNames=Array.from({length:4},(_,index)=>result.workspaces[index]?.name||`Desktop ${index+1}`);updateSpaceButton();if(Number.isInteger(result.current)&&result.current!==activeSpace)switchSpace(result.current,false)}}
+ try{
+  const result=await silk.workspaces.list();spacesAvailable=!!result?.available;
+  if(!result?.available)return;
+  const names=Array.from({length:4},(_,index)=>result.workspaces[index]?.name||`Desktop ${index+1}`);
+  if(names.some((name,index)=>name!==workspaceNames[index])){workspaceNames=names;updateSpaceButton()}
+  if(Number.isInteger(result.current)&&result.current!==activeSpace)switchSpace(result.current,false)
+ }
  catch(error){console.error('Could not read desktop workspace:',error);spacesAvailable=false}
 }
 function launch(id){
@@ -669,18 +753,42 @@ function dragify(el,h){
   const mv=ev=>{const left=Math.max(8,Math.min(innerWidth-el.offsetWidth-8,ev.clientX-sx)),top=Math.max(28,Math.min(innerHeight-el.offsetHeight-8,ev.clientY-sy));el.style.left=left+'px';el.style.top=top+'px'};
   const up=()=>{el.classList.remove('drag');h.style.cursor='';saveWindowBounds(Object.keys(wins).find(id=>wins[id]===el),el);h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up)};
   h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up)})}
-/* dock magnification, lerped on rAF */
-let base=56,maxS=1.7,mx=null;
+/* dock magnification — distances are measured against each icon's resting position so that
+   growing an icon cannot move the point it is measured from (that feedback loop caused wobble). */
+let baseWanted=56,base=56,mx=null,magRaf=null,dockGeom=null;
+const MAG_BELL_SUM=5.4,ICON_GLYPH=26/56;
 icons.forEach(i=>i._s=1);
-dock.addEventListener('pointermove',e=>mx=cfg.dockPosition==='bottom'?e.clientX:e.clientY);
-dock.addEventListener('pointerleave',()=>mx=null);
-function tick(){let busy=false;
- icons.forEach(ic=>{
-  let t=1;if(mx!=null&&!cfg.reduceMotion){const r=ic.getBoundingClientRect(),center=cfg.dockPosition==='bottom'?r.left+r.width/2:r.top+r.height/2,d=mx-center;t=1+(maxS-1)*Math.exp(-(d*d)/(2*55*55))}
-  if(cfg.reduceMotion)ic._s=1;else ic._s+=(t-ic._s)*.22;if(Math.abs(t-ic._s)>.002)busy=true;
-  const s=base*ic._s;ic.style.width=ic.style.height=s+'px';ic.firstChild.style.fontSize=26*ic._s+'px'});
- requestAnimationFrame(tick)}
-tick();
+function measureDock(){
+ const cs=getComputedStyle(dock),vertical=cfg.dockPosition!=='bottom',
+  gap=parseFloat(vertical?cs.rowGap:cs.columnGap)||0,
+  lead=parseFloat(vertical?cs.paddingTop:cs.paddingLeft)||0,
+  side=parseFloat(vertical?cs.paddingLeft:cs.paddingTop)||0,
+  room=Math.max(160,(vertical?innerHeight:innerWidth)-2*side-24);
+ /* Shrink the resting size when the dock cannot fit, then cap magnification so the bell stays on screen. */
+ const fit=Math.floor((room-Math.max(0,icons.length-1)*gap)/Math.max(1,icons.length));
+ base=Math.max(28,Math.min(baseWanted,fit));
+ const span=Math.max(0,icons.length*base+(icons.length-1)*gap),roomForBell=Math.max(0,room-span);
+ dockGeom={vertical,pitch:base+gap,lead,span,mid:vertical?innerHeight/2:innerWidth/2,
+  mag:1+Math.min(magnifyAmount()-1,roomForBell/(base*MAG_BELL_SUM))};
+ icons.forEach(ic=>{ic._w=null})
+}
+function magnifyAmount(){return cfg.mag?cfg.magAmt:1}
+function restCenter(index){const g=dockGeom;return g.mid-g.span/2+g.lead+index*g.pitch+base/2}
+function magTick(){
+ magRaf=null;let busy=false;
+ icons.forEach((ic,index)=>{
+  let target=1;
+  if(mx!=null&&!cfg.reduceMotion){const radius=dockGeom.pitch*2.3,d=mx-restCenter(index);target=1+(dockGeom.mag-1)*Math.exp(-(d*d)/(2*radius*radius))}
+  if(cfg.reduceMotion)ic._s=1;else{ic._s+=(target-ic._s)*.3;if(Math.abs(target-ic._s)>.0015)busy=true}
+  const size=base*ic._s;
+  if(Math.abs(size-(ic._w||0))>.25){ic._w=size;ic.style.width=ic.style.height=size+'px';ic.firstChild.style.fontSize=(size*ICON_GLYPH).toFixed(1)+'px'}
+ });
+ if(busy)magRaf=requestAnimationFrame(magTick)
+}
+function kickMagnify(){if(magRaf==null)magRaf=requestAnimationFrame(magTick)}
+dock.addEventListener('pointermove',e=>{mx=dockGeom&&dockGeom.vertical?e.clientY:e.clientX;kickMagnify()});
+dock.addEventListener('pointerleave',()=>{mx=null;kickMagnify()});
+measureDock();kickMagnify();
 /* clock */
 function clk(){const now=new Date(),date=cfg.showDate?now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+' ':'';
  $('#clock').textContent=date+now.toLocaleTimeString([],{hour:cfg.clock24?'2-digit':'numeric',minute:'2-digit',...(cfg.clockSeconds?{second:'2-digit'}:{}),...(cfg.clock24?{hourCycle:'h23'}:{})})}
@@ -1192,7 +1300,9 @@ const IC={
  next:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM5 6v12l10-6z"/></svg>',
  bat:'<svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".6" y=".6" width="20" height="10.800" rx="3.200" opacity=".6"/><rect x="2.200" y="2.200" width="16.800" height="7.600" rx="1.800" fill="currentColor" stroke="none"/><path d="M22 4v4" stroke-linecap="round" opacity=".6"/></svg>',
  cc:'<svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x=".7" y=".7" width="14.600" height="5" rx="2.500"/><circle cx="4" cy="3.200" r="1.300" fill="currentColor" stroke="none"/><rect x=".7" y="8.300" width="14.600" height="5" rx="2.500"/><circle cx="12" cy="10.800" r="1.300" fill="currentColor" stroke="none"/></svg>',
- srch:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round"><circle cx="6" cy="6" r="4.600"/><path d="m9.500 9.500 3.300 3.300"/></svg>'};
+ srch:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round"><circle cx="6" cy="6" r="4.600"/><path d="m9.500 9.500 3.300 3.300"/></svg>',
+ chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 4 8 8-8 8"/></svg>',
+ mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="m16 10 5 5m0-5-5 5"/></svg>'};
 let curApp=null,dd=null,ddKey=null,curMenus={},bri=100,volume=50,lastAudibleVolume=50,hardwareBrightness=false,batInfo=null;
 const mleft=$('#mleft'),mright=$('#mright');
 const toggleLite=()=>{cfg.lite=document.body.classList.toggle('lite');save()};
@@ -1331,18 +1441,20 @@ function setVolume(value,immediate=false,statusEl=null){
   if(statusEl?.isConnected)statusEl.textContent=result===null?'Audio output control is unavailable.':'';
  },immediate);
 }
-function ccEl(){const el=document.createElement('div');el.className='cc';
- el.innerHTML=`<div class="cc-head"><div><h5>Control Center</h5><p>Quick system controls</p></div></div><div class="cc-toggles"><div class="cc-network"><button class="cc-service" data-service="wifi"><span class="cc-glyph">${IC.wifi}</span><span class="cc-tile-copy"><strong>Wi-Fi</strong><small>Checking…</small></span></button><button class="cc-service" data-service="bluetooth"><span class="cc-glyph">${IC.bluetooth}</span><span class="cc-tile-copy"><strong>Bluetooth</strong><small>Checking…</small></span></button><button class="cc-service" disabled aria-label="AirDrop is not available on Linux"><span class="cc-glyph">${IC.airdrop}</span><span class="cc-tile-copy"><strong>AirDrop</strong><small>Not available on Linux</small></span></button></div><div class="cc-feature-stack"><button class="cc-feature${cfg.quietMode?' active':''}" data-feature="quiet" aria-pressed="${!!cfg.quietMode}"><span class="cc-glyph">${IC.moon}</span><span class="cc-tile-copy"><strong>Do Not Disturb</strong><small>${cfg.quietMode?'On':'Off'}</small></span></button><label class="cc-feature cc-kbd"><span class="cc-glyph">${IC.keyboard}</span><span class="cc-tile-copy"><strong>Keyboard Brightness</strong><small class="cc-kbd-value">Checking…</small></span><input class="cc-kbd-range" type="range" min="0" max="100" value="0" aria-label="Keyboard brightness" disabled></label><button class="cc-feature" disabled aria-label="Screen mirroring is not available in this desktop build"><span class="cc-glyph">${IC.mirror}</span><span class="cc-tile-copy"><strong>Screen Mirroring</strong><small>Not available in this build</small></span></button><button class="cc-feature" data-feature="lock"><span class="cc-glyph">${IC.lock}</span><span class="cc-tile-copy"><strong>Lock Screen</strong><small>Lock this session</small></span></button></div></div><section class="cc-section"><div class="cc-section-head"><span>Display</span><small class="cc-bright-value">${bri}%</small></div><div class="cc-range-row"><span aria-hidden="true">${IC.sunLow}</span><input class="sl cc-brightness" type="range" min="5" max="100" value="${bri}" aria-label="Brightness"><span aria-hidden="true">${IC.sun}</span></div></section><section class="cc-section"><div class="cc-section-head"><span>Sound</span><small class="cc-volume-value">Loading…</small></div><div class="cc-range-row"><span aria-hidden="true">${IC.volumeLow}</span><input class="sl cc-volume" type="range" min="0" max="100" value="${volume}" aria-label="Volume"><span aria-hidden="true">${IC.volumeHigh}</span></div></section><section class="cc-media"><span class="cc-media-art">${IC.music}</span><span class="cc-media-meta"><strong class="cc-track">No media playing</strong><small class="cc-artist">Open a player to see controls</small></span><span class="cc-media-actions"><button data-media="previous" aria-label="Previous track" disabled>${IC.previous}</button><button data-media="play-pause" aria-label="Play or pause" disabled>${IC.play}</button><button data-media="next" aria-label="Next track" disabled>${IC.next}</button></span></section><p class="cc-status" role="status" aria-live="polite"></p>`;
- el.querySelector('.cc-toggles').insertAdjacentHTML('afterend',`<div class="cc-radio-actions"><button type="button" data-radio-open="wifi">Choose Wi-Fi network…</button><button type="button" data-radio-open="bluetooth">Nearby Bluetooth devices…</button></div><section class="cc-radio-pane" data-radio-pane="wifi" hidden><div class="cc-radio-head"><strong>Wi-Fi Networks</strong><button type="button" data-radio-refresh="wifi">Scan</button><button type="button" data-radio-close aria-label="Close">×</button></div><p class="cc-radio-info" data-radio-info="wifi">Scan for nearby networks.</p><div class="cc-radio-list" data-radio-list="wifi"></div><form class="cc-wifi-join" hidden><strong></strong><input type="password" name="password" autocomplete="current-password" aria-label="Wi-Fi password" placeholder="Password"><button type="submit">Join</button><button type="button" data-wifi-cancel>Cancel</button></form></section><section class="cc-radio-pane" data-radio-pane="bluetooth" hidden><div class="cc-radio-head"><strong>Bluetooth Devices</strong><button type="button" data-radio-refresh="bluetooth">Scan</button><button type="button" data-radio-close aria-label="Close">×</button></div><p class="cc-radio-info" data-radio-info="bluetooth">Scan for nearby devices.</p><div class="cc-radio-list" data-radio-list="bluetooth"></div></section>`);
+function ccEl(){const el=document.createElement('div');el.className='cc';el.setAttribute('role','group');el.setAttribute('aria-label','Control Center');
+ el.innerHTML=`<div class="cc-radio cc-tile"><div class="cc-service" data-service="wifi"><button type="button" class="cc-service-main" aria-pressed="false"><span class="cc-glyph">${IC.wifi}</span><span class="cc-copy"><strong>Wi-Fi</strong><small>Checking…</small></span></button><button type="button" class="cc-more" data-radio-open="wifi" aria-label="Choose a Wi-Fi network">${IC.chevron}</button></div><div class="cc-service" data-service="bluetooth"><button type="button" class="cc-service-main" aria-pressed="false"><span class="cc-glyph">${IC.bluetooth}</span><span class="cc-copy"><strong>Bluetooth</strong><small>Checking…</small></span></button><button type="button" class="cc-more" data-radio-open="bluetooth" aria-label="Show nearby Bluetooth devices">${IC.chevron}</button></div><div class="cc-service" data-off><button type="button" class="cc-service-main" disabled><span class="cc-glyph">${IC.airdrop}</span><span class="cc-copy"><strong>AirDrop</strong><small>Not available</small></span></button></div></div><button type="button" class="cc-dnd cc-tile${cfg.quietMode?' on':''}" data-feature="quiet" aria-pressed="${!!cfg.quietMode}"><span class="cc-glyph">${IC.moon}</span><span class="cc-copy"><strong>Do Not Disturb</strong><small>${cfg.quietMode?'On':'Off'}</small></span></button><div class="cc-duo"><div class="cc-mini cc-tile"><span class="cc-glyph">${IC.keyboard}</span><span>Keyboard Brightness</span><small class="cc-kbd-value">Checking…</small><input class="cc-kbd-range" type="range" min="0" max="100" value="0" aria-label="Keyboard brightness" disabled hidden></div><button type="button" class="cc-mini cc-tile" disabled><span class="cc-glyph">${IC.mirror}</span><span>Screen Mirroring</span></button></div><section class="cc-slider cc-tile"><div class="cc-slider-head"><span>Display</span><small class="cc-bright-value">${bri}%</small></div><div class="cc-slider-row"><span class="cc-cap">${IC.sun}<i></i><input class="cc-range cc-brightness" type="range" min="5" max="100" value="${bri}" aria-label="Brightness"></span></div></section><section class="cc-slider cc-tile"><div class="cc-slider-head"><span>Sound</span><small class="cc-volume-value">Loading…</small></div><div class="cc-slider-row"><span class="cc-cap">${IC.volumeLow}<i></i><input class="cc-range cc-volume" type="range" min="0" max="100" value="${volume}" aria-label="Volume"></span><button type="button" class="cc-out${cfg.muted?' on':''}" data-a="mute" aria-label="Mute output">${IC.mute}</button></div></section><section class="cc-media cc-tile"><span class="cc-media-art">${IC.music}</span><span class="cc-media-meta"><strong class="cc-track">No media playing</strong><small class="cc-artist">Open a player to see controls</small></span><span class="cc-media-actions"><button data-media="previous" aria-label="Previous track" disabled>${IC.previous}</button><button data-media="play-pause" aria-label="Play or pause" disabled>${IC.play}</button><button data-media="next" aria-label="Next track" disabled>${IC.next}</button></span></section><section class="cc-pane cc-tile" data-radio-pane="wifi" hidden><div class="cc-pane-head"><strong>Wi-Fi Networks</strong><button type="button" class="cc-chip" data-radio-refresh="wifi">Scan</button><button type="button" class="cc-chip" data-radio-close aria-label="Close Wi-Fi networks">Close</button></div><p class="cc-pane-info" data-radio-info="wifi">Scan for nearby networks.</p><div class="cc-pane-list" data-radio-list="wifi"></div><form class="cc-join" hidden><strong></strong><input type="password" name="password" autocomplete="current-password" aria-label="Wi-Fi password" placeholder="Password"><button type="submit" class="cc-chip">Join</button><button type="button" class="cc-chip" data-wifi-cancel>Cancel</button></form></section><section class="cc-pane cc-tile" data-radio-pane="bluetooth" hidden><div class="cc-pane-head"><strong>Bluetooth Devices</strong><button type="button" class="cc-chip" data-radio-refresh="bluetooth">Scan</button><button type="button" class="cc-chip" data-radio-close aria-label="Close Bluetooth devices">Close</button></div><p class="cc-pane-info" data-radio-info="bluetooth">Scan for nearby devices.</p><div class="cc-pane-list" data-radio-list="bluetooth"></div></section><div class="cc-foot"><p class="cc-status" role="status" aria-live="polite"></p><button type="button" class="cc-chip cc-lock" data-a="lock"><span class="cc-lock-icon">${IC.lock}</span>Lock Screen</button></div>`;
  const status=el.querySelector('.cc-status'),brightness=el.querySelector('.cc-brightness'),volumeSlider=el.querySelector('.cc-volume');
  const setStatus=text=>{status.textContent=text||''};
- const service=(name,enabled,detail,available=true)=>{const button=el.querySelector(`[data-service="${name}"]`);button.classList.toggle('active',!!enabled);button.setAttribute('aria-pressed',String(!!enabled));button.disabled=!available;button.querySelector('small').textContent=detail};
+ /* The capsule fill is painted from the value because a native range cannot style its own track fill. */
+ const paintFill=input=>{const cap=input.closest('.cc-cap');if(!cap)return;const min=Number(input.min)||0,max=Number(input.max)||100;cap.style.setProperty('--fill',`${(Number(input.value)-min)/(max-min)*100}%`)};
+ const serviceMain=name=>el.querySelector(`[data-service="${name}"] .cc-service-main`);
+ const service=(name,enabled,detail,available=true)=>{const row=el.querySelector(`[data-service="${name}"]`),button=serviceMain(name);row.classList.toggle('on',!!enabled);button.setAttribute('aria-pressed',String(!!enabled));button.disabled=!available;row.querySelector('small').textContent=detail};
  const refreshWifi=async()=>{if(!window.silk||silk.platform!=='linux'||!silk.wifi){service('wifi',false,'Unavailable',false);return}try{const result=await silk.wifi();if(!result||!result.available){service('wifi',false,result?.error||'Network service unavailable',false);return}service('wifi',result.enabled,result.enabled?(result.connected?(result.name||'Connected'):'Not connected'):'Off')}catch(error){console.error('Could not read Wi-Fi status:',error);service('wifi',false,'Could not read status',false)}};
  const refreshBluetooth=async()=>{if(!window.silk||silk.platform!=='linux'||!silk.bluetooth){service('bluetooth',false,'Unavailable',false);return}try{const result=await silk.bluetooth();if(!result?.available){service('bluetooth',false,result?.error||'No Bluetooth adapter',false);return}service('bluetooth',result.powered,result.powered?'On':'Off')}catch(error){console.error('Could not read Bluetooth status:',error);service('bluetooth',false,'Could not read status',false)}};
- const toggleRadio=async(name,read,write)=>{const button=el.querySelector(`[data-service="${name}"]`),label=button.querySelector('small'),wasEnabled=button.getAttribute('aria-pressed')==='true';button.disabled=true;label.textContent='Updating…';try{const result=await write(!wasEnabled);if(!result?.available){setStatus(result?.error||`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);await read();return}await read();setStatus('')}catch(error){console.error(`Could not change ${name} state:`,error);label.textContent='Could not change';setStatus(`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);button.disabled=false}};
+ const toggleRadio=async(name,read,write)=>{const button=serviceMain(name),label=button.querySelector('small'),wasEnabled=button.getAttribute('aria-pressed')==='true';button.disabled=true;label.textContent='Updating…';try{const result=await write(!wasEnabled);if(!result?.available){setStatus(result?.error||`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);await read();return}await read();setStatus('')}catch(error){console.error(`Could not change ${name} state:`,error);label.textContent='Could not change';setStatus(`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);button.disabled=false}};
  const radioPane=name=>el.querySelector(`[data-radio-pane="${name}"]`);
- const openRadioPane=name=>{el.querySelectorAll('.cc-radio-pane').forEach(pane=>pane.hidden=pane.dataset.radioPane!==name);if(name==='wifi')loadWifiNetworks();else loadBluetoothDevices()};
- const wifiList=el.querySelector('[data-radio-list="wifi"]'),wifiInfo=el.querySelector('[data-radio-info="wifi"]'),wifiForm=el.querySelector('.cc-wifi-join'),wifiPassword=wifiForm.querySelector('input');
+ const openRadioPane=name=>{el.querySelectorAll('.cc-pane').forEach(pane=>pane.hidden=pane.dataset.radioPane!==name);if(name==='wifi')loadWifiNetworks();else loadBluetoothDevices()};
+ const wifiList=el.querySelector('[data-radio-list="wifi"]'),wifiInfo=el.querySelector('[data-radio-info="wifi"]'),wifiForm=el.querySelector('.cc-join'),wifiPassword=wifiForm.querySelector('input');
  async function connectToWifi(ssid,password=''){
   wifiInfo.textContent=`Connecting to ${ssid}…`;
   try{const result=await silk.connectWifi(ssid,password);if(!result?.ok)throw new Error(result?.error||'Could not connect to this network.');wifiInfo.textContent=`Connected to ${ssid}.`;wifiForm.hidden=true;wifiPassword.value='';await refreshWifi()}
@@ -1357,7 +1469,7 @@ function ccEl(){const el=document.createElement('div');el.className='cc';
    if(!result.networks?.length){wifiInfo.textContent='No Wi-Fi networks found. Try scanning again.';return}
    wifiInfo.textContent='Select a network to connect.';
    result.networks.forEach(network=>{
-    const item=document.createElement('button');item.type='button';item.className='cc-radio-item';item.innerHTML='<span></span><small></small>';item.querySelector('span').textContent=network.ssid;item.querySelector('small').textContent=`${network.signal}%${network.security?' · '+network.security:' · Open'}${network.active?' · Connected':''}`;
+    const item=document.createElement('button');item.type='button';item.className='cc-net';item.innerHTML='<span></span><small></small>';item.querySelector('span').textContent=network.ssid;item.querySelector('small').textContent=`${network.signal}%${network.security?' · '+network.security:' · Open'}${network.active?' · Connected':''}`;
     item.onclick=()=>{wifiForm.querySelector('strong').textContent=network.ssid;wifiPassword.hidden=!network.security;wifiPassword.required=!!network.security;wifiPassword.value='';wifiForm.hidden=false;if(network.security)wifiPassword.focus();else connectToWifi(network.ssid)};wifiList.appendChild(item)
    })
   }catch(error){console.error('Could not scan for Wi-Fi networks:',error);wifiInfo.textContent=error.message||'Could not scan for Wi-Fi networks.'}
@@ -1372,30 +1484,35 @@ function ccEl(){const el=document.createElement('div');el.className='cc';
    const result=await silk.bluetoothDevices();if(!result?.available)throw new Error(result?.error||'Bluetooth scanning is unavailable.');
    if(!result.devices?.length){bluetoothInfo.textContent='No nearby devices found. Put your device in pairing mode and scan again.';return}
    bluetoothInfo.textContent='Select a device to pair or connect.';
-   result.devices.forEach(device=>{const item=document.createElement('button');item.type='button';item.className='cc-radio-item';item.innerHTML='<span></span><small>Connect</small>';item.querySelector('span').textContent=device.name;item.onclick=async()=>{item.disabled=true;bluetoothInfo.textContent=`Connecting to ${device.name}…`;try{const connected=await silk.connectBluetooth(device.address);if(!connected?.ok)throw new Error(connected?.error||'Could not connect to the Bluetooth device.');bluetoothInfo.textContent=`Connected to ${device.name}.`}catch(error){console.error('Could not connect Bluetooth device:',error);bluetoothInfo.textContent=error.message||'Could not connect to the Bluetooth device.'}finally{item.disabled=false}};bluetoothList.appendChild(item)})
+   result.devices.forEach(device=>{const item=document.createElement('button');item.type='button';item.className='cc-net';item.innerHTML='<span></span><small>Connect</small>';item.querySelector('span').textContent=device.name;item.onclick=async()=>{item.disabled=true;bluetoothInfo.textContent=`Connecting to ${device.name}…`;try{const connected=await silk.connectBluetooth(device.address);if(!connected?.ok)throw new Error(connected?.error||'Could not connect to the Bluetooth device.');bluetoothInfo.textContent=`Connected to ${device.name}.`}catch(error){console.error('Could not connect Bluetooth device:',error);bluetoothInfo.textContent=error.message||'Could not connect to the Bluetooth device.'}finally{item.disabled=false}};bluetoothList.appendChild(item)})
   }catch(error){console.error('Could not scan for Bluetooth devices:',error);bluetoothInfo.textContent=error.message||'Could not scan for Bluetooth devices.'}
  }
  el.querySelectorAll('[data-radio-open]').forEach(button=>button.onclick=()=>openRadioPane(button.dataset.radioOpen));
  el.querySelectorAll('[data-radio-refresh]').forEach(button=>button.onclick=()=>button.dataset.radioRefresh==='wifi'?loadWifiNetworks():loadBluetoothDevices());
  el.querySelectorAll('[data-radio-close]').forEach(button=>button.onclick=()=>{radioPane('wifi').hidden=true;radioPane('bluetooth').hidden=true});
- el.querySelector('[data-service="wifi"]').onclick=()=>toggleRadio('wifi',refreshWifi,enabled=>silk.wifi(enabled));
- el.querySelector('[data-service="bluetooth"]').onclick=()=>toggleRadio('bluetooth',refreshBluetooth,enabled=>silk.bluetooth(enabled));
- const quiet=el.querySelector('[data-feature="quiet"]');quiet.onclick=()=>{cfg.quietMode=!cfg.quietMode;quiet.classList.toggle('active',cfg.quietMode);quiet.setAttribute('aria-pressed',String(cfg.quietMode));quiet.querySelector('small').textContent=cfg.quietMode?'On':'Off';saveSettings(true)};
- el.querySelector('[data-feature="lock"]').onclick=()=>lockScreen();
+ serviceMain('wifi').onclick=()=>toggleRadio('wifi',refreshWifi,enabled=>silk.wifi(enabled));
+ serviceMain('bluetooth').onclick=()=>toggleRadio('bluetooth',refreshBluetooth,enabled=>silk.bluetooth(enabled));
+ const quiet=el.querySelector('[data-feature="quiet"]');
+ quiet.onclick=()=>{cfg.quietMode=!cfg.quietMode;quiet.classList.toggle('on',cfg.quietMode);quiet.setAttribute('aria-pressed',String(cfg.quietMode));quiet.querySelector('small').textContent=cfg.quietMode?'On':'Off';quiet.classList.remove('pulse');void quiet.offsetWidth;quiet.classList.add('pulse');saveSettings(true)};
+ el.querySelector('[data-a="lock"]').onclick=()=>lockScreen();
  const kbd=el.querySelector('.cc-kbd-range'),kbdValue=el.querySelector('.cc-kbd-value');
- if(window.silk&&silk.platform==='linux'&&silk.keyboardBrightness)silk.keyboardBrightness().then(result=>{if(!el.isConnected)return;if(!result?.available){kbd.disabled=true;kbdValue.textContent='Not available';return}kbd.disabled=false;kbd.value=String(result.value);kbdValue.textContent=`${result.value}%`}).catch(error=>{console.error('Could not read keyboard brightness:',error);kbd.disabled=true;kbdValue.textContent='Unavailable'});
- else{kbd.disabled=true;kbdValue.textContent='Unavailable'}
- const updateKbd=immediate=>{kbdValue.textContent=`${kbd.value}%`;queueHardwareUpdate('keyboardBrightness',Number(kbd.value),async next=>{const result=await silk.keyboardBrightness(next);if(!result?.available){kbdValue.textContent='Unavailable';setStatus('Keyboard brightness control is unavailable.');return}kbd.value=String(result.value);kbdValue.textContent=`${result.value}%`},immediate)};
+ const showKbd=value=>{kbd.hidden=false;kbd.value=String(value);kbdValue.textContent=`${value}%`};
+ if(window.silk&&silk.platform==='linux'&&silk.keyboardBrightness)silk.keyboardBrightness().then(result=>{if(!el.isConnected)return;if(!result?.available){kbdValue.textContent='Not available';return}kbd.disabled=false;showKbd(result.value)}).catch(error=>{console.error('Could not read keyboard brightness:',error);kbdValue.textContent='Unavailable'});
+ else{kbdValue.textContent='Unavailable'}
+ const updateKbd=immediate=>{showKbd(kbd.value);queueHardwareUpdate('keyboardBrightness',Number(kbd.value),async next=>{const result=await silk.keyboardBrightness(next);if(!result?.available){kbdValue.textContent='Unavailable';setStatus('Keyboard brightness control is unavailable.');return}showKbd(result.value)},immediate)};
  kbd.oninput=()=>updateKbd(false);kbd.onchange=()=>updateKbd(true);
  const loadMedia=async()=>{const buttons=el.querySelectorAll('[data-media]');if(!window.silk||silk.platform!=='linux'||!silk.media){buttons.forEach(button=>button.disabled=true);return}try{const result=await silk.media();if(!el.isConnected)return;buttons.forEach(button=>button.disabled=!result?.available);el.querySelector('.cc-track').textContent=result?.available?result.title:'No media playing';el.querySelector('.cc-artist').textContent=result?.available?result.artist:'Open a player to see controls';if(result?.available){const play=el.querySelector('[data-media="play-pause"]');play.innerHTML=result.playing?IC.pause:IC.play;play.setAttribute('aria-label',result.playing?'Pause':'Play')}}catch(error){console.error('Could not read media status:',error);buttons.forEach(button=>button.disabled=true)}};
  el.querySelectorAll('[data-media]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{const result=await silk.media(button.dataset.media);if(!result?.available)setStatus('Media controls are unavailable.');await loadMedia()}catch(error){console.error('Could not control media playback:',error);setStatus('Could not control media playback.')}});
  refreshWifi();refreshBluetooth();loadMedia();
- const updateBri=immediate=>{el.querySelector('.cc-bright-value').textContent=`${brightness.value}%`;setBrightness(brightness.value,immediate,status)};
+ const brightValue=el.querySelector('.cc-bright-value'),volumeValue=el.querySelector('.cc-volume-value'),muteButton=el.querySelector('[data-a="mute"]');
+ const updateBri=immediate=>{brightValue.textContent=`${brightness.value}%`;paintFill(brightness);setBrightness(brightness.value,immediate,status)};
  brightness.oninput=()=>updateBri(false);brightness.onchange=()=>updateBri(true);
- volumeSlider.oninput=()=>{el.querySelector('.cc-volume-value').textContent=`${volumeSlider.value}%`;setVolume(volumeSlider.value,false,status)};
- volumeSlider.onchange=()=>{el.querySelector('.cc-volume-value').textContent=`${volumeSlider.value}%`;setVolume(volumeSlider.value,true,status)};
- if(window.silk&&silk.platform==='linux'&&silk.brightness)silk.brightness().then(actual=>{if(!Number.isFinite(actual))return;hardwareBrightness=true;bri=cfg.bri=actual;brightness.value=String(actual);el.querySelector('.cc-bright-value').textContent=`${actual}%`;dim.style.opacity='0';save()});
- if(window.silk&&silk.platform==='linux'&&silk.volume)silk.volume().then(actual=>{if(!Number.isFinite(actual)){volumeSlider.disabled=true;el.querySelector('.cc-volume-value').textContent='Unavailable';status.textContent='Audio output control is unavailable.';return}volume=cfg.volume=actual;cfg.muted=actual===0;if(actual>0)lastAudibleVolume=cfg.lastAudibleVolume=actual;volumeSlider.value=String(actual);el.querySelector('.cc-volume-value').textContent=`${actual}%`;save()});
+ const updateVol=immediate=>{volumeValue.textContent=`${volumeSlider.value}%`;paintFill(volumeSlider);muteButton.classList.toggle('on',Number(volumeSlider.value)===0);setVolume(volumeSlider.value,immediate,status)};
+ volumeSlider.oninput=()=>updateVol(false);volumeSlider.onchange=()=>updateVol(true);
+ muteButton.onclick=()=>{if(volumeSlider.disabled){setStatus('Volume control is unavailable.');return}const next=cfg.muted?(cfg.lastAudibleVolume||lastAudibleVolume||50):0;setVolume(next,true,status);volumeSlider.value=String(next);volumeValue.textContent=`${next}%`;paintFill(volumeSlider);muteButton.classList.toggle('on',cfg.muted);muteButton.setAttribute('aria-label',cfg.muted?'Unmute output':'Mute output')};
+ paintFill(brightness);paintFill(volumeSlider);
+ if(window.silk&&silk.platform==='linux'&&silk.brightness)silk.brightness().then(actual=>{if(!Number.isFinite(actual))return;hardwareBrightness=true;bri=cfg.bri=actual;brightness.value=String(actual);el.querySelector('.cc-bright-value').textContent=`${actual}%`;paintFill(brightness);dim.style.opacity='0';save()});
+ if(window.silk&&silk.platform==='linux'&&silk.volume)silk.volume().then(actual=>{if(!Number.isFinite(actual)){volumeSlider.disabled=true;el.querySelector('.cc-volume-value').textContent='Unavailable';status.textContent='Audio output control is unavailable.';return}volume=cfg.volume=actual;cfg.muted=actual===0;if(actual>0)lastAudibleVolume=cfg.lastAudibleVolume=actual;volumeSlider.value=String(actual);el.querySelector('.cc-volume-value').textContent=`${actual}%`;muteButton.classList.toggle('on',cfg.muted);paintFill(volumeSlider);save()});
  else{volumeSlider.disabled=true;el.querySelector('.cc-volume-value').textContent='Unavailable'}
  return el}
 function calEl(){const n=new Date(),f=new Date(n.getFullYear(),n.getMonth(),1).getDay(),dm=new Date(n.getFullYear(),n.getMonth()+1,0).getDate(),el=document.createElement('div');el.className='calw';
@@ -1423,10 +1540,19 @@ function closeDd(now){if(!dd)return;const d=dd;dd=null;ddKey=null;document.query
 mright.innerHTML='<button class="mi" id="spaces" data-k="spaces" aria-label="Desktop spaces"></button><button class="mi" id="bat" data-k="bat"></button><button class="mi" data-k="wifi">'+IC.wifi+'</button><button class="mi" data-k="srch">'+IC.srch+'</button><button class="mi" data-k="cc">'+IC.cc+'</button><button class="mi" id="clock" data-k="clock"></button>';
 wire(mright);
 updateSpaceButton();
-if(window.silk&&silk.platform==='linux'&&silk.battery){const pb=()=>silk.battery().then(r=>{if(!r){$('#bat').style.display='none';return}batInfo={level:r.level/100,charging:r.charging};$('#bat').style.display='';$('#bat').innerHTML=IC.bat+'<span>'+r.level+'%</span>'});pb();setInterval(pb,30000)}else if(navigator.getBattery)navigator.getBattery().then(b=>{batInfo=b;const u=()=>{$('#bat').innerHTML=IC.bat+'<span>'+Math.round(b.level*100)+'%</span>'};u();b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u)}).catch(()=>{});
+/* Each status poll runs a helper process on Linux, so idle them while the shell is hidden. */
+function statusPoll(interval,poll){
+ let timer=null,pending=false;
+ const run=()=>{if(pending)return;pending=true;Promise.resolve(poll()).catch(error=>console.error(error)).then(()=>{pending=false})},
+  stop=()=>{if(timer){clearInterval(timer);timer=null}},
+  start=()=>{if(timer||document.hidden)return;run();timer=setInterval(run,interval)};
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();else start()});
+ start()
+}
+if(window.silk&&silk.platform==='linux'&&silk.battery)statusPoll(30000,()=>silk.battery().then(r=>{if(!r){$('#bat').style.display='none';return}batInfo={level:r.level/100,charging:r.charging};$('#bat').style.display='';$('#bat').innerHTML=IC.bat+'<span>'+r.level+'%</span>'}));else if(navigator.getBattery)navigator.getBattery().then(b=>{batInfo=b;const u=()=>{$('#bat').innerHTML=IC.bat+'<span>'+Math.round(b.level*100)+'%</span>'};u();b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u)}).catch(()=>{});
 let wfInfo=null;const wf=mright.querySelector('[data-k=wifi]'),wfu=()=>wf.style.opacity=(wfInfo?wfInfo.connected:navigator.onLine)?1:.4;wfu();addEventListener('online',wfu);addEventListener('offline',wfu);
-if(window.silk&&silk.platform==='linux'&&silk.wifi){const pw2=()=>silk.wifi().then(r=>{wfInfo=r;wfu()});pw2();setInterval(pw2,10000)}
-if(window.silk?.platform==='linux'&&silk.workspaces){syncSystemWorkspace();setInterval(syncSystemWorkspace,900)}
+if(window.silk&&silk.platform==='linux'&&silk.wifi)statusPoll(10000,()=>silk.wifi().then(r=>{wfInfo=r;wfu()}));
+if(window.silk?.platform==='linux'&&silk.workspaces)statusPoll(900,async()=>{await syncSystemWorkspace()});
 /* spotlight */
 document.body.insertAdjacentHTML('beforeend','<div id="spot" class="glass"><input placeholder="Spotlight Search" spellcheck="false" autocomplete="off"><div class="srs"></div></div>');
 const sp=$('#spot'),spi=sp.querySelector('input'),srs=sp.querySelector('.srs');let sres=[],si=0;
@@ -1482,10 +1608,71 @@ lpi.oninput=lpDraw;
 lpi.onkeydown=e=>{if(e.key==='Enter'){const l=orderedIconIds(lpList(),'launchpadOrder');if(l.length)lpGo(l[0])}else if(e.key==='Escape')launchpad(false)};
 let touchGesture=null;
 let touchpadGesture=null;
+let verticalGesture=null;
+let desktopExposed=false;
+let deskSettleTimer=null;
+const exposedWindows=()=>Object.values(wins).filter(win=>win.isConnected&&!win.classList.contains('min')&&!win.classList.contains('closing')&&!win.classList.contains('space-hidden')&&Number(win.dataset.space)===activeSpace);
+function setDesktopExposeProgress(progress){
+ const value=Math.max(0,Math.min(1,progress)),root=document.documentElement.style;
+ root.setProperty('--desk-y',`${value*26}px`);root.setProperty('--desk-scale',String(1-value*.08));root.setProperty('--desk-opacity',String(1-value))
+}
+function settleDesktopExpose(open,progress){
+ clearTimeout(deskSettleTimer);desktopExposed=open;
+ const settle=Math.round(150+Math.abs((open?1:0)-(progress==null?1:progress))*200);
+ document.documentElement.style.setProperty('--desk-settle',`${settle}ms`);
+ document.body.classList.add('desk-expose-settling');setDesktopExposeProgress(open?1:0);
+ deskSettleTimer=setTimeout(()=>{document.body.classList.remove('desk-expose-settling');document.documentElement.style.removeProperty('--desk-settle');if(!desktopExposed)document.body.classList.remove('desk-expose')},settle+20)
+}
+function beginDesktopExpose(){
+ if(desktopExposed||!exposedWindows().length)return null;
+ document.body.classList.add('desk-expose');setDesktopExposeProgress(0);
+ return {kind:'desktop',progress:0,speed:0,lastMove:0}
+}
+function restoreDesktop(){if(desktopExposed)settleDesktopExpose(false)}
+function beginSwitcherGesture(){
+ if(desktopExposed){restoreDesktop();return null}
+ const ids=switcherIds();if(!ids.length)return null;
+ const current=ids.indexOf(curApp);
+ switchState={ids,index:current<0?0:current};paintSwitcher();
+ switcher.classList.add('gesture');switcher.style.setProperty('--sw-progress','0');
+ return {kind:'switcher',progress:0,speed:0,lastMove:0}
+}
+function beginVerticalGesture(direction){
+ /* A swipe down while the switcher is up dismisses it instead of exposing the desktop behind it. */
+ if(switchState){if(direction==='down')finishWindowSwitch(false);return null}
+ return direction==='up'?beginSwitcherGesture():direction==='down'?beginDesktopExpose():null}
+function updateVerticalGesture(state,progress){
+ if(!state)return;
+ trackGestureSpeed(state,progress);
+ state.progress=Math.max(0,Math.min(1,progress));
+ if(state.kind==='switcher')switcher.style.setProperty('--sw-progress',String(state.progress));else setDesktopExposeProgress(state.progress)
+}
+function finishVerticalGesture(state,commit){
+ if(!state)return;
+ const completed=commit&&shouldCommit(state);
+ if(state.kind==='switcher'){
+  switcher.classList.remove('gesture');switcher.style.removeProperty('--sw-progress');
+  if(completed)switcher.classList.add('on');else finishWindowSwitch(false);
+  return
+ }
+ settleDesktopExpose(completed,state.progress)
+}
 function handleTouchpadGesture(gesture){
  if(!gesture)return;
  if(gesture.type==='swipe'){
   if(touchGesture?.fingers===4)return;
+  if(gesture.direction==='up'||gesture.direction==='down'){
+   if(gesture.phase==='begin'){
+    if(!verticalGesture&&!spaceGesture&&!lpOn()){verticalGesture=beginVerticalGesture(gesture.direction);if(verticalGesture)verticalGesture.direction=gesture.direction}
+    return
+   }
+   if(!verticalGesture)return;
+   const state=verticalGesture;
+   if(gesture.phase==='end'){verticalGesture=null;if(gesture.direction===state.direction)updateVerticalGesture(state,gesture.progress);finishVerticalGesture(state,gesture.direction===state.direction);return}
+   if(gesture.direction===state.direction)updateVerticalGesture(state,gesture.progress);
+   return
+  }
+  if(verticalGesture)return;
   if(gesture.phase==='begin'){
    const direction=gesture.direction==='left'?1:-1,state=beginSpaceGesture(direction);
    touchpadGesture={type:'swipe',direction,ignored:!state};
@@ -1496,10 +1683,10 @@ function handleTouchpadGesture(gesture){
   const active=touchpadGesture;
   if(gesture.direction!==(active.direction===1?'left':'right'))return;
   if(spaceGesture)updateSpaceGesture(spaceGesture,gesture.progress);
-  if(gesture.phase==='end'){touchpadGesture=null;finishSpaceGesture(gesture.progress>=.5)}
+  if(gesture.phase==='end'){touchpadGesture=null;finishSpaceGesture(true)}
   return
  }
- if(touchGesture?.fingers===5)return;
+ if(touchGesture?.fingers===5||verticalGesture)return;
  if(gesture.phase==='begin'){
   const startOpen=lpOn(),opening=gesture.direction==='in',ignored=opening?startOpen:!startOpen;
   touchpadGesture={type:'pinch',direction:gesture.direction,ignored};
@@ -1531,13 +1718,27 @@ document.addEventListener('touchmove',event=>{
  if(touchGesture.fingers===4){
   const dx=touchGesture.last.x-touchGesture.start.x,dy=touchGesture.last.y-touchGesture.start.y;
   if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.1){
+   if(verticalGesture){const state=verticalGesture;verticalGesture=null;finishVerticalGesture(state,false)}
+   touchGesture.verticalDirection='';
    const direction=dx<0?1:-1;
    if(touchGesture.spaceDirection!==direction){
     if(spaceGesture)finishSpaceGesture(false,true);
     touchGesture.spaceDirection=direction;beginSpaceGesture(direction)
    }
-   if(spaceGesture){touchGesture.spaceProgress=Math.min(1,Math.abs(dx)/(innerWidth*.35));updateSpaceGesture(spaceGesture,touchGesture.spaceProgress)}
-  }else if(spaceGesture){finishSpaceGesture(false,true);touchGesture.spaceDirection=0}
+   if(spaceGesture){touchGesture.spaceProgress=Math.min(1,Math.abs(dx)/innerWidth);updateSpaceGesture(spaceGesture,touchGesture.spaceProgress)}
+  }else if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)*1.1){
+   if(spaceGesture){finishSpaceGesture(false,true);touchGesture.spaceDirection=0;touchGesture.spaceProgress=0}
+   const direction=dy<0?'up':'down';
+   if(touchGesture.verticalDirection!==direction){
+    if(verticalGesture){const state=verticalGesture;verticalGesture=null;finishVerticalGesture(state,false)}
+    touchGesture.verticalDirection=direction;verticalGesture=beginVerticalGesture(direction)
+   }
+   if(verticalGesture){touchGesture.verticalProgress=Math.min(1,Math.abs(dy)/innerHeight);updateVerticalGesture(verticalGesture,touchGesture.verticalProgress)}
+  }else{
+   if(spaceGesture){finishSpaceGesture(false,true);touchGesture.spaceDirection=0;touchGesture.spaceProgress=0}
+   if(verticalGesture){const state=verticalGesture;verticalGesture=null;finishVerticalGesture(state,false)}
+   touchGesture.verticalDirection=''
+  }
  }
  if(touchGesture.fingers===5){
   const spread=touchSpread(touchGesture.lastPoints,touchGesture.last),delta=touchGesture.startOpen?spread-touchGesture.spread:touchGesture.spread-spread;
@@ -1549,12 +1750,13 @@ document.addEventListener('touchend',event=>{
  if(!touchGesture||event.touches.length>=touchGesture.fingers)return;
  const gesture=touchGesture;touchGesture=null;
  if(gesture.fingers===4){
-  if(gesture.spaceDirection)finishSpaceGesture(gesture.spaceProgress>=.5);
+  if(verticalGesture&&gesture.verticalDirection){const state=verticalGesture;verticalGesture=null;finishVerticalGesture(state,true)}
+  else if(gesture.spaceDirection)finishSpaceGesture(true)
  }else launchpad(gesture.progress>=.5);
 },{passive:true});
-document.addEventListener('touchcancel',()=>{const gesture=touchGesture;touchGesture=null;if(gesture?.fingers===5)launchpad(gesture.startOpen);else if(gesture?.fingers===4)finishSpaceGesture(false)},{passive:true});
+document.addEventListener('touchcancel',()=>{const gesture=touchGesture;touchGesture=null;if(gesture?.fingers===5)launchpad(gesture.startOpen);else if(gesture?.fingers===4){if(verticalGesture){const state=verticalGesture;verticalGesture=null;finishVerticalGesture(state,false)}else finishSpaceGesture(false)}},{passive:true});
 dock.addEventListener('click',e=>{if(lpOn()&&!e.target.closest('[data-id=launchpad]'))launchpad(false)});
-document.addEventListener('pointerdown',e=>{if(dd&&!e.target.closest('.dd,.mi'))closeDd();if(sp.classList.contains('on')&&!e.target.closest('#spot,[data-k=srch]'))spot(false)});
+document.addEventListener('pointerdown',e=>{if(desktopExposed)restoreDesktop();if(switchState&&!e.target.closest('.switcher'))finishWindowSwitch(false);if(dd&&!e.target.closest('.dd,.mi'))closeDd();if(sp.classList.contains('on')&&!e.target.closest('#spot,[data-k=srch]'))spot(false)});
 addEventListener('blur',()=>closeDd());
 let switchState=null;
 const switcher=document.createElement('section');switcher.className='switcher';switcher.setAttribute('role','dialog');switcher.setAttribute('aria-label','Open windows');switcher.innerHTML='<h2 class="switcher-title">Open Windows</h2><div class="switcher-list"></div>';document.body.appendChild(switcher);
@@ -1564,8 +1766,9 @@ function paintSwitcher(){
  list.innerHTML=switchState.ids.map((id,index)=>`<button class="switcher-item${index===switchState.index?' active':''}" data-id="${esc(id)}" aria-pressed="${index===switchState.index}"><span class="switcher-icon"${cfg.showSwitcherIcons?'':' hidden'}>${apps[id].svg||esc(apps[id].i)}</span><span class="switcher-name">${esc(apps[id].n)}</span></button>`).join('');
  list.querySelectorAll('.switcher-item').forEach(item=>item.onclick=()=>{switchState.index=switchState.ids.indexOf(item.dataset.id);finishWindowSwitch(true)});
 }
+function switcherIds(){return Object.entries(wins).filter(([,win])=>win.isConnected&&!win.classList.contains('closing')&&(cfg.includeMinimized||!win.classList.contains('min'))).sort((a,b)=>cfg.switcherOrder==='alphabetical'?apps[a[0]].n.localeCompare(apps[b[0]].n):(Number(b[1].style.zIndex)||0)-(Number(a[1].style.zIndex)||0)).map(([id])=>id)}
 function cycleWindows(reverse=false){
- const ids=Object.entries(wins).filter(([,win])=>win.isConnected&&!win.classList.contains('closing')&&(cfg.includeMinimized||!win.classList.contains('min'))).sort((a,b)=>cfg.switcherOrder==='alphabetical'?apps[a[0]].n.localeCompare(apps[b[0]].n):(Number(b[1].style.zIndex)||0)-(Number(a[1].style.zIndex)||0)).map(([id])=>id);
+ const ids=switcherIds();
  if(!ids.length)return;
  if(!switchState){const current=ids.indexOf(curApp);switchState={ids,index:current<0?(reverse?0:ids.length-1):current}}
  else switchState.ids=ids.filter(id=>switchState.ids.includes(id));
@@ -1582,7 +1785,7 @@ function finishWindowSwitch(commit){
 function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4,true,-1);if(k==='space-right')return switchSpace((activeSpace+1)%4,true,1);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
  if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='d')b.addBm()}
 if(window.silk&&silk.onShortcut)silk.onShortcut(shortcut);
-document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Escape'){if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false)}});
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Enter'&&switchState){e.preventDefault();finishWindowSwitch(true)}else if(e.key==='Escape'){if(desktopExposed)restoreDesktop();if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false)}});
 if(!window.silk){
  document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='Tab'){e.preventDefault();cycleWindows(e.shiftKey)}else if(e.key==='Escape'&&switchState){e.preventDefault();finishWindowSwitch(false)}});
  document.addEventListener('keyup',e=>{if(e.key==='Alt'||e.key==='AltGraph')finishWindowSwitch(true)});
@@ -1596,7 +1799,7 @@ function applyCfg(){const R=document.documentElement,dark=cfg.theme==='dark'||(c
  const wall=$('#wall');wall.style.background=cfg.wallpaperImage?`center / cover no-repeat url("${cfg.wallpaperImage}")`:WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('static-wallpaper',!cfg.wallpaperMotion);document.body.classList.toggle('lite',!!cfg.lite);
  document.body.classList.toggle('reduce-motion',!!cfg.reduceMotion);document.body.classList.toggle('high-contrast',!!cfg.highContrast);document.body.classList.toggle('high-contrast-dark',!!cfg.highContrast&&dark);
  const dockWrap=$('#dockwrap');dockWrap.classList.remove('pos-left','pos-right');if(cfg.dockPosition!=='bottom')dockWrap.classList.add('pos-'+cfg.dockPosition);
- base=cfg.dock;maxS=cfg.mag?cfg.magAmt:1;dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;clk()}
+ baseWanted=cfg.dock;measureDock();dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;clk()}
 document.addEventListener('mousemove',e=>{if(!cfg.hide)return;const w=$('#dockwrap'),edge=cfg.dockPosition==='bottom'?e.clientY>innerHeight-10:cfg.dockPosition==='left'?e.clientX<10:e.clientX>innerWidth-10,near=cfg.dockPosition==='bottom'?e.clientY>innerHeight-120:cfg.dockPosition==='left'?e.clientX<120:e.clientX>innerWidth-120;w.classList.toggle('show',edge||(w.classList.contains('show')&&near))});
 function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=document.createElement('div');h.className='rz '+d;el.appendChild(h);
  h.onpointerdown=ev=>{if(el.dataset.max)return;ev.preventDefault();ev.stopPropagation();h.setPointerCapture(ev.pointerId);
@@ -1612,7 +1815,7 @@ function constrainWindows(){Object.values(wins).forEach(el=>{
  const minWidth=Math.min(260,Math.max(160,innerWidth-16)),width=Math.min(el.offsetWidth,Math.max(minWidth,innerWidth-16)),height=Math.min(el.offsetHeight,Math.max(120,innerHeight-36));
  Object.assign(el.style,{minWidth:minWidth+'px',width:width+'px',height:height+'px',left:Math.max(8,Math.min(innerWidth-width-8,el.offsetLeft))+'px',top:Math.max(28,Math.min(innerHeight-height-8,el.offsetTop))+'px'})
 })}
-window.addEventListener('resize',constrainWindows);
+window.addEventListener('resize',()=>{constrainWindows();measureDock()});
 function settingsInit(el){
  const NAV=[
   ['gen','General','gear','#9299a8','system version reset defaults processor cores memory resolution'],
@@ -1640,7 +1843,7 @@ function settingsInit(el){
   session:()=>'<h2>Startup & Sessions</h2><h3>When SilkOS opens</h3><div class="grp">'+tg('startBrowser','Open Browser at startup')+tg('restoreWindows','Reopen apps from the previous session')+'</div><p class="lock-settings-note">Session restore remembers open SilkOS app windows on this device. Native Linux app windows are managed by the desktop and are not restored here.</p>',
   desk:()=>'<h2>Desktop & Dock</h2><h3>Dock</h3><div class="grp">'+sel('dockPosition','Position',[['bottom','Bottom'],['left','Left'],['right','Right']])+sl('dock','Icon size',40,80,cfg.dock)+tg('mag','Magnify icons on hover')+sl('magAmt','Magnification',12,20,Math.round(cfg.magAmt*10),.1)+tg('hide','Automatically hide the Dock')+'</div><h3>Menu bar</h3><div class="grp">'+tg('showDate','Show date in menu bar')+tg('clock24','Use 24-hour time')+tg('clockSeconds','Show seconds')+'</div>',
   win:()=>'<h2>Windows</h2><h3>New windows</h3><div class="grp">'+sl('windowScale','Default window size',70,130,Math.round(cfg.windowScale*100))+tg('centerWindows','Center new windows')+tg('rememberWindows','Remember window sizes and positions')+'</div><h3>Window actions</h3><div class="grp">'+tg('titlebarDoubleClick','Double-click title bar to zoom')+tg('confirmClose','Confirm before closing a window')+'</div>',
-  key:()=>'<h2>Keyboard</h2><h3>Window switcher</h3><div class="grp">'+sel('switcherStyle','Switcher layout',[['grid','App grid'],['list','Compact list']])+sel('switcherOrder','Cycle order',[['recent','Most recently used'],['alphabetical','Alphabetical']])+tg('showSwitcherIcons','Show app icons')+tg('includeMinimized','Include minimized windows')+'</div><h3>Shortcuts & gestures</h3><div class="grp">'+rw('Switch between SilkOS windows','Alt + Tab')+rw('Switch in reverse','Alt + Shift + Tab')+rw('Switch desktops','Ctrl + Alt + ← / → · four-finger swipe')+rw('Open Launchpad','F4 · five-finger pinch inward')+rw('Search apps','Ctrl + K')+'</div>',
+  key:()=>'<h2>Keyboard</h2><h3>Window switcher</h3><div class="grp">'+sel('switcherStyle','Switcher layout',[['grid','App grid'],['list','Compact list']])+sel('switcherOrder','Cycle order',[['recent','Most recently used'],['alphabetical','Alphabetical']])+tg('showSwitcherIcons','Show app icons')+tg('includeMinimized','Include minimized windows')+'</div><h3>Shortcuts & gestures</h3><div class="grp">'+rw('Switch between SilkOS windows','Alt + Tab')+rw('Switch in reverse','Alt + Shift + Tab')+rw('Switch desktops','Ctrl + Alt + ← / → · four-finger swipe')+rw('Show windows','Four-finger swipe up')+rw('Show desktop','Four-finger swipe down')+rw('Open Launchpad','F4 · five-finger pinch inward')+rw('Search apps','Ctrl + K')+'</div>',
   access:()=>'<h2>Accessibility</h2><h3>Visual comfort</h3><div class="grp">'+tg('reduceMotion','Reduce motion and animations')+tg('highContrast','Increase interface contrast')+sl('cursorSize','Cursor size',80,160,Math.round(cfg.cursorSize*100),.01)+'</div><p class="lock-settings-note">Cursor size applies to SilkOS and web content inside the built-in Browser.</p>',
   display:()=>'<h2>Display & Sound</h2><h3>Display</h3><div class="grp">'+sl('bri','Brightness',5,100,cfg.bri)+'<div class="rw"><span>Full screen</span><button class="tg'+(document.fullscreenElement?' on':'')+'" data-t="fs"></button></div></div><h3>Sound</h3><div class="grp">'+sl('volume','Output volume',0,100,cfg.volume)+tg('muted','Mute output')+'<div class="rw"><span>Volume control</span><span class="mut volume-status">'+(window.silk&&silk.platform==='linux'?'Checking audio output…':'Requires Linux audio')+'</span></div></div>',
   files:()=>'<h2>Files</h2><h3>Finder</h3><div class="grp">'+sel('finderLocation','Open new Finder windows in',[['home','Home'],['desktop','Desktop'],['documents','Documents'],['downloads','Downloads'],['last','Last opened folder']])+sel('finderSort','Sort items by',[['folders','Folders first · A to Z'],['name','Name · A to Z'],['name-desc','Name · Z to A']])+tg('showHiddenFiles','Show hidden files and folders')+tg('hideFileExtensions','Hide filename extensions')+'</div>',
