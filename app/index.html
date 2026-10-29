@@ -76,6 +76,26 @@ body.lite #menubar{backdrop-filter:none;background:var(--win)}
 .card{border-radius:12px;overflow:hidden;background:var(--win);box-shadow:0 6px 20px rgba(0,0,0,.2);transition:transform var(--t-ui) var(--spring)}.card:hover{transform:scale(1.04)}
 .thumb{height:130px;background:#8882 center/cover no-repeat;display:grid;place-items:center;font-size:12px;opacity:.9}
 .ct{padding:8px 10px;font-size:12px;display:flex;justify-content:space-between;gap:8px}.ct span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ct b{font-weight:400;opacity:.5}
+/* Browser: site icons in the tab strip, arrows with nowhere to go, find bar and failed loads */
+.tf{display:flex;flex:none}.tf:empty{display:none}
+.tf img{width:14px;height:14px;border-radius:3px;object-fit:contain;margin-right:6px}
+.sb:disabled{opacity:.2;pointer-events:none}
+.fin{position:absolute;right:18px;bottom:18px;z-index:4;display:flex;align-items:center;gap:3px;padding:5px;border-radius:13px;background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 14px 40px rgba(0,0,0,.3),0 0 0 .5px var(--line);opacity:0;transform:translateY(10px) scale(.97);pointer-events:none;transition:opacity var(--t-ui) var(--ease),transform var(--t-pop) var(--ease),box-shadow var(--t-ui);font-size:12px}
+.fin.on{opacity:1;transform:none;pointer-events:auto}
+.fin.miss{box-shadow:0 14px 40px rgba(0,0,0,.3),0 0 0 2px rgba(255,69,58,.55)}
+body.lite .fin{background:var(--win);backdrop-filter:none;-webkit-backdrop-filter:none}
+.fin input{width:164px;border:0;outline:0;background:transparent;color:inherit;font-size:13px;padding:6px 8px}
+.fin input::-webkit-search-cancel-button{display:none}
+.fin .fc{min-width:60px;text-align:center;opacity:.6;font-variant-numeric:tabular-nums}
+.fin .fb{border:0;background:transparent;color:inherit;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;opacity:.6;transition:background var(--t-tap),opacity var(--t-tap),transform var(--t-tap) var(--spring)}
+.fin .fb:hover{background:var(--sfield);opacity:1}.fin .fb:active{transform:scale(.88)}
+.perr{position:absolute;inset:0;z-index:3;display:none;place-items:center;padding:30px;text-align:center;background:var(--win)}
+.perr.on{display:grid}
+.perr .pe-ic{width:50px;height:50px;margin:0 auto;opacity:.35}.perr .pe-ic svg{width:100%;height:100%;display:block}
+.perr h4{font-size:17px;font-weight:600;margin:16px 0 6px}
+.perr p{font-size:13px;opacity:.6;max-width:360px;margin:0 auto 22px;line-height:1.55}
+.perr button{border:0;border-radius:11px;padding:9px 22px;font-size:13px;background:var(--sfield);color:inherit;transition:background var(--t-tap),color var(--t-tap),transform var(--t-tap) var(--spring)}
+.perr button:hover{background:var(--accent);color:#fff}.perr button:active{transform:scale(.95)}
 .toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-20px) scale(.9);padding:8px 16px;border-radius:12px;font-size:13px;background:var(--win);box-shadow:0 8px 24px #0003;opacity:0;transition:var(--t-space) var(--spring);z-index:9}.toast.on{opacity:1;transform:translate(-50%,0)}
 textarea{width:100%;height:100%;border:0;outline:0;resize:none;padding:14px;font:15px/1.5 inherit;background:transparent;color:inherit;user-select:text}
 .calc{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);height:100%}
@@ -1428,7 +1448,10 @@ const I={
  rl:'<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M13 8a5 5 0 1 1-1.6-3.7"/><path d="M13 2.5v3h-3"/></svg>',
  share:'<svg width="15" height="17" viewBox="0 0 16 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V1.5M5 4l3-3 3 3"/><path d="M5 7H3.5A1.5 1.5 0 0 0 2 8.5v6A1.5 1.5 0 0 0 3.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 12.5 7H11"/></svg>',
  plus:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M7 1v12M1 7h12"/></svg>',
- tabs:'<svg width="17" height="15" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="4.5" y="1.5" width="12" height="9" rx="2"/><path d="M1.5 5v6.5a2 2 0 0 0 2 2H13"/></svg>'};
+ tabs:'<svg width="17" height="15" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="4.5" y="1.5" width="12" height="9" rx="2"/><path d="M1.5 5v6.5a2 2 0 0 0 2 2H13"/></svg>',
+ up:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9 7 5.4 10.5 9"/></svg>',
+ down:'<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5 7 8.6 10.5 5"/></svg>',
+ x:'<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m3.6 3.6 6.8 6.8M10.4 3.6l-6.8 6.8"/></svg>'};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const store={get(k){try{return JSON.parse(localStorage.getItem('silk.'+k))||[]}catch(e){return[]}},set(k,v){try{localStorage.setItem('silk.'+k,JSON.stringify(v))}catch(e){}}};
 const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return String(u)}};
@@ -1436,8 +1459,8 @@ const tc=u=>{let h=0;for(const c of hostOf(u))h=(h*31+c.charCodeAt(0))%360;retur
 const SITES='google.com youtube.com wikipedia.org github.com reddit.com amazon.in amazon.com netflix.com instagram.com facebook.com x.com linkedin.com whatsapp.com stackoverflow.com flipkart.com spotify.com claude.ai anthropic.com chatgpt.com openai.com gmail.com maps.google.com news.google.com bbc.com imdb.com twitch.tv discord.com roblox.com pinterest.com microsoft.com apple.com primevideo.com hotstar.com zomato.com swiggy.com irctc.co.in timesofindia.com ndtv.com quora.com medium.com canva.com figma.com notion.so drive.google.com docs.google.com outlook.com yahoo.com bing.com duckduckgo.com steampowered.com epicgames.com'.split(' ');
 function browserInit(el){
  el.classList.add('safari');
- el.querySelector('.tb').innerHTML=`<div class="tl"><div class="lights"><button class="dot r"></button><button class="dot y"></button><button class="dot g"></button></div><button class="sb" data-a="side">${I.side}</button><button class="sb" data-a="b">${I.back}</button><button class="sb" data-a="f">${I.fwd}</button></div><div class="addr"><div class="prog"></div><input class="url" spellcheck="false" autocomplete="off"><div class="dom"></div><button class="sb rl" data-a="r">${I.rl}</button></div><div class="tr"><button class="sb" data-a="share">${I.share}</button><button class="sb" data-a="n">${I.plus}</button><button class="sb" data-a="ov">${I.tabs}</button></div>`;
- const q=s=>el.querySelector(s),pages=q('.pages'),stabs=q('.stabs'),side=q('.side div'),main=q('.main'),ov=q('.ov'),url=q('.url'),dm=q('.dom'),bar=q('.prog'),start=q('.start');
+ el.querySelector('.tb').innerHTML=`<div class="tl"><div class="lights"><button class="dot r"></button><button class="dot y"></button><button class="dot g"></button></div><button class="sb" data-a="side" title="Show tabs and bookmarks" aria-label="Show tabs and bookmarks">${I.side}</button><button class="sb" data-a="b" title="Back" aria-label="Back">${I.back}</button><button class="sb" data-a="f" title="Forward" aria-label="Forward">${I.fwd}</button></div><div class="addr"><div class="prog"></div><input class="url" spellcheck="false" autocomplete="off" aria-label="Address or search"><div class="dom"></div><button class="sb rl" data-a="r" title="Reload this page" aria-label="Reload this page">${I.rl}</button></div><div class="tr"><button class="sb" data-a="share" title="Copy the page address" aria-label="Copy the page address">${I.share}</button><button class="sb" data-a="n" title="New tab" aria-label="New tab">${I.plus}</button><button class="sb" data-a="ov" title="All tabs" aria-label="All tabs">${I.tabs}</button></div>`;
+ const q=s=>el.querySelector(s),pages=q('.pages'),stabs=q('.stabs'),side=q('.side div'),main=q('.main'),ov=q('.ov'),url=q('.url'),dm=q('.dom'),bar=q('.prog'),start=q('.start'),backB=q('[data-a=b]'),fwdB=q('[data-a=f]'),relB=q('[data-a=r]');
  if(!window.silk){pages.innerHTML='<div class="about">The Browser app needs the desktop (Electron) version of SilkOS.</div>';return}
  const FAV=[
   ['Google','google.com','#fff','google'],
@@ -1480,25 +1503,102 @@ function browserInit(el){
  const norm=v=>{v=v.trim();if(!v)return'https://www.google.com';if(/^https?:\/\//i.test(v))return v;if(!/\s/.test(v)&&/\.[a-z]{2,}/i.test(v))return'https://'+v;return searchURL(v)};
  function dom(t){const u=t&&t.url;if(!u){dm.innerHTML='<span class="ph">Search or enter website name</span>';return}let h;try{h=new URL(u).hostname.replace(/^www\./,'')}catch(e){h=u}dm.innerHTML=(u.startsWith('https')?I.lock:'')+'<span>'+esc(h)+'</span>'}
  function prog(on){if(on){bar.style.transition='none';bar.style.opacity=1;bar.style.width='0';void bar.offsetWidth;bar.style.transition='width 6s cubic-bezier(.1,.8,.2,1),opacity .3s';bar.style.width='85%'}else{bar.style.transition='width .25s,opacity .4s .25s';bar.style.width='100%';bar.style.opacity=0}}
+ /* Safari greys the arrows that have nowhere to go and turns the reload control into a stop while a page loads. */
+ const favOf=list=>(list||[]).find(icon=>/^https?:/i.test(icon))||'';
+ function navState(){
+  const v=cur&&cur.v;let b=false,f=false;
+  if(v)try{b=v.canGoBack();f=v.canGoForward()}catch(error){}
+  backB.disabled=!b;fwdB.disabled=!f;relB.disabled=!v;
+  relB.innerHTML=cur&&cur.loading?I.x:I.rl;
+  relB.title=cur&&cur.loading?'Stop loading':'Reload this page';
+ }
+ const failNote=(code,host)=>{const c=Math.abs(code);
+  if(c===3)return'';
+  if(c===5)return'That file is not on this computer.';
+  if(c===7)return host+' took too long to answer, so nothing loaded.';
+  if(c===101)return'The connection to '+host+' was reset while the page was loading.';
+  if(c===102)return'Nothing is answering at '+host+'.';
+  if(c===105)return'Could not find '+host+'. Check the spelling, or your network if the address is right.';
+  if(c===106)return'This computer is not connected to the internet.';
+  if(c===130)return'Could not reach '+host+' through the configured proxy.';
+  if(c===300)return host+' kept redirecting, so the page never finished loading.';
+  if(c>=200&&c<300)return'A secure connection to '+host+' could not be made.';
+  return'SilkOS could not load '+host+'.'};
+ const perr=document.createElement('div');
+ perr.className='perr';
+ perr.innerHTML=`<div><div class="pe-ic">${uiIcon('globe')}</div><h4>This page could not be loaded</h4><p></p><button type="button" data-f="retry">Try Again</button></div>`;
+ pages.appendChild(perr);
+ function showFail(){
+  const f=cur&&cur.fail;
+  perr.classList.toggle('on',!!f);
+  if(!f)return;
+  perr.querySelector('p').textContent=failNote(f.code,hostOf(f.url))||'SilkOS could not load this page.';
+ }
+ perr.onclick=e=>{
+  if(!e.target.closest('[data-f="retry"]'))return;
+  const t=cur;if(!t||!t.v)return;
+  t.fail='';showFail();prog(1);
+  try{t.v.reload()}catch(error){go(t,t.url)}};
+ const fin=document.createElement('div');
+ fin.className='fin';
+ fin.innerHTML=`<input type="search" placeholder="Find in page" aria-label="Find in page" spellcheck="false" autocomplete="off"><span class="fc"></span><button class="fb" type="button" data-f="p" title="Previous match" aria-label="Previous match">${I.up}</button><button class="fb" type="button" data-f="n" title="Next match" aria-label="Next match">${I.down}</button><button class="fb" type="button" data-f="x" title="Close" aria-label="Close find bar">${I.x}</button>`;
+ pages.appendChild(fin);
+ const fq=fin.querySelector('input'),fcount=fin.querySelector('.fc');
+ let ftimer=0;
+ function findStep(next){
+  const t=cur;
+  if(!t||!t.v||!fq.value){fcount.textContent='';fin.classList.remove('miss');return}
+  clearTimeout(ftimer);
+  if(next===undefined){ftimer=setTimeout(()=>findStep(true),160);return}
+  try{
+   const found=t.v.findInPage(fq.value,{next:next!==false,matchCase:false});
+   if(found&&found.then)found.then(r=>{
+    if(cur!==t||!r)return;
+    const total=r.matchesTotalCount|0,at=r.activeMatchOrdinal|0;
+    fcount.textContent=total?at+' of '+total:'No matches';
+    fin.classList.toggle('miss',!total);
+   }).catch(()=>{});
+  }catch(error){}
+ }
+ function hideFind(leaving){fin.classList.remove('on','miss');fcount.textContent='';clearTimeout(ftimer);const t=leaving||cur;try{t&&t.v&&t.v.stopFindInPage('clearSelection')}catch(error){}}
+ function showFind(){if(!cur||!cur.v){url.focus();return}fin.classList.add('on');fcount.textContent='';fin.classList.remove('miss');fq.focus();fq.select()}
+ fq.oninput=()=>findStep();
+ fq.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();findStep(!e.shiftKey)}else if(e.key==='Escape'){e.preventDefault();hideFind()}};
+ fin.onclick=e=>{const button=e.target.closest('[data-f]');if(!button)return;if(button.dataset.f==='x')hideFind();else findStep(button.dataset.f==='n')};
+ /* The slot stays in the tab even before an icon arrives, so titles do not jump when a site reports one. */
+ const tabIcon=t=>{const slot=t.tabEl&&t.tabEl.querySelector('.tf');if(!slot||slot.dataset.src===(t.icon||''))return;
+  slot.dataset.src=t.icon||'';slot.innerHTML=t.icon?`<img src="${esc(t.icon)}" alt="" onerror="this.remove()">`:''};
  function refresh(){
-  list.forEach(t=>{if(!t.tabEl)mkTab(t);t.tabEl.classList.toggle('on',t===cur);t.tabEl.querySelector('span').textContent=t.title});
+  list.forEach(t=>{if(!t.tabEl)mkTab(t);t.tabEl.classList.toggle('on',t===cur);t.tabEl.querySelector('span').textContent=t.title;tabIcon(t)});
   stabs.classList.toggle('open',list.length>1);
   side.innerHTML='<h5>Tabs</h5>'+list.map((t,i)=>`<div class="si${t===cur?' on':''}" data-i="${i}">${esc(t.title)}</div>`).join('');
   const bm=store.get('bm');side.insertAdjacentHTML('beforeend','<h5 style="margin-top:14px">Bookmarks · '+bm.length+'</h5>'+bm.slice(0,80).map(b=>`<div class="bi" data-u="${esc(b.u)}">${esc(b.t)}</div>`).join(''));
   side.querySelectorAll('.si').forEach(n=>n.onclick=()=>sel(list[+n.dataset.i]));side.querySelectorAll('.bi').forEach(n=>n.onclick=()=>go(cur,n.dataset.u))}
- function mkTab(t){const n=document.createElement('div');n.className='stab';n.innerHTML='<b>✕</b><span></span>';t.tabEl=n;
+ function mkTab(t){const n=document.createElement('div');n.className='stab';n.innerHTML='<b>✕</b><i class="tf"></i><span></span>';t.tabEl=n;
   n.onclick=()=>sel(t);n.querySelector('b').onclick=e=>{e.stopPropagation();close(list.indexOf(t))};
+  n.onmousedown=e=>{if(e.button===1)e.preventDefault()};
+  n.onauxclick=e=>{if(e.button===1){e.preventDefault();close(list.indexOf(t))}};
   stabs.appendChild(n);void n.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>n.classList.add('in')))}
- function sel(t){cur=t;ov.classList.remove('open');refresh();
+ function sel(t){if(t!==cur)hideFind(cur);cur=t;ov.classList.remove('open');navState();refresh();
   start.style.display=t.v?'none':'flex';if(!t.v){start.classList.remove('enter');void start.offsetWidth;start.classList.add('enter')}list.forEach(x=>x.v&&x.v.classList.toggle('on',x===t));
-  url.value=t.url||'';dom(t);t.loading?prog(1):(bar.style.transition='none',bar.style.width='0',bar.style.opacity=0)}
+  url.value=t.url||'';dom(t);showFail();t.loading?prog(1):(bar.style.transition='none',bar.style.width='0',bar.style.opacity=0)}
  function go(t,u){u=norm(u);t.url=u;
   if(!t.v){const v=document.createElement('webview');v.setAttribute('allowpopups','');t.v=v;
-   const nv=e=>{if(e.url){t.url=e.url;logHist(e.url);if(cur===t){url.value=e.url;dom(t)}}};
+   const nv=e=>{if(!e.url)return;
+    if(hostOf(e.url)!==hostOf(t.url)){t.icon='';t.fail='';tabIcon(t)}
+    t.url=e.url;logHist(e.url);
+    if(cur===t){url.value=e.url;dom(t);navState();showFail()}};
    v.addEventListener('did-navigate',nv);v.addEventListener('did-navigate-in-page',nv);
+   v.addEventListener('page-favicon-updated',e=>{const icon=favOf(e.favicons);if(icon){t.icon=icon;tabIcon(t)}});
    v.addEventListener('page-title-updated',e=>{t.title=e.title;logHist(t.url,e.title);refresh()});
-   v.addEventListener('did-start-loading',()=>{t.loading=1;if(cur===t)prog(1)});
-   v.addEventListener('did-stop-loading',()=>{t.loading=0;if(cur===t)prog(0)});
+   v.addEventListener('did-start-loading',()=>{t.loading=1;t.fail='';if(cur===t){prog(1);navState();showFail()}});
+   /* A finished load drops the page highlight, so re-run the query rather than leave a stale match count showing. */
+   v.addEventListener('did-stop-loading',()=>{t.loading=0;if(cur===t){prog(0);navState();if(fin.classList.contains('on'))findStep()}});
+   v.addEventListener('did-fail-load',e=>{if(!e.isMainFrame)return;
+    const note=failNote(e.errorCode,hostOf(e.validatedURL||t.url));
+    if(!note)return;
+    t.fail={code:e.errorCode,url:e.validatedURL||t.url};
+    if(cur===t){prog(0);navState();showFail()}});
    v.addEventListener('dom-ready',()=>applyWebCursor(t));v.src=u;pages.appendChild(v)}
   else{try{t.v.loadURL(u)}catch(e){t.v.src=u}}
   sel(t)}
@@ -1551,8 +1651,10 @@ function browserInit(el){
   try{if(a==='n')add('');else if(a==='side')main.classList.toggle('sidebar');
   else if(a==='ov'){if(ov.classList.contains('open'))ov.classList.remove('open');else{buildOv();ov.classList.add('open')}}
   else if(a==='share'){if(cur&&cur.url){navigator.clipboard.writeText(cur.url);toast('Link copied')}}
-  else if(cur&&cur.v){a==='b'?cur.v.canGoBack()&&cur.v.goBack():a==='f'?cur.v.canGoForward()&&cur.v.goForward():cur.v.reload()}}catch(e){}});
- openTab=add;el._b={add,closeCur:()=>close(list.indexOf(cur)),reload:()=>{try{cur&&cur.v&&cur.v.reload()}catch(e){}},addr:()=>url.focus(),impBm:()=>importFile('bm'),impHist:()=>importFile('hist'),addBm,parse:parseAny,merge,rebuild:()=>{buildStart();refresh()},updateCursor:()=>list.forEach(applyWebCursor),ov:()=>q('[data-a=ov]').click(),side:()=>q('[data-a=side]').click()};add('');url.blur()}
+  else if(a==='r'){if(cur&&cur.v){if(cur.loading)cur.v.stop();else cur.v.reload()}}
+  else if(a==='f'){if(cur&&cur.v)cur.v.canGoForward()&&cur.v.goForward()}
+  else if(cur&&cur.v&&a==='b')cur.v.canGoBack()&&cur.v.goBack()}catch(e){}});
+ openTab=add;el._b={add,closeCur:()=>close(list.indexOf(cur)),reload:()=>{try{cur&&cur.v&&cur.v.reload()}catch(e){}},addr:()=>url.focus(),impBm:()=>importFile('bm'),impHist:()=>importFile('hist'),addBm,parse:parseAny,merge,rebuild:()=>{buildStart();refresh()},updateCursor:()=>list.forEach(applyWebCursor),ov:()=>q('[data-a=ov]').click(),side:()=>q('[data-a=side]').click(),find:showFind,findOff:()=>{if(fin.classList.contains('on'))hideFind()}};add('');url.blur()}
 const mk=(sv,x,y,f)=>'url("data:image/svg+xml,'+encodeURIComponent(sv)+'") '+x+' '+y+', '+f;
 const X="<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'>";
 const CA_PATH=X+"<path d='M6 3.5v15.2l3.9-3.5 2.6 5.7 2.6-1.2-2.6-5.6 5.2-.1z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/></svg>";
@@ -2067,9 +2169,9 @@ function finishWindowSwitch(commit){
  if(id&&wins[id]){const win=wins[id];if(win.classList.contains('min'))restore(win,id);focus(win,id)}
 }
 function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4,true,-1);if(k==='space-right')return switchSpace((activeSpace+1)%4,true,1);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
- if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='d')b.addBm()}
+ if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='f')b.find();else if(k==='d')b.addBm()}
 if(window.silk&&silk.onShortcut)silk.onShortcut(shortcut);
-document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Enter'&&switchState){e.preventDefault();finishWindowSwitch(true)}else if(e.key==='Escape'){if(desktopExposed)restoreDesktop();if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false)}});
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','f','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Enter'&&switchState){e.preventDefault();finishWindowSwitch(true)}else if(e.key==='Escape'){if(desktopExposed)restoreDesktop();if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false);const bf=curApp==='browser'&&wins.browser&&wins.browser._b;if(bf)bf.findOff()}});
 if(!window.silk){
  document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='Tab'){e.preventDefault();cycleWindows(e.shiftKey)}else if(e.key==='Escape'&&switchState){e.preventDefault();finishWindowSwitch(false)}});
  document.addEventListener('keyup',e=>{if(e.key==='Alt'||e.key==='AltGraph')finishWindowSwitch(true)});
