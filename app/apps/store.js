@@ -272,13 +272,14 @@ function storeInit(el){
  };
  q.oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>runSearch(q.value.trim()),260)};
  q.onkeydown=event=>{if(event.key==='Escape'){q.value='';runSearch('');return}if(event.key==='Enter'){event.preventDefault();runSearch(q.value.trim())}};
- if(S&&S.onProgress)S.onProgress(step=>{
+ const unsubscribe=S&&S.onProgress?S.onProgress(step=>{
   const id=step&&step.id?step.id:'ALL',job=jobs.get(id);
   if(!job)return;
   job.label=step.label||job.label;
   job.percent=typeof step.percent==='number'?step.percent:null;
   paintJob(id);
- });
+ }):null;
+ el._dispose=()=>{clearTimeout(timer);unsubscribe?.()};
  el._refresh=()=>render();
  renderNav();
  render();

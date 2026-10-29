@@ -195,4 +195,5 @@ function browserInit(el){
   else if(a==='r'){if(cur&&cur.v){if(cur.loading)cur.v.stop();else cur.v.reload()}}
   else if(a==='f'){if(cur&&cur.v)cur.v.canGoForward()&&cur.v.goForward()}
   else if(cur&&cur.v&&a==='b')cur.v.canGoBack()&&cur.v.goBack()}catch(e){}});
+ el._dispose=()=>{hideFind();clearTimeout(tm);rid++;list.forEach(t=>clearTimeout(t.cursorCssTimer));sug.remove();if(openTab===add)openTab=null};
  openTab=add;el._b={add,closeCur:()=>close(list.indexOf(cur)),reload:()=>{try{cur&&cur.v&&cur.v.reload()}catch(e){}},addr:()=>url.focus(),impBm:()=>importFile('bm'),impHist:()=>importFile('hist'),addBm,parse:parseAny,merge,rebuild:()=>{buildStart();refresh()},updateCursor:()=>list.forEach(applyWebCursor),ov:()=>q('[data-a=ov]').click(),side:()=>q('[data-a=side]').click(),find:showFind,findOff:()=>{if(fin.classList.contains('on'))hideFind()}};add('');url.blur()}

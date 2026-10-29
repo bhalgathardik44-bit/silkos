@@ -224,10 +224,10 @@ function launch(id){
  el.style.cssText=`min-width:${minWidth}px;width:${restoredWidth}px;height:${restoredHeight}px;left:${Math.max(8,Math.min(innerWidth-restoredWidth-8,left))}px;top:${Math.max(28,Math.min(innerHeight-restoredHeight-8,top))}px`;
  el.innerHTML=`<div class="tb"><button class="dot r"></button><button class="dot y"></button><button class="dot g"></button><span class="t">${a.n}</span></div><div class="body">${a.html()}</div>`;
  el.dataset.space=String(activeSpace);desk.appendChild(el);wins[id]=el;saveSessionWindows();
- setTimeout(()=>{el.classList.add('show');focus(el,id)},180);
+ const showTimer=setTimeout(()=>{el.classList.add('show');focus(el,id)},180);
  a.init&&a.init(el);
  const [r,y,g]=el.querySelectorAll('.dot');
- r.onclick=e=>{e.stopPropagation();if(cfg.confirmClose&&!confirm(`Close ${a.n}?`))return;saveWindowBounds(id,el);el.classList.remove('show');el.classList.add('closing');ic.classList.remove('on');delete wins[id];saveSessionWindows();if(curApp===id){curApp=null;buildBar()}setTimeout(()=>el.remove(),260)};
+ r.onclick=e=>{e.stopPropagation();if(cfg.confirmClose&&!confirm(`Close ${a.n}?`))return;clearTimeout(showTimer);el._dispose?.();saveWindowBounds(id,el);el.classList.remove('show');el.classList.add('closing');ic.classList.remove('on');delete wins[id];saveSessionWindows();if(curApp===id){curApp=null;buildBar()}setTimeout(()=>el.remove(),260)};
  y.onclick=e=>{e.stopPropagation();minimize(el,id)};
  g.onclick=e=>{e.stopPropagation();maxToggle(el)};
  el.addEventListener('pointerdown',()=>focus(el,id));
@@ -238,7 +238,7 @@ function getWindowBounds(id){try{const all=JSON.parse(localStorage.getItem('silk
 function saveWindowBounds(id,el){if(!cfg.rememberWindows||el.dataset.max)return;try{const all=JSON.parse(localStorage.getItem('silk.windows')||'{}');all[id]={left:el.offsetLeft,top:el.offsetTop,width:el.offsetWidth,height:el.offsetHeight};localStorage.setItem('silk.windows',JSON.stringify(all))}catch(e){console.error('Could not save window placement:',e)}}
 function saveSessionWindows(){if(!cfg.restoreWindows)return;try{localStorage.setItem('silk.session',JSON.stringify(Object.entries(wins).filter(([,win])=>win.isConnected&&!win.classList.contains('closing')).map(([id])=>id)))}catch(e){console.error('Could not save the open app session:',e)}}
 function getSavedSessionWindows(){if(!cfg.restoreWindows)return[];try{const ids=JSON.parse(localStorage.getItem('silk.session')||'[]');return Array.isArray(ids)?[...new Set(ids.filter(id=>typeof id==='string'&&apps[id]&&!apps[id].run))]:[]}catch(e){console.error('Could not read the saved app session:',e);return[]}}
-window.addEventListener('beforeunload',saveSessionWindows);
+window.addEventListener('beforeunload',()=>{saveSessionWindows();Object.values(wins).forEach(el=>el._dispose?.())});
 function minimize(el,id){
  saveWindowBounds(id,el);
  const r=el.getBoundingClientRect(),i=dockIcon(id).getBoundingClientRect();
@@ -931,3 +931,4 @@ syncFlatpaks();
 const startupApps=getSavedSessionWindows(),appsToLaunch=startupApps.length?startupApps:(cfg.startBrowser?['browser']:[]);
 appsToLaunch.forEach((id,index)=>setTimeout(()=>launch(id),index*100));
 if(appsToLaunch.includes('browser'))setTimeout(()=>wins.browser&&!wins.browser.dataset.max&&maxToggle(wins.browser),700+Math.max(0,appsToLaunch.indexOf('browser'))*100);
+window.silkStartup?.ready();

@@ -149,12 +149,13 @@ app.on('web-contents-created', (_, c) => {
   }
 });
 ipcMain.handle('suggest', async (_, q) => {
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), 2000);
   try {
-    const c = new AbortController(); const t = setTimeout(() => c.abort(), 2000);
     const r = await fetch('https://suggestqueries.google.com/complete/search?client=firefox&q=' + encodeURIComponent(String(q).slice(0, 100)), { signal: c.signal });
     clearTimeout(t); const j = await r.json();
     return Array.isArray(j[1]) ? j[1].slice(0, 8) : [];
   } catch (e) { return []; }
+  finally { clearTimeout(t); }
 });
 ipcMain.handle('lock:status', async () => {
   try { return { ok: true, configured: !!(await readLock()) }; }

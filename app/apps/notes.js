@@ -96,7 +96,8 @@ function notesInit(el){
   const cleaned=document.createElement('div');cleaned.appendChild(sanitizeHtml(editor.innerHTML));
   note.title=title.value.trimStart().slice(0,160);note.body=cleaned.innerHTML;note.updatedAt=now();persist();renderList(false);
  }
- function scheduleSave(){footer.textContent='Saving…';clearTimeout(saveTimer);saveTimer=setTimeout(saveCurrent,320)}
+ function scheduleSave(){footer.textContent='Saving…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>{saveTimer=0;saveCurrent()},320)}
+ el._dispose=()=>{if(saveTimer){clearTimeout(saveTimer);saveTimer=0;saveCurrent()}};
  function createNote(){
   const folderId=folders.some(folder=>folder.id===currentFolder)?currentFolder:(folders[0]?.id||'notes');
   const note={id:makeId(),folderId,title:'',body:'',createdAt:now(),updatedAt:now(),pinned:false,deletedAt:0,font:'system'};
