@@ -8,9 +8,23 @@ const { test } = require('node:test');
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-test('desktop styling remains byte-equivalent to the extracted baseline', () => {
- const css = read('app/desktop.css').replace(/\r\n/g, '\n');
- assert.equal(crypto.createHash('sha256').update(css).digest('hex'), '88c8ce5e7bd885e119147b6608dfd09fe58f6e3604c463a32e908e44d5898ff1');
+test('desktop styling preserves the extracted baseline outside fullscreen and material rules', () => {
+ const css = read('app/desktop.css').replace(/\r\n/g, '\n').split('\n:root{--material-window:')[0];
+ const fullscreen = css.slice(css.indexOf('.win.fullscreen,'), css.indexOf('#dock{border-radius:28px}'));
+ assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-menu-visible #menubar/);
+ assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-dock-visible #dockwrap #dock/);
+ assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), '88c8ce5e7bd885e119147b6608dfd09fe58f6e3604c463a32e908e44d5898ff1');
+});
+
+test('light materials cover app surfaces with opaque accessibility fallbacks', () => {
+ const css = read('app/desktop.css');
+ const materials = css.slice(css.indexOf(':root{--material-window:'));
+ assert.match(materials, /@media\(prefers-color-scheme:light\)\{:root:not\(\[data-theme\]\)/);
+ assert.match(materials, /:root\[data-theme=light\]\{--material-window:rgba\(255,255,255,\.38\)/);
+ assert.match(materials, /\.win\{background:var\(--material-window\);-webkit-backdrop-filter:var\(--material-blur\);backdrop-filter:var\(--material-blur\)/);
+ for (const selector of ['.win.safari .tb', '.sbn', '.notes-folders', '.notes-list', '.notes-editor-pane', '.store-side', '.store-content', '.fsb', '.fls', '.rescontent']) assert.ok(materials.includes(selector), selector);
+ assert.match(materials, /body\.lite,body\.high-contrast\{[^}]*--material-window:var\(--win\)[^}]*--material-blur:none;--material-panel-blur:none/);
+ assert.doesNotMatch(materials, /\.pages webview/);
 });
 
 test('renderer assets exist, parse as classic scripts, and are included in production packaging', () => {

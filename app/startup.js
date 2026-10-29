@@ -22,7 +22,7 @@
   if(!document.querySelector('link[href="desktop.css"]').sheet){fail();return}
   complete=true;delete window.silkStartup;performance.mark('silkos-desktop-ready');screen.dataset.state='ready';screen.setAttribute('aria-busy','false');
   window.removeEventListener('keydown',blockKeys,true);window.removeEventListener('error',onError,true);document.removeEventListener('DOMContentLoaded',finish);
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.classList.contains('lite'))remove();
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches||document.body.classList.contains('lite')||document.body.classList.contains('reduce-motion'))remove();
   else {
    screen.addEventListener('transitionend',onTransition);
    screen.classList.add('startup-leaving');

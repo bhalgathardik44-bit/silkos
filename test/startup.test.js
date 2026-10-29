@@ -13,7 +13,7 @@ class Target {
  setAttribute(key, value) { this.attributes[key] = value; }
  count() { return [...this.listeners.values()].reduce((sum, set) => sum + set.size, 0); }
 }
-function harness({ reduced = false, lite = false, stylesheet = true } = {}) {
+function harness({ reduced = false, lite = false, appReduced = false, stylesheet = true } = {}) {
  const window = new Target(), document = new Target(), screen = new Target(), retry = new Target();
  const timers = new Map(), marks = []; let nextTimer = 0, reloads = 0;
  screen.classList = { add: name => { screen.addedClass = name; } };
@@ -21,7 +21,7 @@ function harness({ reduced = false, lite = false, stylesheet = true } = {}) {
  screen.remove = () => { screen.removed = true; };
  retry.hidden = true; retry.focus = () => { retry.focused = true; };
  const status = { textContent: 'Preparing your desktop' };
- document.readyState = 'loading'; document.body = { classList: { contains: name => lite && name === 'lite' } };
+ document.readyState = 'loading'; document.body = { classList: { contains: name => lite && name === 'lite' || appReduced && name === 'reduce-motion' } };
  document.getElementById = id => ({ startup: screen, 'startup-status': status, 'startup-retry': retry })[id];
  document.querySelector = () => ({ sheet: stylesheet ? {} : null });
  const context = vm.createContext({ window, document, location: { reload: () => reloads++ }, performance: { mark: name => marks.push(name) }, matchMedia: () => ({ matches: reduced }), setTimeout: (callback, ms) => { const id = ++nextTimer; timers.set(id, { callback, ms }); return id; }, clearTimeout: id => timers.delete(id) });
@@ -48,7 +48,7 @@ test('core-ready before DOMContentLoaded does not reveal an incomplete document'
 });
 
 test('reduced motion and Lite Mode remove startup immediately without animation callbacks', () => {
- for (const options of [{ reduced: true }, { lite: true }]) {
+ for (const options of [{ reduced: true }, { lite: true }, { appReduced: true }]) {
   const h = harness(options); h.window.silkStartup.ready(); h.loaded();
   assert.equal(h.screen.removed, true); assert.equal(h.timers.size, 0); assert.equal(h.window.count(), 0);
  }
