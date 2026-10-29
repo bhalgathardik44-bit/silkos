@@ -41,6 +41,10 @@ contextBridge.exposeInMainWorld('silk', {
     updates: () => ipcRenderer.invoke('store:updates'),
     updateAll: id => ipcRenderer.invoke('store:update-all', id),
     run: id => ipcRenderer.invoke('store:run', id),
-    onProgress: cb => ipcRenderer.on('store:progress', (_, step) => cb(step))
+    onProgress: cb => {
+      const listener = (_, step) => cb(step);
+      ipcRenderer.on('store:progress', listener);
+      return () => ipcRenderer.removeListener('store:progress', listener);
+    }
   }
 });
