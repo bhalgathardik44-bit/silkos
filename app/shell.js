@@ -56,9 +56,15 @@ iconOrderReady=true;applySavedOrder(dock,'.ic','dockOrder');
 function setupIconReordering(container,selector,key){
  let state=null;
  const items=()=>[...container.querySelectorAll(selector)];
- const animateReflow=before=>items().forEach(item=>{const old=before.get(item);if(!old)return;const rect=item.getBoundingClientRect(),dx=old.left-rect.left,dy=old.top-rect.top;if(Math.abs(dx)+Math.abs(dy)<1)return;item.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})});
+ const animateReflow=before=>items().forEach(item=>{const old=before.get(item);item._reflowAnimation?.cancel();if(!old||cfg.reduceMotion)return;const rect=item.getBoundingClientRect(),dx=old.left-rect.left,dy=old.top-rect.top;if(Math.abs(dx)+Math.abs(dy)<1)return;item._reflowAnimation=item.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})});
  const reorderAt=(x,y)=>{
   if(!state)return;
+  if(container===dock){
+   const rect=container.getBoundingClientRect(),vertical=cfg.dockPosition!=='bottom',coordinate=vertical?y-rect.top:x-rect.left;
+   const target=items().find(item=>item!==state.item&&coordinate<(vertical?item.offsetTop+item.offsetHeight/2:item.offsetLeft+item.offsetWidth/2))||null;
+   if(state.item.nextElementSibling===target)return;
+   const before=new Map(items().map(item=>[item,item.getBoundingClientRect()]));container.insertBefore(state.item,target);animateReflow(before);syncIconOrder();return
+  }
   const target=document.elementFromPoint(x,y)?.closest(selector);
   if(!target||target===state.item||!container.contains(target))return;
   const rect=target.getBoundingClientRect(),vertical=container===dock&&cfg.dockPosition!=='bottom';
@@ -74,26 +80,29 @@ function setupIconReordering(container,selector,key){
  });
  const move=event=>{
   if(!state||event.pointerId!==state.pointerId)return;
+  if(!(event.buttons&1)){finish(event);return}
   state.x=event.clientX;state.y=event.clientY;
-  if(container===dock)mx=cfg.dockPosition==='bottom'?event.clientX:event.clientY;
   if(!state.moved&&Math.hypot(event.clientX-state.startX,event.clientY-state.startY)<6)return;
   if(!state.moved){
-   state.moved=true;event.preventDefault();state.item.classList.add('dragging');
+   state.moved=true;event.preventDefault();container.setPointerCapture(state.pointerId);state.item.classList.add('dragging');
    const icon=state.item.getBoundingClientRect();state.ghost=state.item.cloneNode(true);state.ghost.classList.add('icon-drag-ghost');state.ghost.classList.remove('on','dragging','drop-target');state.ghost.style.cssText+=`;left:${state.startX-icon.width/2}px;top:${state.startY-icon.height/2}px;width:${icon.width}px;height:${icon.height}px`;
    document.body.appendChild(state.ghost);
+   if(container===dock){dockDragging=true;resetDockMagnification()}
   }
   if(state.ghost)state.ghost.style.transform=`translate(${event.clientX-state.startX}px,${event.clientY-state.startY}px) scale(1.08)`;
   reorderAt(event.clientX,event.clientY);
  };
  const finish=event=>{
   if(!state||event.pointerId!==state.pointerId)return;
-  if(state.moved){suppressReorderClick={container,selector,until:Date.now()+500};state.item.classList.remove('dragging');state.ghost?.remove();cfg[key]=items().map(item=>item.dataset.id);save()}
-  state=null;
+  if(state.moved){suppressReorderClick={container,selector,until:Date.now()+500};state.item.classList.remove('dragging');state.ghost?.remove();cfg[key]=items().map(item=>item.dataset.id);save();if(container===dock){dockDragging=false;measureDock()}}
+  const pointerId=state.pointerId;state=null;if(container.hasPointerCapture(pointerId))container.releasePointerCapture(pointerId);
  };
+ container.addEventListener('lostpointercapture',finish);
  container.addEventListener('dragstart',event=>{if(event.target.closest(selector))event.preventDefault()});
  window.addEventListener('pointermove',move,{capture:true});
  window.addEventListener('pointerup',finish,{capture:true});
  window.addEventListener('pointercancel',finish,{capture:true});
+ window.addEventListener('blur',()=>{if(state)finish({pointerId:state.pointerId})});
 }
 function syncFlatpaks(){const S=window.silk&&silk.store;S&&S.installed().then(r=>{if(r.error)throw new Error(r.error);(r.apps||[]).forEach(a=>{if(apps[a.id])return;
  apps[a.id]={n:a.name||a.id,i:esc((a.name||'?')[0]),c:'linear-gradient(#5ac8fa,#0a60ff)',run:()=>S.run(a.id).then(r=>r&&r.error&&alert('Could not open '+(a.name||a.id)+':\n'+r.error)),svg:a.icon?`<img src="file://${esc(encodeURI(a.icon))}" style="width:100%;height:100%;object-fit:contain">`:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a60ff"/><text x="50" y="66" font-size="48" text-anchor="middle" fill="#fff" font-family="sans-serif">${esc((a.name||'?')[0])}</text></svg>`};addIcon(a.id)})})
@@ -137,7 +146,7 @@ function clearSpaceGesture(state){
   else win.classList.add('space-hidden')
  });
  if(spaceTransition===state){spaceTransition=null;document.documentElement.style.removeProperty('--space-settle')}
- spaceSettleTimer=null
+ spaceSettleTimer=null;syncFullscreenChrome()
 }
 function beginSpaceGesture(direction){
  if(lpOn()||![-1,1].includes(direction))return null;
@@ -155,7 +164,7 @@ function beginSpaceGesture(direction){
    win.classList.remove('space-hidden','space-leaving','space-entering');win.style.display='';win.classList.add('space-swipe')
   }
  });
- updateSpaceGesture(state,0);
+ updateSpaceGesture(state,0);syncFullscreenChrome();
  return state
 }
 function finishSpaceGesture(commit,immediate=false){
@@ -193,7 +202,7 @@ async function switchSpace(index,syncSystem=true,direction){
   }else{win.classList.add('space-hidden');win.classList.remove('space-leaving','space-entering')}
  });
  if(lpOn())launchpad(false);
- refreshDockIndicators();updateSpaceButton();
+ refreshDockIndicators();updateSpaceButton();syncFullscreenChrome();
  if(switchState)paintSwitcher();
  if(syncSystem&&window.silk?.platform==='linux'&&silk.workspaces){
   try{const result=await silk.workspaces.switchTo(index);if(!result?.ok)console.error('Could not switch desktop workspace:',result?.error||'unknown error')}
@@ -227,15 +236,16 @@ function launch(id){
  const showTimer=setTimeout(()=>{el.classList.add('show');focus(el,id)},180);
  a.init&&a.init(el);
  const [r,y,g]=el.querySelectorAll('.dot');
- r.onclick=e=>{e.stopPropagation();if(cfg.confirmClose&&!confirm(`Close ${a.n}?`))return;clearTimeout(showTimer);el._dispose?.();saveWindowBounds(id,el);el.classList.remove('show');el.classList.add('closing');ic.classList.remove('on');delete wins[id];saveSessionWindows();if(curApp===id){curApp=null;buildBar()}setTimeout(()=>el.remove(),260)};
+ g.title='Enter Full Screen';g.setAttribute('aria-label',g.title);
+ r.onclick=e=>{e.stopPropagation();if(cfg.confirmClose&&!confirm(`Close ${a.n}?`))return;clearTimeout(showTimer);clearTimeout(el._boundsTimer);el._dispose?.();saveWindowBounds(id,el);el.classList.remove('show');el.classList.add('closing');ic.classList.remove('on');delete wins[id];saveSessionWindows();if(curApp===id){curApp=null;buildBar()}syncFullscreenChrome();setTimeout(()=>el.remove(),260)};
  y.onclick=e=>{e.stopPropagation();minimize(el,id)};
- g.onclick=e=>{e.stopPropagation();maxToggle(el)};
+ g.onclick=e=>{e.stopPropagation();fullscreenToggle(el)};
  el.addEventListener('pointerdown',()=>focus(el,id));
  dragify(el,el.querySelector('.tb'));resizify(el);
 }
-function focus(el,id){el.style.zIndex=++z;curApp=id;Object.values(wins).forEach(w=>w.classList.toggle('inactive',w!==el));buildBar()}
+function focus(el,id){el.style.zIndex=++z;curApp=id;Object.values(wins).forEach(w=>w.classList.toggle('inactive',w!==el));buildBar();syncFullscreenChrome()}
 function getWindowBounds(id){try{const all=JSON.parse(localStorage.getItem('silk.windows')||'{}');const value=all[id];return value&&['left','top','width','height'].every(k=>Number.isFinite(Number(value[k])))?value:null}catch{return null}}
-function saveWindowBounds(id,el){if(!cfg.rememberWindows||el.dataset.max)return;try{const all=JSON.parse(localStorage.getItem('silk.windows')||'{}');all[id]={left:el.offsetLeft,top:el.offsetTop,width:el.offsetWidth,height:el.offsetHeight};localStorage.setItem('silk.windows',JSON.stringify(all))}catch(e){console.error('Could not save window placement:',e)}}
+function saveWindowBounds(id,el){if(!cfg.rememberWindows||el.dataset.max||el.dataset.fullscreen)return;try{const all=JSON.parse(localStorage.getItem('silk.windows')||'{}');all[id]={left:parseFloat(el.style.left),top:parseFloat(el.style.top),width:parseFloat(el.style.width),height:parseFloat(el.style.height)};localStorage.setItem('silk.windows',JSON.stringify(all))}catch(e){console.error('Could not save window placement:',e)}}
 function saveSessionWindows(){if(!cfg.restoreWindows)return;try{localStorage.setItem('silk.session',JSON.stringify(Object.entries(wins).filter(([,win])=>win.isConnected&&!win.classList.contains('closing')).map(([id])=>id)))}catch(e){console.error('Could not save the open app session:',e)}}
 function getSavedSessionWindows(){if(!cfg.restoreWindows)return[];try{const ids=JSON.parse(localStorage.getItem('silk.session')||'[]');return Array.isArray(ids)?[...new Set(ids.filter(id=>typeof id==='string'&&apps[id]&&!apps[id].run))]:[]}catch(e){console.error('Could not read the saved app session:',e);return[]}}
 window.addEventListener('beforeunload',()=>{saveSessionWindows();Object.values(wins).forEach(el=>el._dispose?.())});
@@ -243,28 +253,56 @@ function minimize(el,id){
  saveWindowBounds(id,el);
  const r=el.getBoundingClientRect(),i=dockIcon(id).getBoundingClientRect();
  el.style.transformOrigin=`${i.left+i.width/2-r.left}px ${i.top+i.height/2-r.top}px`;
- el.classList.remove('show');el.classList.add('min');el.classList.add('inactive');curApp=null;buildBar()}
+ el.classList.remove('show');el.classList.add('min');el.classList.add('inactive');curApp=null;buildBar();syncFullscreenChrome()}
 function restore(el,id){
- el.classList.remove('min','inactive');void el.offsetWidth;el.classList.add('show')}
+ el.classList.remove('min','inactive');void el.offsetWidth;el.classList.add('show');syncFullscreenChrome()}
+function syncFullscreenChrome(){
+ const top=Object.values(wins).filter(win=>Number(win.dataset.space)===activeSpace&&win.classList.contains('show')&&!win.classList.contains('min')&&!win.classList.contains('closing')).sort((a,b)=>Number(b.style.zIndex)-Number(a.style.zIndex))[0];
+ const fullscreen=!!top?.dataset.fullscreen&&!document.body.classList.contains('launchpad-open')&&!document.body.classList.contains('desk-expose')&&!document.body.classList.contains('space-swipe-active');
+ if(fullscreen&&!document.body.classList.contains('app-fullscreen'))resetDockMagnification();
+ document.body.classList.toggle('app-fullscreen',fullscreen);
+ if(!fullscreen)document.body.classList.remove('fullscreen-menu-visible','fullscreen-dock-visible');
+}
+function updateFullscreenChromePointer(event){
+ const body=document.body;if(!body.classList.contains('app-fullscreen'))return;
+ const menuVisible=event.clientY<=6||body.classList.contains('fullscreen-menu-visible')&&(event.clientY<=36||!!event.target.closest('.dd,.mi'));
+ const edge=cfg.dockPosition==='left'?event.clientX<=6:cfg.dockPosition==='right'?event.clientX>=innerWidth-6:event.clientY>=innerHeight-6;
+ const near=cfg.dockPosition==='left'?event.clientX<=120:cfg.dockPosition==='right'?event.clientX>=innerWidth-120:event.clientY>=innerHeight-120;
+ body.classList.toggle('fullscreen-menu-visible',menuVisible);
+ body.classList.toggle('fullscreen-dock-visible',edge||body.classList.contains('fullscreen-dock-visible')&&(near||dockDragging));
+}
+document.addEventListener('pointermove',updateFullscreenChromePointer);
+document.addEventListener('pointerleave',()=>document.body.classList.remove('fullscreen-menu-visible','fullscreen-dock-visible'));
+function fullscreenToggle(el){
+ const id=Object.keys(wins).find(id=>wins[id]===el),button=el.querySelector('.dot.g');
+ clearTimeout(el._boundsTimer);el.classList.add('max');
+ if(el.dataset.fullscreen){
+  const bounds=JSON.parse(el.dataset.fullscreen);delete el.dataset.fullscreen;el.classList.remove('fullscreen');Object.assign(el.style,bounds);constrainWindows();saveWindowBounds(id,el);
+ }else{
+  saveWindowBounds(id,el);
+  el.dataset.fullscreen=el.dataset.max||JSON.stringify({left:el.style.left,top:el.style.top,width:el.style.width,height:el.style.height,minWidth:el.style.minWidth});delete el.dataset.max;
+  el.classList.add('fullscreen');Object.assign(el.style,{left:'0px',top:'0px',width:innerWidth+'px',height:innerHeight+'px',minWidth:'0px'});
+ }
+ button.title=el.dataset.fullscreen?'Exit Full Screen':'Enter Full Screen';button.setAttribute('aria-label',button.title);
+ el._boundsTimer=setTimeout(()=>{el.classList.remove('max');el._boundsTimer=0},480);focus(el,id);
+}
 function maxToggle(el){
- if(el.dataset.max){const p=JSON.parse(el.dataset.max);el.classList.add('max');Object.assign(el.style,p);delete el.dataset.max;constrainWindows();saveWindowBounds(Object.keys(wins).find(id=>wins[id]===el),el);setTimeout(()=>el.classList.remove('max'),480)}
+ if(el.dataset.fullscreen){fullscreenToggle(el);return}
+ clearTimeout(el._boundsTimer);
+ if(el.dataset.max){const p=JSON.parse(el.dataset.max);el.classList.add('max');Object.assign(el.style,p);delete el.dataset.max;constrainWindows();saveWindowBounds(Object.keys(wins).find(id=>wins[id]===el),el);el._boundsTimer=setTimeout(()=>{el.classList.remove('max');el._boundsTimer=0},480)}
  else{saveWindowBounds(Object.keys(wins).find(id=>wins[id]===el),el);el.dataset.max=JSON.stringify({left:el.style.left,top:el.style.top,width:el.style.width,height:el.style.height});
   el.classList.add('max');Object.assign(el.style,{left:'8px',top:'34px',minWidth:Math.min(260,Math.max(160,innerWidth-16))+'px',width:Math.max(160,innerWidth-16)+'px',height:Math.max(120,innerHeight-132)+'px'})}}
 function dragify(el,h){
  h.addEventListener('dblclick',e=>{if(cfg.titlebarDoubleClick&&!e.target.closest('.dot,button,input'))maxToggle(el)});
  h.addEventListener('pointerdown',e=>{
-  if(e.target.closest('.dot,button,input')||el.dataset.max)return;
+  if(e.target.closest('.dot,button,input')||el.dataset.max||el.dataset.fullscreen)return;
   const sx=e.clientX-el.offsetLeft,sy=e.clientY-el.offsetTop;
   el.classList.add('drag');h.setPointerCapture(e.pointerId);
   const mv=ev=>{const left=Math.max(8,Math.min(innerWidth-el.offsetWidth-8,ev.clientX-sx)),top=Math.max(28,Math.min(innerHeight-el.offsetHeight-8,ev.clientY-sy));el.style.left=left+'px';el.style.top=top+'px'};
   const up=()=>{el.classList.remove('drag');h.style.cursor='';saveWindowBounds(Object.keys(wins).find(id=>wins[id]===el),el);h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up)};
   h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up)})}
-/* Dock magnification follows the macOS model: the bell is measured in icon slots rather
-   than pixels and stops at a fixed radius, and the enlarged icon is held under the pointer
-   by sliding the whole dock — which is what keeps the ends of the dock usable. */
 const MAG_RADIUS=2.15,MAG_BELL_SUM=2.2,ICON_GLYPH=26/56;
-let baseWanted=56,base=56,mx=null,magRaf=null,dockGeom=null,shiftCur=0,magLast=0;
-/* Dragging a dock icon reorders the DOM, and the bell has to follow visual order, not insertion order. */
+let baseWanted=56,base=56,mx=null,magRaf=null,dockGeom=null,magLast=0,dockDragging=false;
 function syncIconOrder(){
  const ordered=[...dock.children].filter(node=>node.classList&&node.classList.contains('ic'));
  if(ordered.length!==icons.length||ordered.some((node,index)=>node!==icons[index])){
@@ -280,75 +318,60 @@ function measureDock(){
   gap=parseFloat(vertical?cs.rowGap:cs.columnGap)||0,
   padStart=parseFloat(vertical?cs.paddingTop:cs.paddingLeft)||0,
   padEnd=parseFloat(vertical?cs.paddingBottom:cs.paddingRight)||0,
+  crossPadding=(parseFloat(vertical?cs.paddingLeft:cs.paddingTop)||0)+(parseFloat(vertical?cs.paddingRight:cs.paddingBottom)||0),
   along=vertical?innerHeight:innerWidth,room=Math.max(180,along-24),count=Math.max(1,icons.length),
   fit=Math.floor((room-padStart-padEnd-(count-1)*gap)/count);
- /* Shrink the resting size when the dock cannot fit, then cap the peak so it never overflows. */
  base=Math.max(28,Math.min(baseWanted,fit));
- const rest=count*base+(count-1)*gap,roomForBell=Math.max(0,room-padStart-padEnd-rest);
- dockGeom={vertical,gap,padStart,padEnd,along,mid:along/2,pitch:base+gap,
-  mag:1+Math.min(magnifyAmount()-1,roomForBell/(base*MAG_BELL_SUM))};
- icons.forEach(ic=>{ic._w=null})
+ const rest=count*base+(count-1)*gap,roomForBell=Math.max(0,room-padStart-padEnd-rest),mag=1+Math.min(magnifyAmount()-1,roomForBell/(base*MAG_BELL_SUM));
+ dockGeom={vertical,gap,padStart,padEnd,along,mid:along/2,mag,crossSize:base*mag+crossPadding,maxLength:rest+padStart+padEnd+base*(mag-1)*MAG_BELL_SUM};
+ icons.forEach(ic=>{ic._w=null});if(cfg.reduceMotion)resetDockMagnification();else kickMagnify()
 }
 function bellScale(distance,peak){
  const a=Math.abs(distance);
  return a>=MAG_RADIUS?1:1+(peak-1)*.5*(1+Math.cos(Math.PI*a/MAG_RADIUS))
 }
-/* Which slot the pointer sits over, as a fractional index, given the widths that magnification produced. */
-function slotUnderCursor(cursor,widths,gap){
- let offset=0;
- for(let i=0;i<widths.length;i++){
-  const end=offset+widths[i];
-  if(cursor<end)return{i,fraction:Math.max(0,Math.min(1,(cursor-offset)/widths[i]))};
-  if(cursor<end+gap)return{i,fraction:1};
-  offset=end+gap;
- }
- return{i:widths.length-1,fraction:1}
-}
 function magSolve(){
- syncIconOrder();
  const g=dockGeom,n=icons.length;
- if(!n||!g)return{scales:[],shift:0};
- if(mx==null||cfg.reduceMotion||g.mag<=1)return{scales:new Array(n).fill(1),shift:0};
- const peak=g.mag,widths=new Array(n);
- let focus=(mx-(g.mid-(n*g.pitch-g.gap+g.padStart+g.padEnd)/2+g.padStart)-base/2)/g.pitch;
- let shift=0;
- for(let pass=0;pass<3;pass++){
-  let total=0;
-  for(let i=0;i<n;i++){widths[i]=base*bellScale(i-focus,peak);total+=widths[i]}
-  const pill=total+(n-1)*g.gap+g.padStart+g.padEnd,left=g.mid-pill/2;
-  const anchor=Math.max(0,Math.min(n-1,Math.round(focus)));
-  let peakCenter=g.padStart+left;
-  for(let i=0;i<anchor;i++)peakCenter+=widths[i]+g.gap;
-  peakCenter+=widths[anchor]/2;
-  /* Slide the dock so the enlarged icon sits under the pointer, unless that pushes it off screen. */
-  const wanted=Math.max(8,Math.min(g.along-pill-8,left+(mx-peakCenter)));
-  shift=pill>g.along-16?0:wanted-left;
-  const {i,fraction}=slotUnderCursor(mx-(wanted+g.padStart),widths,g.gap);
-  focus=Math.max(.5-MAG_RADIUS,Math.min(n-.5,i+fraction-.5));
- }
- return{scales:widths.map(width=>width/base),shift:Math.abs(shift)<.5?0:shift}
+ if(!n||!g)return[];
+ if(mx==null||dockDragging||cfg.reduceMotion||g.mag<=1)return new Array(n).fill(1);
+ const layout=focus=>{
+  const scales=icons.map((_,i)=>bellScale(i-focus,g.mag)),widths=scales.map(s=>base*s),total=widths.reduce((sum,w)=>sum+w,0)+(n-1)*g.gap+g.padStart+g.padEnd;
+  let position=g.mid-total/2+g.padStart;const centers=widths.map(width=>{const center=position+width/2;position+=width+g.gap;return center});
+  const slot=Math.floor(focus),fraction=focus-slot;
+  const cursor=focus<0?centers[0]+focus*(base+g.gap):focus>=n-1?centers[n-1]+(focus-n+1)*(base+g.gap):centers[slot]+fraction*(centers[slot+1]-centers[slot]);
+  return {cursor,scales}
+ };
+ // Solve against target geometry, never the animated hitboxes or a rounded icon anchor.
+ let low=-MAG_RADIUS,high=n-1+MAG_RADIUS;
+ for(let i=0;i<18;i++){const middle=(low+high)/2;if(layout(middle).cursor<mx)low=middle;else high=middle}
+ return layout((low+high)/2).scales
 }
 function magTick(ts){
- magRaf=null;
- syncIconOrder();
- /* Frame-rate independent follow: a fixed per-frame factor would feel twice as slow on a 120 Hz panel. */
+ magRaf=null;syncIconOrder();
  const dt=Math.max(4,Math.min(60,ts-magLast)),k=1-Math.pow(.7,dt/16.7);magLast=ts;
- const {scales,shift}=magSolve(),wrap=dock.parentElement;let busy=false;
+ const scales=magSolve();let busy=false;
  icons.forEach((ic,index)=>{
   const target=scales[index]??1;
   ic._s+=(target-ic._s)*k;
   if(Math.abs(target-ic._s)>.0015)busy=true;else ic._s=target;
   const size=base*ic._s;
-  if(Math.abs(size-(ic._w||0))>.25){ic._w=size;ic.style.width=ic.style.height=size+'px';ic.firstChild.style.fontSize=(size*ICON_GLYPH).toFixed(1)+'px'}
+  if(Math.abs(size-(ic._w||0))>.25||ic._s===target){ic._w=size;ic.style.width=ic.style.height=size+'px';ic.firstChild.style.fontSize=(size*ICON_GLYPH).toFixed(1)+'px'}
  });
- shiftCur+=(shift-shiftCur)*k;
- if(Math.abs(shift-shiftCur)>.2)busy=true;else shiftCur=shift;
- if(wrap)wrap.style.transform=dockGeom&&dockGeom.vertical?`translateY(${shiftCur}px)`:`translateX(${shiftCur}px)`;
  if(busy)magRaf=requestAnimationFrame(magTick)
 }
 function kickMagnify(){if(magRaf==null){magLast=performance.now();magRaf=requestAnimationFrame(magTick)}}
-dock.addEventListener('pointermove',e=>{mx=dockGeom&&dockGeom.vertical?e.clientY:e.clientX;kickMagnify()});
-dock.addEventListener('pointerleave',()=>{mx=null;kickMagnify()});
+function resetDockMagnification(){
+ cancelAnimationFrame(magRaf);magRaf=null;mx=null;syncIconOrder();
+ icons.forEach(ic=>{ic._s=1;ic._w=base;ic.style.width=ic.style.height=base+'px';ic.firstChild.style.fontSize=(base*ICON_GLYPH).toFixed(1)+'px'})
+}
+document.addEventListener('pointermove',e=>{
+ if(e.pointerType==='touch'||dockDragging)return;
+ const g=dockGeom,rect=dock.getBoundingClientRect(),along=g.vertical?e.clientY:e.clientX;
+ const cross=g.vertical?(cfg.dockPosition==='left'?e.clientX>=rect.left&&e.clientX<=rect.left+g.crossSize:e.clientX<=rect.right&&e.clientX>=rect.right-g.crossSize):e.clientY<=rect.bottom&&e.clientY>=rect.bottom-g.crossSize;
+ const over=cross&&Math.abs(along-g.mid)<=g.maxLength/2&&!document.body.classList.contains('launchpad-open')&&(!document.body.classList.contains('app-fullscreen')||document.body.classList.contains('fullscreen-dock-visible'));
+ const next=over?along:null;if(next!==mx){mx=next;kickMagnify()}
+});
+document.addEventListener('pointerleave',()=>{mx=null;kickMagnify()});
 measureDock();kickMagnify();
 /* clock */
 function clk(){const now=new Date(),date=cfg.showDate?now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+' ':'';
@@ -693,18 +716,19 @@ function setLaunchpadGestureProgress(progress){
 }
 function beginLaunchpadGesture(startOpen,progress){
  if(!startOpen){closeDd(true);spot(false);mx=null;lpi.value='';lpDraw()}
- document.body.classList.add('launchpad-open');lp.classList.add('gesture-active');setLaunchpadGestureProgress(progress)
+ document.body.classList.add('launchpad-open');lp.classList.add('gesture-active');setLaunchpadGestureProgress(progress);syncFullscreenChrome()
 }
 function clearLaunchpadGesture(){
  lp.classList.remove('gesture-active');
  LP_VARS.forEach(property=>lp.style.removeProperty(property));
  if(!lpOn())document.body.classList.remove('launchpad-open');
+ syncFullscreenChrome()
 }
 function launchpad(on=!lpOn()){
  if(lp.classList.contains('gesture-active'))clearLaunchpadGesture();
  if(on===lpOn())return;
  if(on){closeDd(true);spot(false);mx=null;document.body.classList.add('launchpad-open');lpi.value='';lpDraw();void lp.offsetWidth;lp.classList.add('on');setTimeout(()=>lpi.focus(),30)}
- else{lp.classList.remove('on');document.body.classList.remove('launchpad-open');lpi.blur()}}
+ else{lp.classList.remove('on');document.body.classList.remove('launchpad-open');lpi.blur()}syncFullscreenChrome()}
 function lpGo(id){launchpad(false);setTimeout(()=>launch(id),cfg.reduceMotion?20:500+Math.min(24,lpg.querySelectorAll('.lpa').length)*14)}
 setupIconReordering(lpg,'.lpa','launchpadOrder');
 lp.onclick=e=>{const a=e.target.closest('.lpa');if(a)lpGo(a.dataset.id);else if(!e.target.closest('input'))launchpad(false)};
@@ -725,12 +749,12 @@ function settleDesktopExpose(open,progress){
  clearTimeout(deskSettleTimer);desktopExposed=open;
  const settle=Math.round(150+Math.abs((open?1:0)-(progress==null?1:progress))*200);
  document.documentElement.style.setProperty('--desk-settle',`${settle}ms`);
- document.body.classList.add('desk-expose-settling');setDesktopExposeProgress(open?1:0);
- deskSettleTimer=setTimeout(()=>{document.body.classList.remove('desk-expose-settling');document.documentElement.style.removeProperty('--desk-settle');if(!desktopExposed)document.body.classList.remove('desk-expose')},settle+20)
+ document.body.classList.add('desk-expose-settling');setDesktopExposeProgress(open?1:0);syncFullscreenChrome();
+ deskSettleTimer=setTimeout(()=>{document.body.classList.remove('desk-expose-settling');document.documentElement.style.removeProperty('--desk-settle');if(!desktopExposed)document.body.classList.remove('desk-expose');syncFullscreenChrome()},settle+20)
 }
 function beginDesktopExpose(){
  if(desktopExposed||!exposedWindows().length)return null;
- document.body.classList.add('desk-expose');setDesktopExposeProgress(0);
+ document.body.classList.add('desk-expose');setDesktopExposeProgress(0);syncFullscreenChrome();
  return {kind:'desktop',progress:0,speed:0,lastMove:0}
 }
 function restoreDesktop(){if(desktopExposed)settleDesktopExpose(false)}
@@ -907,7 +931,7 @@ function applyCfg(){const R=document.documentElement,dark=cfg.theme==='dark'||(c
  baseWanted=cfg.dock;measureDock();dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;clk()}
 document.addEventListener('mousemove',e=>{if(!cfg.hide)return;const w=$('#dockwrap'),edge=cfg.dockPosition==='bottom'?e.clientY>innerHeight-10:cfg.dockPosition==='left'?e.clientX<10:e.clientX>innerWidth-10,near=cfg.dockPosition==='bottom'?e.clientY>innerHeight-120:cfg.dockPosition==='left'?e.clientX<120:e.clientX>innerWidth-120;w.classList.toggle('show',edge||(w.classList.contains('show')&&near))});
 function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=document.createElement('div');h.className='rz '+d;el.appendChild(h);
- h.onpointerdown=ev=>{if(el.dataset.max)return;ev.preventDefault();ev.stopPropagation();h.setPointerCapture(ev.pointerId);
+ h.onpointerdown=ev=>{if(el.dataset.max||el.dataset.fullscreen)return;ev.preventDefault();ev.stopPropagation();h.setPointerCapture(ev.pointerId);
   const r={l:el.offsetLeft,t:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight,x:ev.clientX,y:ev.clientY};el.classList.add('rzing');
   const mv=m=>{const dx=m.clientX-r.x,dy=m.clientY-r.y;let L=r.l,T=r.t,W=r.w,H=r.h;
    const minW=Math.min(260,Math.max(160,innerWidth-16)),minH=Math.min(200,Math.max(100,innerHeight-36));
@@ -916,9 +940,10 @@ function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=
    Object.assign(el.style,{left:L+'px',top:T+'px',width:W+'px',height:H+'px'})};
   const up=()=>{el.classList.remove('rzing');saveWindowBounds(Object.keys(wins).find(id=>wins[id]===el),el);h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up)};h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up)}})}
 function constrainWindows(){Object.values(wins).forEach(el=>{
+ if(el.dataset.fullscreen){Object.assign(el.style,{left:'0px',top:'0px',width:innerWidth+'px',height:innerHeight+'px'});return}
  if(el.dataset.max){Object.assign(el.style,{left:'8px',top:'34px',width:Math.max(160,innerWidth-16)+'px',height:Math.max(120,innerHeight-132)+'px'});return}
- const minWidth=Math.min(260,Math.max(160,innerWidth-16)),width=Math.min(el.offsetWidth,Math.max(minWidth,innerWidth-16)),height=Math.min(el.offsetHeight,Math.max(120,innerHeight-36));
- Object.assign(el.style,{minWidth:minWidth+'px',width:width+'px',height:height+'px',left:Math.max(8,Math.min(innerWidth-width-8,el.offsetLeft))+'px',top:Math.max(28,Math.min(innerHeight-height-8,el.offsetTop))+'px'})
+ const minWidth=Math.min(260,Math.max(160,innerWidth-16)),width=Math.min(parseFloat(el.style.width),Math.max(minWidth,innerWidth-16)),height=Math.min(parseFloat(el.style.height),Math.max(120,innerHeight-36));
+ Object.assign(el.style,{minWidth:minWidth+'px',width:width+'px',height:height+'px',left:Math.max(8,Math.min(innerWidth-width-8,parseFloat(el.style.left)))+'px',top:Math.max(28,Math.min(innerHeight-height-8,parseFloat(el.style.top)))+'px'})
 })}
 window.addEventListener('resize',()=>{constrainWindows();measureDock()});
 document.addEventListener('contextmenu',e=>{if(e.target.closest('.win,.dd,#dockwrap,#menubar'))return;e.preventDefault();closeDd(true);
