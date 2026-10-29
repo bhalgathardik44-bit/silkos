@@ -13,7 +13,7 @@ const run = (cmd, args, ms = 4000) => new Promise(res => execFile(cmd, args, { t
 const runDetailed = (cmd, args, ms = 4000) => new Promise(resolve => execFile(cmd, args, { timeout: ms }, (error, out, stderr) => resolve({
   ok: !error,
   out: String(out || ''),
-  error: error ? String(stderr || error.message) : ''
+  stderr: String(stderr || '')
 })));
 const splitNmcliRow = line => {
   const fields = [];
@@ -28,15 +28,23 @@ const splitNmcliRow = line => {
   fields.push(value);
   return fields;
 };
+/* bluetoothctl exits 0 on failure, so outcomes must be read from its output, which always anchors errors at line start. */
+const btFailure = out => String(out || '').split(/\r?\n/).map(line => line.trim())
+  .find(line => /^(?:Failed\b|Error\b|No default controller\b)/i.test(line)) || '';
+/* A loose hex class would match "No default controller available" via the "a" in "available". */
+const btController = out => /Controller\s+(?:[0-9A-F]{2}:){5}[0-9A-F]{2}\b/i.test(String(out || ''));
 const invokeWifiStatus = async () => {
   const out = await run('nmcli', ['-t', '--escape', 'yes', '-f', 'TYPE,STATE,CONNECTION', 'device', 'status']);
   if (out === null) return { available: false, error: 'NetworkManager is unavailable.' };
   const wifiDevices = out.trim().split(/\r?\n/).filter(Boolean).map(splitNmcliRow).filter(row => row[0] === 'wifi');
   const radio = await run('nmcli', ['radio', 'wifi']);
   if (radio === null) return { available: false, error: 'Could not read Wi-Fi radio state.' };
-  if (!wifiDevices.length) return { available: false, enabled: radio.trim() === 'enabled', connected: false, error: 'No Wi-Fi adapter was detected.' };
+  const radioState = radio.trim().toLowerCase();
+  if (radioState !== 'enabled' && radioState !== 'disabled') return { available: false, error: 'Could not read Wi-Fi radio state.' };
+  const enabled = radioState === 'enabled';
+  if (!wifiDevices.length) return { available: false, enabled, connected: false, error: 'No Wi-Fi adapter was detected.' };
   const connected = wifiDevices.find(row => /^connected(?:\s|$)/i.test(row[1] || ''));
-  return { available: true, enabled: radio.trim() === 'enabled', connected: !!connected, name: connected?.[2] || null };
+  return { available: true, enabled, connected: !!connected, name: connected?.[2] || null };
 };
 let mainWindow = null;
 let screenLocked = false;
@@ -228,10 +236,12 @@ ipcMain.handle('sys:wifi:networks', async () => {
   if (!status.available) return status;
   if (!status.enabled) return { available: true, enabled: false, networks: [] };
   const result = await runDetailed('nmcli', ['-t', '--escape', 'yes', '-f', 'IN-USE,SSID,SIGNAL,SECURITY', 'device', 'wifi', 'list', '--rescan', 'yes'], 18000);
-  if (!result.ok) return { available: false, error: result.error || 'Could not scan for Wi-Fi networks.' };
+  if (!result.ok) return { available: false, error: result.stderr.trim().slice(-600) || 'Could not scan for Wi-Fi networks.' };
   const found = new Map();
   for (const line of result.out.trim().split(/\r?\n/).filter(Boolean)) {
-    const [active, ssid, signal, security] = splitNmcliRow(line);
+    const fields = splitNmcliRow(line);
+    if (fields.length < 4) continue;
+    const [active, ssid, signal, security] = fields;
     if (!ssid) continue;
     const network = { ssid, signal: Number(signal) || 0, security: security && security !== '--' ? security : '', active: active.trim() === '*' };
     const existing = found.get(ssid);
@@ -241,32 +251,39 @@ ipcMain.handle('sys:wifi:networks', async () => {
 });
 ipcMain.handle('sys:wifi:connect', async (_, ssid, password = '') => {
   if (!IS_LINUX) return { ok: false, error: 'Wi-Fi connections are only available on Linux.' };
-  if (typeof ssid !== 'string' || !ssid.trim() || Buffer.byteLength(ssid, 'utf8') > 32 || typeof password !== 'string' || Buffer.byteLength(password, 'utf8') > 128) {
+  if (typeof ssid !== 'string' || typeof password !== 'string' || !ssid.trim() ||
+    Buffer.byteLength(ssid, 'utf8') > 32 || Buffer.byteLength(password, 'utf8') > 128 ||
+    ssid.includes('\0') || password.includes('\0')) {
     return { ok: false, error: 'Invalid Wi-Fi network or password.' };
   }
   const args = ['device', 'wifi', 'connect', ssid];
   if (password) args.push('password', password);
   const result = await runDetailed('nmcli', args, 30000);
-  return result.ok ? { ok: true } : { ok: false, error: result.error || 'Could not connect to the Wi-Fi network.' };
+  if (result.ok) return { ok: true };
+  // execFile's fallback message echoes the command line, which contains the password.
+  const detail = result.stderr.trim().slice(-600);
+  return { ok: false, error: detail ? `Could not connect to the Wi-Fi network: ${detail}` : 'Could not connect to the Wi-Fi network. Check the password and try again.' };
 });
 ipcMain.handle('sys:bluetooth', async (_, enabled) => {
   if (!IS_LINUX) return null;
-  if (typeof enabled === 'boolean' && await run('bluetoothctl', ['power', enabled ? 'on' : 'off']) === null) {
-    return { available: false, error: 'BlueZ could not change Bluetooth power state.' };
+  if (typeof enabled === 'boolean') {
+    const power = await runDetailed('bluetoothctl', ['power', enabled ? 'on' : 'off'], 8000);
+    if (!power.ok || btFailure(power.out)) return { available: false, error: 'BlueZ could not change Bluetooth power state.' };
   }
   const out = await run('bluetoothctl', ['show']);
-  if (!out || !/Controller\s+[0-9A-F:]+/i.test(out)) return { available: false, powered: false, error: 'No Bluetooth controller was detected.' };
+  if (!out || !btController(out)) return { available: false, powered: false, error: 'No Bluetooth controller was detected.' };
   return { available: true, powered: /^\s*Powered:\s*yes/im.test(out) };
 });
 ipcMain.handle('sys:bluetooth:devices', async () => {
   if (!IS_LINUX) return { available: false, error: 'Bluetooth is only available on Linux.' };
   const status = await run('bluetoothctl', ['show']);
-  if (!status || !/Controller\s+[0-9A-F:]+/i.test(status)) return { available: false, error: 'No Bluetooth controller was detected.' };
+  if (!status || !btController(status)) return { available: false, error: 'No Bluetooth controller was detected.' };
   if (!/^\s*Powered:\s*yes/im.test(status)) return { available: false, error: 'Turn Bluetooth on to scan for devices.' };
   const scan = await runDetailed('bluetoothctl', ['--timeout', '8', 'scan', 'on'], 12000);
-  if (!scan.ok) return { available: false, error: scan.error || 'Could not scan for Bluetooth devices.' };
+  const scanIssue = scan.ok ? btFailure(scan.out) : (scan.stderr.trim() || 'Could not scan for Bluetooth devices.');
+  if (scanIssue) return { available: false, error: scanIssue };
   const devices = await run('bluetoothctl', ['devices']);
-  if (devices === null) return { available: false, error: 'Could not list Bluetooth devices.' };
+  if (devices === null || btFailure(devices)) return { available: false, error: 'Could not list Bluetooth devices.' };
   const result = devices.split(/\r?\n/).map(line => {
     const match = line.match(/^Device\s+([0-9A-F:]{17})\s+(.+)$/i);
     return match ? { address: match[1], name: match[2] } : null;
@@ -278,15 +295,21 @@ ipcMain.handle('sys:bluetooth:connect', async (_, address) => {
     return { ok: false, error: 'Invalid Bluetooth device.' };
   }
   const details = await run('bluetoothctl', ['info', address]);
-  if (!details) return { ok: false, error: 'Could not read Bluetooth device information.' };
+  if (!details || btFailure(details) || /^Device\s+\S+\s+not available$/im.test(details) ||
+    !details.toLowerCase().includes(address.toLowerCase())) {
+    return { ok: false, error: 'Could not read Bluetooth device information.' };
+  }
   if (!/^\s*Paired:\s*yes/im.test(details)) {
     const paired = await runDetailed('bluetoothctl', ['pair', address], 20000);
-    if (!paired.ok) return { ok: false, error: paired.error || 'Pairing failed. Check the device and try again.' };
+    const failure = paired.ok ? btFailure(paired.out) : (paired.stderr.trim() || 'Pairing failed. Check the device and try again.');
+    if (failure) return { ok: false, error: failure };
   }
   const trusted = await runDetailed('bluetoothctl', ['trust', address], 10000);
-  if (!trusted.ok) return { ok: false, error: trusted.error || 'Could not trust the Bluetooth device.' };
+  const trustFailure = trusted.ok ? btFailure(trusted.out) : (trusted.stderr.trim() || 'Could not trust the Bluetooth device.');
+  if (trustFailure) return { ok: false, error: trustFailure };
   const connected = await runDetailed('bluetoothctl', ['connect', address], 20000);
-  return connected.ok ? { ok: true } : { ok: false, error: connected.error || 'Could not connect to the Bluetooth device.' };
+  const connectFailure = connected.ok ? btFailure(connected.out) : (connected.stderr.trim() || 'Could not connect to the Bluetooth device.');
+  return connectFailure ? { ok: false, error: connectFailure } : { ok: true };
 });
 ipcMain.handle('wallpaper:select', async () => {
   const options = {
