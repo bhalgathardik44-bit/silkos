@@ -32,5 +32,15 @@ contextBridge.exposeInMainWorld('silk', {
   files: { home: () => ipcRenderer.invoke('fs:home'), list: (d, showHidden) => ipcRenderer.invoke('fs:list', d, showHidden), open: p => ipcRenderer.invoke('fs:open', p) },
   persist: { status: () => ipcRenderer.invoke('persist:status'), setup: d => ipcRenderer.invoke('persist:setup', d) },
   terminal: () => ipcRenderer.invoke('sys:terminal'),
-  store: { installed: () => ipcRenderer.invoke('store:installed'), search: q => ipcRenderer.invoke('store:search', q), install: id => ipcRenderer.invoke('store:install', id), run: id => ipcRenderer.invoke('store:run', id) }
+  store: {
+    installed: () => ipcRenderer.invoke('store:installed'),
+    search: q => ipcRenderer.invoke('store:search', q),
+    detail: id => ipcRenderer.invoke('store:detail', id),
+    install: id => ipcRenderer.invoke('store:install', id),
+    uninstall: id => ipcRenderer.invoke('store:uninstall', id),
+    updates: () => ipcRenderer.invoke('store:updates'),
+    updateAll: id => ipcRenderer.invoke('store:update-all', id),
+    run: id => ipcRenderer.invoke('store:run', id),
+    onProgress: cb => ipcRenderer.on('store:progress', (_, step) => cb(step))
+  }
 });

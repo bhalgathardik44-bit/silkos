@@ -223,41 +223,79 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .lpa:hover b{transform:scale(1.06)}.lpa:active b{transform:scale(.92);filter:brightness(.75)}
 .lpa.sel b{box-shadow:0 0 0 3px rgba(255,255,255,.85),0 8px 22px rgba(0,0,0,.35)}
 .lpe{grid-column:1/-1;text-align:center;color:rgba(255,255,255,.7);font-size:15px;margin-top:40px}
-.sto{display:flex;flex-direction:column;height:100%}.stq{padding:14px 16px;border-bottom:1px solid var(--line)}
-.stq input{width:100%;height:34px;border:0;outline:0;border-radius:10px;padding:0 14px;font-size:14px;background:var(--sfield);color:inherit;user-select:text}
-.stl{flex:1;overflow:auto;padding:4px 16px 16px}.stl h5{font-size:12px;opacity:.55;margin:12px 0 4px}
-.str{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-.str>b{width:44px;height:44px;border-radius:22%;flex:none;display:grid;place-items:center;position:relative;overflow:hidden;color:#fff;font-size:20px;background:linear-gradient(#5ac8fa,#0a60ff)}
-.str>b img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:var(--win)}
-.str>div{flex:1;min-width:0}.str h4{font-size:14px;font-weight:600}.str p{font-size:12px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stb{border:0;border-radius:14px;padding:5px 16px;font-size:13px;font-weight:600;background:var(--sfield);color:var(--accent);flex:none}.stb:disabled{opacity:.6}
+.sto{display:flex;min-height:0;height:100%}
+.stb{border:0;border-radius:14px;padding:5px 16px;font-size:13px;font-weight:600;background:var(--sfield);color:var(--accent);flex:none;transition:transform var(--t-tap) var(--ease),filter var(--t-tap) var(--ease)}.stb:hover{filter:brightness(.94)}.stb:active{transform:scale(.96)}.stb:disabled{opacity:.6}
 .stm{text-align:center;opacity:.6;font-size:14px;margin-top:70px;padding:0 20px}
-.store-head{padding:18px 20px 12px;border-bottom:1px solid var(--line);flex:none}
-.store-title{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
-.store-title h2{font-size:22px;letter-spacing:-.4px}.store-title p{font-size:12px;opacity:.58;margin-top:3px}
-.store-search{height:38px;display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:12px;background:var(--sfield);color:inherit}
-.store-search svg{width:16px;height:16px;opacity:.55;flex:none}.store-search input{width:100%;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:13px;user-select:text}
-.store-cats{display:flex;gap:7px;overflow-x:auto;padding:12px 18px 9px;flex:none;scrollbar-width:none}
-.store-cats::-webkit-scrollbar{display:none}
-.store-cat{border:0;border-radius:999px;padding:7px 12px;background:var(--sfield);color:inherit;font-size:12px;white-space:nowrap;cursor:pointer}
-.store-cat.active{background:var(--accent);color:#fff}
-.store-content{flex:1;min-height:0;overflow:auto;padding:0 18px 20px}
-.store-feature{position:relative;min-height:126px;margin:6px 0 18px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;overflow:hidden;border-radius:18px;color:#fff;background:radial-gradient(circle at 85% 20%,rgba(255,255,255,.32),transparent 30%),linear-gradient(115deg,#113a2b,#1ed760)}
-.store-feature-copy{position:relative;z-index:1;max-width:390px}.store-eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;opacity:.8}
-.store-feature h3{font-size:22px;margin:5px 0 3px}.store-feature p{font-size:12px;opacity:.85}
-.store-feature .stb{background:#fff;color:#173b2b;padding:8px 17px}
-.store-feature-mark{position:absolute;right:108px;width:112px;height:112px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.3);border-radius:50%;background:rgba(255,255,255,.12);font-size:76px;font-weight:700;line-height:1;opacity:.3;transform:rotate(12deg)}
-.store-section{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:16px 2px 10px}
-.store-section h3{font-size:15px}.store-section span{font-size:11px;opacity:.55}
-.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}
-.store-card{min-width:0;display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:15px;background:var(--win);transition:transform .18s var(--ease),box-shadow .18s}
-.store-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.1)}
-.store-icon{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;position:relative;overflow:hidden;background:linear-gradient(145deg,#8ec5ff,#5968df);color:white;font-size:20px;font-weight:700}
-.store-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.store-side{flex:none;width:180px;min-height:0;display:flex;flex-direction:column;gap:1px;padding:12px 9px;overflow:auto;border-right:1px solid var(--line);background:color-mix(in srgb,var(--sbar) 60%,var(--win))}
+.store-side h5{font-size:10px;text-transform:uppercase;letter-spacing:.8px;opacity:.45;margin:12px 8px 5px;font-weight:600}
+.store-nav{display:flex;align-items:center;gap:8px;width:100%;border:0;text-align:left;padding:7px 10px;border-radius:9px;background:transparent;color:inherit;font:inherit;font-size:12.5px;cursor:pointer;transition:background var(--t-tap) var(--ease),color var(--t-tap) var(--ease)}
+.store-nav:hover{background:color-mix(in srgb,var(--text) 7%,transparent)}
+.store-nav.on{background:color-mix(in srgb,var(--accent) 17%,transparent);color:var(--accent);font-weight:600}
+.store-nav em{margin-left:auto;font-style:normal;font-size:10px;font-weight:700;min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;border-radius:9px;background:var(--accent);color:#fff}
+.store-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.store-head{padding:14px 18px 11px;border-bottom:1px solid var(--line);flex:none;display:flex;align-items:center;gap:12px}
+.store-title{flex:1;min-width:0}.store-title h2{font-size:19px;letter-spacing:-.35px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.store-title p{font-size:11.5px;opacity:.55;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-back{flex:none;display:flex;align-items:center;gap:4px;border:0;border-radius:10px;padding:6px 11px 6px 8px;background:var(--sfield);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;transition:transform var(--t-tap) var(--ease),filter var(--t-tap) var(--ease)}.store-back:hover{filter:brightness(.94)}.store-back:active{transform:translateX(-2px) scale(.97)}
+.store-search{width:236px;height:32px;flex:none;display:flex;align-items:center;gap:8px;padding:0 11px;border-radius:11px;background:var(--sfield);color:inherit}
+.store-search svg{width:15px;height:15px;opacity:.55;flex:none}.store-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:13px;user-select:text}
+.store-content{flex:1;min-height:0;overflow:auto;padding:14px 18px 20px;scrollbar-gutter:stable}
+.store-content.in{animation:storeIn var(--t-space) var(--ease)}
+@keyframes storeIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.store-hero{position:relative;display:flex;align-items:center;gap:18px;min-height:136px;padding:18px 22px;margin-bottom:20px;overflow:hidden;border-radius:20px;color:#fff;background:var(--hero,linear-gradient(115deg,#1d3f6e,#3f8cff))}
+.store-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 88% 12%,rgba(255,255,255,.3),transparent 42%)}
+.store-hero-copy{position:relative;z-index:1;flex:1;min-width:0}.store-eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;opacity:.82}
+.store-hero h3{font-size:21px;margin:5px 0 3px;letter-spacing:-.3px}.store-hero p{font-size:12.5px;opacity:.88;max-width:44ch}
+.store-hero .stb{position:relative;z-index:1;background:#fff;color:#17253d;padding:8px 18px}
+.store-section{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:4px 2px 11px}
+.store-section h3{font-size:15.5px;letter-spacing:-.2px}.store-section span{font-size:11px;opacity:.55}
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:11px}
+.store-tile{position:relative;min-width:0;display:flex;flex-direction:column;gap:9px;padding:13px;border:1px solid var(--line);border-radius:17px;background:var(--win);cursor:pointer;transition:transform var(--t-ui) var(--ease),box-shadow var(--t-ui) var(--ease)}
+.store-tile:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(0,0,0,.13)}
+.store-tile:active{transform:translateY(-1px) scale(.99)}
+.store-art{width:62px;height:62px;border-radius:15px;display:grid;place-items:center;position:relative;overflow:hidden;color:#fff;font-size:26px;font-weight:700;background:var(--art,linear-gradient(145deg,#8ec5ff,#5968df));box-shadow:0 4px 12px rgba(0,0,0,.14)}
+.store-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .store-meta{min-width:0}.store-meta h4{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.store-meta p{font-size:11px;opacity:.58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
-.store-card .stb{padding:6px 11px;background:color-mix(in srgb,var(--accent) 10%,var(--win));border-radius:10px}
-.store-status{min-height:18px;padding:10px 3px 0;font-size:11px;opacity:.7}
-@media(max-width:620px){.store-grid{grid-template-columns:1fr}.store-feature-icon{right:60px}.store-title h2{font-size:19px}}
+.store-tile .stb{align-self:flex-start;padding:5px 15px;background:color-mix(in srgb,var(--accent) 12%,var(--sfield));border-radius:999px;font-size:12px}
+.store-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px 10px;border-radius:14px;cursor:pointer;transition:background var(--t-tap) var(--ease)}
+.store-row:hover{background:color-mix(in srgb,var(--text) 6%,transparent)}
+.store-row+.store-row{margin-top:2px}
+.store-row .store-art{width:46px;height:46px;border-radius:12px;font-size:19px}
+.store-row>div{min-width:0}
+.store-prog{height:3px;margin-top:7px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.store-prog i{display:block;height:100%;width:0;border-radius:3px;background:var(--accent);transition:width var(--t-ui) var(--ease)}
+.store-prog.run i{width:38%;animation:storeRun 1.1s linear infinite}
+@keyframes storeRun{from{transform:translateX(-105%)}to{transform:translateX(320%)}}
+.store-act{display:grid;gap:6px;justify-items:start;align-content:start;min-width:0;flex:none}
+.store-row .store-act,.store-app-head .store-act{justify-items:end}
+.store-section .store-act{align-self:center}
+.store-list{display:flex;flex-direction:column;gap:2px}
+.store-hero .store-art{position:relative;z-index:1;width:76px;height:76px;border-radius:19px;font-size:32px;flex:none}
+.store-hero .store-act{position:relative;z-index:1}
+.store-hero .store-prog{background:rgba(255,255,255,.3)}
+.store-hero .store-prog i{background:#fff}
+.store-app{animation:storeIn var(--t-space) var(--ease)}
+.store-app-head{display:flex;align-items:center;gap:18px;padding-bottom:18px}
+.store-app-head .store-art{width:92px;height:92px;border-radius:22px;font-size:38px;flex:none}
+.store-app-id{flex:1;min-width:0}.store-app-id h3{font-size:23px;letter-spacing:-.4px}.store-app-id p{font-size:12.5px;opacity:.62;margin-top:4px}
+.store-app-id .store-eyebrow{color:var(--accent)}
+.store-actions{display:flex;align-items:center;gap:9px;flex:none}
+.store-actions .stb{padding:7px 20px;border-radius:999px;background:color-mix(in srgb,var(--accent) 13%,var(--sfield))}
+.store-shots{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 16px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.store-shots img{height:216px;aspect-ratio:16/9;flex:none;border-radius:12px;border:1px solid var(--line);background:var(--sfield);object-fit:cover;scroll-snap-align:start;box-shadow:0 6px 18px rgba(0,0,0,.1)}
+.store-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;margin:6px 0 20px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--line)}
+.store-fact{background:var(--win);padding:11px 13px;min-width:0}.store-fact span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;opacity:.5}.store-fact b{display:block;font-size:13px;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.store-desc{font-size:13px;line-height:1.58;opacity:.86;max-width:74ch}
+.store-desc p{margin:0 0 11px}.store-desc ul,.store-desc ol{margin:0 0 11px;padding-left:19px}.store-desc li{margin:3px 0}.store-desc code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--sfield);padding:1px 5px;border-radius:5px}
+.store-desc h4{font-size:14px;margin:16px 0 7px;opacity:.9}
+.store-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.store-links button{border:1px solid var(--line);border-radius:10px;padding:6px 12px;background:var(--win);color:var(--accent);font-size:12px;cursor:pointer;transition:background var(--t-tap) var(--ease)}
+.store-links button:hover{background:var(--sfield)}
+.sk{position:relative;overflow:hidden;border-radius:9px;background:color-mix(in srgb,var(--text) 8%,transparent)}
+.sk::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--text) 9%,transparent),transparent);transform:translateX(-100%);animation:skShine 1.2s var(--ease) infinite}
+@keyframes skShine{to{transform:translateX(100%)}}
+.store-skeleton{pointer-events:none}
+.store-status{min-height:18px;padding:9px 18px;border-top:1px solid var(--line);font-size:11px;opacity:.7;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:660px){.store-side{display:none}.store-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}.store-search{width:150px}.store-app-head{flex-wrap:wrap}.store-shots img{height:168px}}
 .notes-app{height:100%;min-height:0;display:grid;grid-template-columns:172px 255px minmax(0,1fr);background:var(--win);color:var(--text);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .notes-folders,.notes-list{min-width:0;min-height:0;display:flex;flex-direction:column;background:color-mix(in srgb,var(--sbar) 72%,var(--win))}
 .notes-folders{border-right:1px solid var(--line);padding:14px 10px 10px;gap:12px}
@@ -1021,15 +1059,15 @@ function finderInit(el){const b=el.querySelector('.body'),F=window.silk&&silk.fi
   sb.onclick=e=>{const x=e.target.closest('[data-p]');x&&go(x.dataset.p)};go(configuredLocation())})}
 function storeInit(el){
  const apps=[
-  {id:'org.spotify.Client',name:'Spotify',tag:'Music',category:'audio',summary:'Music and podcasts for every moment.',mark:'♫'},
+  {id:'com.spotify.Client',name:'Spotify',tag:'Music',category:'audio',summary:'Music and podcasts for every moment.',mark:'♫'},
   {id:'org.mozilla.firefox',name:'Firefox',tag:'Browser',category:'internet',summary:'A fast browser built around your privacy.',mark:'F'},
   {id:'org.videolan.VLC',name:'VLC',tag:'Video',category:'audio',summary:'Play almost any video or audio format.',mark:'▶'},
   {id:'com.discordapp.Discord',name:'Discord',tag:'Community',category:'internet',summary:'Talk, share, and hang out with communities.',mark:'D'},
   {id:'com.valvesoftware.Steam',name:'Steam',tag:'Games',category:'games',summary:'Discover and play your PC game library.',mark:'S'},
   {id:'org.gimp.GIMP',name:'GIMP',tag:'Photo editing',category:'creative',summary:'A powerful free image editor.',mark:'G'},
   {id:'org.libreoffice.LibreOffice',name:'LibreOffice',tag:'Office',category:'productivity',summary:'Documents, spreadsheets, and presentations.',mark:'L'},
-  {id:'org.obsproject.Studio',name:'OBS Studio',tag:'Streaming',category:'creative',summary:'Record and livestream your screen.',mark:'O'},
-  {id:'org.telegram.desktop',name:'Telegram',tag:'Messaging',category:'internet',summary:'Fast messaging across all your devices.',mark:'➤'},
+  {id:'com.obsproject.Studio',name:'OBS Studio',tag:'Streaming',category:'creative',summary:'Record and livestream your screen.',mark:'O'},
+  {id:'org.telegram.desktop',name:'Telegram',tag:'Messaging',category:'internet',summary:'Fast messaging across all your devices.',mark:'T'},
   {id:'org.kde.kdenlive',name:'Kdenlive',tag:'Video editing',category:'creative',summary:'Create polished videos with a full editor.',mark:'K'},
   {id:'org.audacityteam.Audacity',name:'Audacity',tag:'Audio editing',category:'audio',summary:'Record and edit audio with precision.',mark:'A'},
   {id:'org.blender.Blender',name:'Blender',tag:'3D design',category:'creative',summary:'Make 3D art, animation, and visual effects.',mark:'B'},
@@ -1039,8 +1077,8 @@ function storeInit(el){
   {id:'com.bitwarden.desktop',name:'Bitwarden',tag:'Password manager',category:'utilities',summary:'Keep passwords organized across devices.',mark:'B'}
  ];
  const categories=[
-  {id:'featured',name:'For you',description:'Popular picks to get your desktop started.'},
-  {id:'audio',name:'Audio & video',description:'Listen, watch, and make something worth sharing.'},
+  {id:'featured',name:'For You',description:'Popular picks to get your desktop started.'},
+  {id:'audio',name:'Audio & Video',description:'Listen, watch, and make something worth sharing.'},
   {id:'creative',name:'Creative',description:'Tools for design, photography, video, and sound.'},
   {id:'games',name:'Games',description:'Find your next favorite game and game tools.'},
   {id:'internet',name:'Internet',description:'Browsers, messaging, and online communities.'},
@@ -1048,69 +1086,262 @@ function storeInit(el){
   {id:'utilities',name:'Utilities',description:'Handy tools for everyday desktop tasks.'}
  ];
  const b=el.querySelector('.body'),S=window.silk&&silk.store;
- b.innerHTML=`<div class="sto"><header class="store-head"><div class="store-title"><div><h2>Discover apps</h2><p>Find something great for your desktop.</p></div></div><label class="store-search">${uiIcon('search')}<input type="search" placeholder="Search apps and games" spellcheck="false" autocomplete="off"></label></header><nav class="store-cats" aria-label="App categories" role="tablist"></nav><main class="store-content"><section class="store-feature"><span class="store-feature-mark" aria-hidden="true">♫</span><div class="store-feature-copy"><span class="store-eyebrow">Featured app · Music</span><h3>Make room for the music</h3><p>Your playlists, podcasts, and favorites in one place.</p></div><button class="stb" data-id="org.spotify.Client">Get Spotify</button></section><div class="store-section"><h3 class="store-heading"></h3><span class="store-count"></span></div><div class="store-grid"></div><div class="store-status" role="status" aria-live="polite"></div></main></div>`;
- const q=b.querySelector('input'),nav=b.querySelector('.store-cats'),content=b.querySelector('.store-content'),feature=b.querySelector('.store-feature'),heading=b.querySelector('.store-heading'),count=b.querySelector('.store-count'),grid=b.querySelector('.store-grid'),status=b.querySelector('.store-status');
- let installed=new Set(),busy=new Set(),active='featured',timer,searchRequest=0;
- const category=id=>categories.find(item=>item.id===id)||categories[0];
- const appCard=a=>`<article class="store-card"><div class="store-icon">${esc(a.mark||a.name?.[0]||'?')}<img src="https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${encodeURIComponent(a.id)}.png" alt="" loading="lazy" onerror="this.remove()"></div><div class="store-meta"><h4>${esc(a.name)}</h4><p>${esc(a.summary||a.desc||a.tag||a.id)}</p></div><button class="stb" data-id="${esc(a.id)}"${busy.has(a.id)||!S?' disabled':''}>${busy.has(a.id)?'Working…':installed.has(a.id)?'Open':'Get'}</button></article>`;
- function renderCards(items,title,sub){
-  heading.textContent=title;count.textContent=sub||`${items.length} apps`;grid.innerHTML=items.map(appCard).join('');
-  if(!items.length)grid.innerHTML='<div class="stm">No apps found. Try another search.</div>';
+ const guessIcon=id=>`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${encodeURIComponent(id)}.png`;
+ const tint=id=>{let h=0;for(const ch of String(id))h=(h*31+ch.charCodeAt(0))%360;return `linear-gradient(150deg,hsl(${h} 72% 56%),hsl(${(h+38)%360} 66% 33%))`};
+ const markOf=id=>(String(id).split('.').pop()||'?').slice(0,1).toUpperCase();
+ const FLATHUB_CATS=['AudioVideo','Development','Education','Game','Graphics','Network','Office','Science','System','Utility'];
+ b.innerHTML=`<div class="sto"><aside class="store-side"><nav class="store-rail" aria-label="Store sections"></nav></aside><section class="store-main"><header class="store-head"><button class="store-back" type="button" hidden>‹ Back</button><div class="store-title"><h2>Store</h2><p></p></div><label class="store-search">${uiIcon('search')}<input type="search" placeholder="Search Flathub" aria-label="Search apps and games" spellcheck="false" autocomplete="off"></label></header><main class="store-content" tabindex="-1"></main><footer class="store-status" role="status" aria-live="polite"></footer></section></div>`;
+ const rail=b.querySelector('.store-rail'),back=b.querySelector('.store-back'),heading=b.querySelector('.store-title h2'),subheading=b.querySelector('.store-title p'),q=b.querySelector('.store-search input'),content=b.querySelector('.store-content'),status=b.querySelector('.store-status');
+ const info=new Map(),bases=new Map(),jobs=new Map(),pending=new Set();
+ let installed=new Map(),updates=[],active='featured',app='',searching=false,searchError='',searchResults=[],timer,searchRequest=0,noteTimer,lastKind='',heroShown='';
+ const defaultNote=S?'Details come from Flathub. Apps install into your user profile, so no password is needed.':'Preview: browsing works here, installs are available when SilkOS runs on Linux.';
+ /* Installed and Updates are rail entries without a catalog, so they head themselves with live counts. */
+ const plural=(n,word)=>`${n} ${word}${n===1?'':'s'}`;
+ const tab=()=>categories.find(item=>item.id===active)||(active==='installed'?{name:'Installed',description:installed.size?plural(installed.size,'app')+' on this computer':'Nothing installed from the Store yet'}:active==='updates'?{name:'Updates',description:updates.length?plural(updates.length,'app')+' ready to update':'Everything from the Store is up to date'}:categories[0]);
+ const baseOf=id=>bases.get(id)||apps.find(item=>item.id===id)||{id,name:String(id).split('.').pop()||id,tag:'',category:'',summary:id,mark:markOf(id)};
+ const nameOf=id=>(info.get(id)||{}).name||installed.get(id)?.name||baseOf(id).name;
+ const summaryOf=id=>(info.get(id)||{}).summary||baseOf(id).summary||id;
+ const listApps=()=>active==='featured'?apps:apps.filter(item=>item.category===active);
+ const heroId=()=>{const items=listApps();return items.length?items[new Date().getDate()%items.length].id:''};
+ const say=text=>{status.textContent=text;clearTimeout(noteTimer);noteTimer=setTimeout(()=>{status.textContent=defaultNote},6000)};
+ status.textContent=defaultNote;
+ /* Flathub returns AppStream HTML, so rebuild the text from a small tag whitelist and let no attribute through. */
+ function safeHtml(source){
+  if(!source)return '';
+  const keep={P:'p',UL:'ul',OL:'ol',LI:'li',CODE:'code',B:'b',STRONG:'b',I:'i',EM:'i',BR:'br',H4:'h4',H5:'h4'};
+  const walk=node=>[...node.childNodes].map(child=>{
+   if(child.nodeType===3)return esc(child.nodeValue);
+   if(child.nodeType!==1)return '';
+   const tag=keep[child.tagName];
+   if(!tag)return walk(child).join('');
+   if(tag==='br')return '<br>';
+   const inner=walk(child).trim();
+   return inner?`<${tag}>${inner}</${tag}>`:'';
+  }).join('');
+  return walk(new DOMParser().parseFromString(String(source),'text/html').body).trim();
  }
- function renderHome(){
-  const selected=category(active),items=active==='featured'?apps:apps.filter(app=>app.category===active);
-  nav.querySelectorAll('.store-cat').forEach(button=>{const selected=button.dataset.category===active;button.classList.toggle('active',selected);button.setAttribute('aria-selected',String(selected))});
-  feature.hidden=!!q.value.trim();
-  renderCards(items,selected.name,selected.description);
-  status.textContent=S?'Curated picks from Flathub. Search Flathub for more apps.':'Browsing preview · installs are available when SilkOS runs on Linux.';
+ /* Screenshots arrive with their band width; keep the ratio so the strip holds its shape before the pixels load. */
+ const pickShot=shot=>{const sizes=((shot||{}).sizes||[]).filter(s=>s&&s.src);if(!sizes.length)return null;
+  const best=sizes.reduce((a,s)=>Math.abs(+a.width-900)<=Math.abs(+s.width-900)?a:s);
+  const w=+best.width,h=+best.height;return {src:best.src,ratio:w>0&&h>0&&w/h<4?String(+(w/h).toFixed(3)):''}};
+ const formatDate=stamp=>{const time=Number(stamp);if(!time)return '';const d=new Date(time<1e11?time*1e3:time);return isNaN(d.getTime())?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})};
+ const stubOf=id=>{const base=baseOf(id);return {id,name:base.name,summary:base.summary,developer:'',license:'',version:'',date:'',homepage:'',bugtracker:'',help:'',cats:[base.tag||'App'],icon:guessIcon(id),mark:base.mark,shots:[],desc:'',verified:false,free:true,loaded:false}};
+ function normalize(raw,base){
+  const releases=raw.releases||[],latest=releases.find(item=>item&&item.version)||releases[0]||{},urls=raw.urls||{},meta=raw.metadata||{};
+  const matched=(raw.categories||[]).filter(cat=>FLATHUB_CATS.includes(cat));
+  /* Curated entries keep their short editorial titles; everything else uses the upstream name. */
+  const editorial=apps.find(item=>item.id===base.id);
+  return {id:base.id,name:(editorial||{}).name||raw.name||base.name,summary:raw.summary||base.summary,developer:raw.developer_name||'',
+   license:raw.project_license||'',version:latest.version||'',date:formatDate(latest.timestamp),
+   homepage:urls.homepage||'',bugtracker:urls.bugtracker||'',help:urls.help||'',
+   cats:matched.length?matched:[base.tag||'App'],icon:raw.icon||guessIcon(base.id),mark:base.mark,
+   shots:(raw.screenshots||[]).map(pickShot).filter(Boolean),desc:safeHtml(raw.description),
+   verified:meta['flathub::verification::verified']===true,free:raw.is_free_license!==false,loaded:true};
  }
+ async function loadDetail(id){
+  try{
+   if(S&&S.detail){const reply=await S.detail(id);if(reply&&reply.error)throw new Error(reply.error);return reply&&reply.data}
+   const reply=await fetch(`https://flathub.org/api/v2/appstream/${encodeURIComponent(id)}`,{headers:{accept:'application/json'}});
+   if(!reply.ok)throw new Error(`HTTP ${reply.status}`);
+   return await reply.json();
+  }catch(error){console.warn(`Store: no Flathub details for ${id}:`,error);return null}
+ }
+ /* Details arrive without blocking the list: each answer patches the cards already on screen.
+    Four requests at a time keeps a category page from opening a dozen sockets at Flathub. */
+ function ensureDetails(ids){
+  const missing=[...new Set(ids)].filter(id=>!info.has(id)&&!pending.has(id));
+  missing.forEach(id=>pending.add(id));
+  const wanted=id=>loadDetail(id).then(raw=>{
+   pending.delete(id);
+   info.set(id,raw?normalize(raw,baseOf(id)):stubOf(id));
+   afterDetail(id);
+  });
+  let next=0;
+  return Promise.all(Array.from({length:Math.min(4,missing.length)},async()=>{for(let i=next++;i<missing.length;i=next++)await wanted(missing[i])}));
+ }
+ function afterDetail(id){
+  const record=info.get(id);
+  content.querySelectorAll(`[data-app="${CSS.escape(id)}"]`).forEach(node=>{
+   const img=node.querySelector('.store-art img');
+   if(img&&record.icon&&img.getAttribute('src')!==record.icon)img.setAttribute('src',record.icon);
+   const blurb=node.querySelector('.store-meta p');
+   if(blurb&&record.summary)blurb.textContent=record.summary;
+  });
+  if(app===id||!app&&id===heroShown&&content.scrollTop<40)render();
+ }
+ const artHTML=id=>`<div class="store-art" style="--art:${tint(id)}">${esc(baseOf(id).mark||markOf(id))}<img src="${esc((info.get(id)||{}).icon||guessIcon(id))}" alt="" loading="lazy" decoding="async" onerror="this.remove()"></div>`;
+ function actionHTML(id,label,act){
+  const job=jobs.get(id);
+  if(job)return `<button class="stb" type="button" disabled>${esc(job.label||label||'Working…')}</button><div class="store-prog${job.percent===null?' run':''}"><i${job.percent===null?'':` style="width:${job.percent}%"`}></i></div>`;
+  const has=installed.has(id);
+  return `<button class="stb" type="button" data-id="${esc(id)}" data-act="${esc(act||(has?'run':'install'))}">${esc(label||(has?'Open':'Get'))}</button>`;
+ }
+ const jobWrap=(id,label,act)=>`<span class="store-act" data-job="${esc(id)}" data-label="${esc(label)}" data-act="${esc(act)}">${actionHTML(id,label,act)}</span>`;
+ const tileHTML=id=>`<article class="store-tile" data-app="${esc(id)}" data-open="${esc(id)}" tabindex="0">${artHTML(id)}<div class="store-meta"><h4>${esc(nameOf(id))}</h4><p>${esc(summaryOf(id))}</p></div>${jobWrap(id,installed.has(id)?'Open':'Get',installed.has(id)?'run':'install')}</article>`;
+ const rowHTML=(id,label,act,note)=>`<div class="store-row" data-app="${esc(id)}" data-open="${esc(id)}" tabindex="0">${artHTML(id)}<div class="store-meta"><h4>${esc(nameOf(id))}</h4><p>${esc(note||summaryOf(id))}</p></div>${jobWrap(id,label,act)}</div>`;
+ const gridHTML=ids=>`<div class="store-grid">${ids.map(tileHTML).join('')}</div>`;
+ const skeletonTiles=count=>`<div class="store-grid">${Array.from({length:count},()=>'<div class="store-tile store-skeleton"><div class="sk" style="width:62px;height:62px;border-radius:15px"></div><div class="store-meta"><h4 class="sk" style="height:12px;width:66%"></h4><p class="sk" style="height:10px;width:88%;margin-top:7px"></p></div><div class="sk" style="height:24px;width:58px;border-radius:999px"></div></div>').join('')}</div>`;
+ function paint(html,kind){
+  content.innerHTML=html;
+  if(kind!==lastKind){lastKind=kind;content.scrollTop=0;content.classList.remove('in');void content.offsetWidth;content.classList.add('in')}
+ }
+ const byName=(a,c)=>nameOf(a).localeCompare(nameOf(c));
+ const versionNote=item=>item.version?`Version ${item.version}`:'Ready to open';
+ function paintBrowse(){
+  const items=listApps(),hero=heroId(),record=info.get(hero),grid=items.filter(item=>item.id!==hero);
+  heroShown=hero;
+  const library=installed.size?`<div class="store-section"><h3>In your library</h3><span>${installed.size} installed</span></div><div class="store-list">${[...installed.keys()].sort(byName).slice(0,5).map(id=>rowHTML(id,'Open','run',versionNote(installed.get(id)))).join('')}</div>`:'';
+  const eyebrow=`${(record&&record.cats[0])||tab().name} · Featured today`;
+  const heroBlock=hero?`<section class="store-hero" data-app="${esc(hero)}" data-open="${esc(hero)}" style="--hero:${tint(hero)}">${artHTML(hero)}<div class="store-hero-copy"><span class="store-eyebrow">${esc(eyebrow)}</span><h3>${esc(nameOf(hero))}</h3><p>${esc(summaryOf(hero))}</p></div>${jobWrap(hero,installed.has(hero)?'Open':'Get',installed.has(hero)?'run':'install')}</section>`:'';
+  paint(`${heroBlock}<div class="store-section"><h3>${esc(tab().name)}</h3><span>${plural(grid.length,'app')}</span></div>${grid.length?gridHTML(grid.map(item=>item.id)):'<div class="stm">Nothing in this category yet.</div>'}${library}`,'browse');
+  ensureDetails(items.map(item=>item.id));
+ }
+ function paintSearch(){
+  if(searching){paint(skeletonTiles(6),'search');return}
+  if(searchError){paint(`<div class="stm">${esc(searchError)}</div>`,'search');return}
+  if(!searchResults.length){paint('<div class="stm">No apps matched that search. Try another word.</div>','search');return}
+  paint(`<div class="store-section"><h3>Results</h3><span>${searchResults.length} found</span></div><div class="store-list">${searchResults.map(item=>rowHTML(item.id,installed.has(item.id)?'Open':'Get',installed.has(item.id)?'run':'install')).join('')}</div>`,'search');
+  ensureDetails(searchResults.slice(0,12).map(item=>item.id));
+ }
+ function paintInstalled(){
+  if(!S){paint('<div class="stm">Installed apps appear when SilkOS runs on Linux.</div>','installed');return}
+  const ids=[...installed.keys()].sort(byName);
+  if(!ids.length){paint('<div class="stm">No Store apps installed yet. Pick one from For You.</div>','installed');return}
+  paint(`<div class="store-section"><h3>Installed</h3><span>${plural(ids.length,'app')}</span></div><div class="store-list">${ids.map(id=>rowHTML(id,'Open','run',versionNote(installed.get(id)))).join('')}</div>`,'installed');
+  ensureDetails(ids);
+ }
+ function paintUpdates(){
+  if(!S){paint('<div class="stm">Update checks run when SilkOS is on Linux.</div>','updates');return}
+  if(!updates.length){paint('<div class="store-section"><h3>Updates</h3><span>Checked</span></div><div class="stm">Everything you installed from the Store is up to date.</div>','updates');return}
+  paint(`<div class="store-section"><h3>Updates</h3>${jobWrap('ALL','Update All','update-all')}</div><div class="store-list">${updates.map(item=>{
+   if(!bases.has(item.id))bases.set(item.id,{id:item.id,name:item.name||item.id,tag:'',category:'',summary:'',mark:markOf(item.id)});
+   return rowHTML(item.id,'Update','update',`Version ${item.from||'?'} → ${item.to}`);
+  }).join('')}</div>`,'updates');
+  ensureDetails(updates.map(item=>item.id));
+ }
+ function paintApp(){
+  const id=app,record=info.get(id);
+  if(!record){
+   paint(`<div class="store-app"><div class="store-app-head"><div class="sk" style="width:92px;height:92px;border-radius:22px;flex:none"></div><div class="store-app-id"><h3>${esc(nameOf(id))}</h3><p class="sk" style="height:11px;width:210px;margin-top:8px"></p></div><div class="sk" style="height:32px;width:76px;border-radius:999px"></div></div><div class="store-shots">${'<div class="sk" style="height:216px;width:384px;border-radius:12px;flex:none"></div>'.repeat(3)}</div></div>`,'app');
+   ensureDetails([id]);
+   return;
+  }
+  const has=installed.has(id);
+  const facts=[['Version',record.version||'—'],['Updated',record.date||'—'],['License',record.license||'—'],['Category',record.cats[0]||'—']];
+  const links=[['Website',record.homepage],['Issue tracker',record.bugtracker],['Get help',record.help]].filter(pair=>pair[1]);
+  paint(`<section class="store-app"><div class="store-app-head" data-app="${esc(id)}">${artHTML(id)}<div class="store-app-id"><span class="store-eyebrow">${esc(record.cats.join(' · '))}${record.verified?' · Verified by Flathub':''}</span><h3>${esc(record.name)}</h3><p>${esc(record.developer||'The Flathub community')} · ${record.free?'Free':'Not free'}</p></div><div class="store-actions">${jobWrap(id,has?'Open':'Get',has?'run':'install')}${has?`<button class="stb" type="button" data-id="${esc(id)}" data-act="uninstall">Remove</button>`:''}</div></div>${record.shots.length?`<div class="store-shots">${record.shots.map(shot=>`<img src="${esc(shot.src)}" alt="Screenshot of ${esc(record.name)}" loading="lazy" decoding="async"${shot.ratio?` style="aspect-ratio:${shot.ratio}"`:''}>`).join('')}</div>`:''}<div class="store-facts">${facts.map(([label,value])=>`<div class="store-fact"><span>${label}</span><b title="${esc(value)}">${esc(value)}</b></div>`).join('')}</div>${record.desc?`<div class="store-section"><h3>Overview</h3><span>${esc(record.loaded?'from Flathub':'cached description')}</span></div><div class="store-desc">${record.desc}</div>`:''}${links.length?`<div class="store-links">${links.map(([label,url])=>`<button type="button" data-link="${esc(url)}">${esc(label)}</button>`).join('')}</div>`:''}</section>`,'app');
+ }
+ function render(){
+  const query=q.value.trim();
+  rail.querySelectorAll('.store-nav').forEach(node=>node.classList.toggle('on',!app&&!query&&node.dataset.cat===active));
+  back.hidden=!app;
+  if(app){const record=info.get(app);heading.textContent=record?record.name:nameOf(app);subheading.textContent=record?(record.developer||'Flathub'):'Loading from Flathub…'}
+  else if(query){heading.textContent='Search';subheading.textContent=`Results for “${query}”`}
+  else{heading.textContent=tab().name;subheading.textContent=tab().description}
+  if(app)paintApp();
+  else if(query)paintSearch();
+  else if(active==='installed')paintInstalled();
+  else if(active==='updates')paintUpdates();
+  else paintBrowse();
+ }
+ const navItem=(cat,label,badge)=>`<button class="store-nav" type="button" data-cat="${esc(cat)}">${esc(label)}${badge?`<em>${badge}</em>`:''}</button>`;
+ function renderNav(){
+  rail.innerHTML=`<h5>Discover</h5>${categories.map(item=>navItem(item.id,item.name)).join('')}<h5>Library</h5>${navItem('installed','Installed',installed.size)}${navItem('updates','Updates',updates.length)}`;
+ }
+ const openApp=id=>{if(app===id)return;app=id;render()};
+ const paintJob=id=>content.querySelectorAll(`[data-job="${CSS.escape(String(id))}"]`).forEach(node=>{node.innerHTML=actionHTML(String(id),node.dataset.label,node.dataset.act)});
  async function loadInstalled(){
-  if(!S){renderHome();return}
+  if(!S)return;
   try{
-   const result=await S.installed();
-   if(result.error)throw new Error(result.error);
-   installed=new Set((result.apps||[]).map(app=>app.id));
-   if(!q.value.trim())renderHome();
-  }catch(error){console.error('Could not load installed Store apps:',error);status.textContent=error.message||'Could not load installed apps.';renderHome()}
+   const reply=await S.installed();
+   if(reply.error)throw new Error(reply.error);
+   installed=new Map((reply.apps||[]).filter(item=>item&&item.id).map(item=>[item.id,item]));
+  }catch(error){installed=new Map();say(error.message||'Could not list installed apps.')}
  }
- async function search(){
-  const query=q.value.trim(),request=++searchRequest;
-  if(!query){active='featured';renderHome();return}
-  feature.hidden=true;heading.textContent='Search results';count.textContent='Searching Flathub…';grid.innerHTML='<div class="stm">Searching…</div>';
-  if(!S){count.textContent='Preview';grid.innerHTML='<div class="stm">Live search and installs are available when SilkOS runs on Linux.</div>';return}
+ async function loadUpdates(){
+  if(!S)return;
   try{
-   const result=await S.search(query);
+   const reply=await S.updates();
+   if(reply.error){updates=[];say(reply.error);return}
+   updates=reply.updates||[];
+  }catch{updates=[]}
+ }
+ async function activate(button){
+  const id=button.dataset.id,act=button.dataset.act||'install';
+  if(!id||jobs.has(id))return;
+  if(!S){say('Install apps when SilkOS runs on Linux.');return}
+  if(act==='uninstall'&&!confirm(`Uninstall ${nameOf(id)} from this computer?`))return;
+  /* flatpak keeps a lock on the user repo, so two installs or updates at once would fail for the user. */
+  if(act!=='run'&&[...jobs.values()].some(job=>job.act!=='run')){say('The Store is already busy with another download.');return}
+  jobs.set(id,{label:'',percent:null,act});
+  button.disabled=true;
+  paintJob(id);
+  try{
+   let reply;
+   if(act==='run')reply=await S.run(id);
+   else if(act==='uninstall')reply=await S.uninstall(id);
+   else if(act==='update')reply=await S.updateAll(id);
+   else if(act==='update-all')reply=await S.updateAll();
+   else reply=await S.install(id);
+   if(reply&&reply.error)throw new Error(reply.error);
+   if(act==='run')say(`${nameOf(id)} is opening.`);
+   else if(act==='install'){installed.set(id,{id,name:nameOf(id)});syncFlatpaks();say(`${nameOf(id)} is installed and added to your dock.`)}
+   else if(act==='uninstall'){installed.delete(id);say(`${nameOf(id)} was uninstalled.`)}
+   else say('Your apps are up to date.');
+  }catch(error){console.error('Store action failed:',error);say(error.message||'The Store could not finish that action.')}
+  finally{jobs.delete(id);await Promise.all([loadInstalled(),loadUpdates()]);renderNav();render()}
+ }
+ async function runSearch(query){
+  const request=++searchRequest;
+  clearTimeout(timer);
+  if(!query){searching=false;searchError='';searchResults=[];render();return}
+  app='';searching=true;searchError='';searchResults=[];render();
+  try{
+   let items;
+   if(S&&S.search){const reply=await S.search(query);if(reply.error)throw new Error(reply.error);items=reply.apps||[]}
+   else{
+    const needle=query.toLowerCase();
+    items=apps.filter(item=>`${item.name} ${item.tag} ${item.summary}`.toLowerCase().includes(needle));
+   }
    if(request!==searchRequest||q.value.trim()!==query)return;
-   if(result.error)throw new Error(result.error);
-   renderCards(result.apps||[],'Search results',`${(result.apps||[]).length} found`);
-   status.textContent='Results from Flathub.';
+   items.filter(item=>item&&item.id).forEach(item=>{if(!bases.has(item.id))bases.set(item.id,{id:item.id,name:item.name||item.id,tag:'',category:'',summary:item.desc||item.summary||'',mark:markOf(item.id)})});
+   searchResults=items.filter(item=>item&&item.id&&item.name);
   }catch(error){
-   console.error('Could not search the Store:',error);
-   if(request===searchRequest){count.textContent='';grid.innerHTML=`<div class="stm">${esc(error.message||'Could not search Flathub.')}</div>`;status.textContent='Check your connection and try again.'}
+   if(request===searchRequest)searchError=error.message||'Could not search Flathub.';
+  }finally{
+   if(request===searchRequest){searching=false;render()}
   }
  }
- nav.innerHTML=categories.map(item=>`<button class="store-cat" role="tab" aria-selected="false" data-category="${item.id}">${item.name}</button>`).join('');
- nav.onclick=e=>{const button=e.target.closest('[data-category]');if(!button)return;active=button.dataset.category;q.value='';searchRequest++;renderHome()};
- q.oninput=()=>{clearTimeout(timer);timer=setTimeout(search,280)};
- q.onkeydown=e=>{if(e.key==='Enter'){clearTimeout(timer);search()}};
- const activate=async button=>{
-  if(!S){status.textContent='Install apps when SilkOS runs on Linux.';return}
-  const id=button.dataset.id;if(!id||busy.has(id))return;
-  const isInstalled=installed.has(id);busy.add(id);button.disabled=true;button.textContent=isInstalled?'Opening…':'Installing…';status.textContent='';
-  try{
-   const result=isInstalled?await S.run(id):await S.install(id);
-   if(result?.error)throw new Error(result.error);
-   if(!isInstalled){installed.add(id);syncFlatpaks();status.textContent=`${apps.find(app=>app.id===id)?.name||id} installed successfully.`}
-  }catch(error){console.error(`Could not ${isInstalled?'open':'install'} Store app:`,error);status.textContent=error.message||`Could not ${isInstalled?'open':'install'} the app.`}
-  finally{
-   busy.delete(id);
-   const matching=[...content.querySelectorAll(`.stb[data-id="${CSS.escape(id)}"]`)];
-   matching.forEach(item=>{item.disabled=false;item.textContent=installed.has(id)?'Open':'Get'});
-  }
+ rail.onclick=event=>{const node=event.target.closest('.store-nav');if(!node)return;app='';q.value='';searchRequest++;searching=false;searchError='';searchResults=[];active=node.dataset.cat;render()};
+ back.onclick=()=>{app='';render()};
+ content.onclick=event=>{
+  const link=event.target.closest('[data-link]');
+  if(link){openUrl(link.dataset.link);return}
+  const button=event.target.closest('.stb');
+  if(button&&button.dataset.id){activate(button);return}
+  const open=event.target.closest('[data-open]');
+  if(open)openApp(open.dataset.open);
  };
- content.onclick=e=>{const button=e.target.closest('.stb');if(button)activate(button)};
- renderHome();
- loadInstalled();
+ content.onkeydown=event=>{
+  if(event.key!=='Enter'&&event.key!==' ')return;
+  const open=event.target.closest('[data-open]');
+  if(!open)return;
+  event.preventDefault();
+  openApp(open.dataset.open);
+ };
+ q.oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>runSearch(q.value.trim()),260)};
+ q.onkeydown=event=>{if(event.key==='Escape'){q.value='';runSearch('');return}if(event.key==='Enter'){event.preventDefault();runSearch(q.value.trim())}};
+ if(S&&S.onProgress)S.onProgress(step=>{
+  const id=step&&step.id?step.id:'ALL',job=jobs.get(id);
+  if(!job)return;
+  job.label=step.label||job.label;
+  job.percent=typeof step.percent==='number'?step.percent:null;
+  paintJob(id);
+ });
+ el._refresh=()=>render();
+ renderNav();
+ render();
+ Promise.all([loadInstalled(),loadUpdates()]).then(()=>{renderNav();render()});
 }
 function calcInit(el){let cur='0',acc=null,op=null,fresh=true;const s=el.querySelector('.scr');
  const ops={'+':(a,b)=>a+b,'−':(a,b)=>a-b,'×':(a,b)=>a*b,'÷':(a,b)=>a/b};
@@ -1421,7 +1652,7 @@ document.addEventListener('keydown',e=>{
  }
 });
 updateLockClock();setInterval(updateLockClock,15000);
-function webSearch(q){const had=!!wins.browser;launch('browser');setTimeout(()=>openTab&&openTab(q),had?60:450)}
+function openUrl(u){const had=!!wins.browser;launch('browser');setTimeout(()=>openTab&&openTab(u),had?60:450)}
 function menusFor(id){
  const A=id?apps[id].n:'SilkOS',w=id&&wins[id],b=id==='browser'&&w?w._b:null,x=!w,m={};
  const cl=()=>w&&w.querySelector('.dot.r').click();
@@ -1611,7 +1842,7 @@ function spot(on){sp.classList.toggle('on',on);if(on){closeDd(true);spi.value=''
 function sfind(){const raw=spi.value.trim(),v=raw.toLowerCase();sres=[];
  const all=Object.entries(apps).filter(([k,a])=>!v||a.n.toLowerCase().includes(v)).map(([k,a])=>({i:a.i,t:a.n,s:'Application',f:()=>launch(k)}));
  if(v&&/^[\d\s+\-*/().%]+$/.test(v)&&/\d/.test(v)){try{const r=Function('"use strict";return ('+v+')')();if(isFinite(r))sres.push({i:'🧮',t:String(+r.toPrecision(12)),s:'Calculator',f:()=>launch('calc')})}catch(e){}}
- sres=sres.concat(all);if(v)sres.push({i:'🔍',t:'Search the web for “'+raw+'”',s:'Browser',f:()=>webSearch(raw)});
+ sres=sres.concat(all);if(v)sres.push({i:'🔍',t:'Search the web for “'+raw+'”',s:'Browser',f:()=>openUrl(raw)});
  si=0;spaint()}
 function spaint(){srs.innerHTML=sres.map((r,i)=>`<div class="sr${i===si?' on':''}" data-i="${i}"><i>${r.i}</i><span>${esc(r.t)}</span><em>${r.s}</em></div>`).join('');
  srs.querySelectorAll('.sr').forEach(n=>n.onclick=()=>{const r=sres[+n.dataset.i];spot(false);r.f()})}
