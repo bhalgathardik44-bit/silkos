@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
 const Module = require('node:module');
+const fs = require('node:fs');
+const path = require('node:path');
 const { test } = require('node:test');
 
 const handlers = new Map();
@@ -63,4 +65,21 @@ test('workspace API validates indices before switching', async () => {
   assert.deepEqual(await invoke('sys:workspace:set', 2), { ok: true, index: 2 });
   assert.deepEqual(await invoke('sys:workspace:set', 4), { ok: false, error: 'Invalid desktop workspace.' });
   assert.deepEqual(calls, [['-d'], ['-s', '2']]);
+});
+
+/* The wallpaper, menu bar, dock and every SilkOS window are drawn by one fullscreen X window, so a
+   desktop switch that leaves that window behind shows a bare X root instead of an empty desktop. */
+test('the live session keeps the desktop shell on all four Openbox desktops', () => {
+  const read = (...parts) => fs.readFileSync(path.join(__dirname, '..', 'distro', 'config', ...parts), 'utf8');
+  const hook = read('hooks', 'normal', '0100-silkos.hook.chroot');
+  /* Openbox has no stickiness element: <desktop>all</desktop> is what makes a window omnipresent, and
+     its class matcher folds no case, so the rule covers both spellings of the class name. */
+  const upper = '<application class="SilkOS"><desktop>all</desktop></application>';
+  const lower = '<application class="silkos"><desktop>all</desktop></application>';
+  assert.ok(hook.includes(`sed -i '/<applications>/,/<\\/applications>/ s|</applications>|${upper}${lower}</applications>|'`), 'the rule must be inserted inside the <applications> block, not into a commented-out example');
+  assert.ok(hook.includes(`grep -q '${upper}' "$OPENBOX_RC"`));
+  assert.ok(hook.includes(`grep -q '${lower}' "$OPENBOX_RC"`));
+  const xsession = read('includes.chroot', 'usr', 'local', 'bin', 'silkos-xsession');
+  assert.match(xsession, /FLAGS="\$FLAGS --class=SilkOS"/);
+  assert.match(xsession, /"\$APP" \$FLAGS/);
 });

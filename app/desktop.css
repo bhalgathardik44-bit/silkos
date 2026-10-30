@@ -176,6 +176,8 @@ body.lite #dock{background:var(--win)}
 .ic i{position:absolute;inset:0;border-radius:inherit;overflow:hidden;display:block;line-height:0}
 .ic i svg{width:100%;height:100%;display:block}
 .ic i::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 .6px rgba(255,255,255,.35),inset 0 1px 0 rgba(255,255,255,.4)}
+/* Real app artwork carries its own edges, so the synthetic glass rim would read as a frame around the logo. */
+.ic.photo i::after{box-shadow:none}
 .ic.on::after{bottom:-8px;width:5px;height:5px}
 .ic .tip{top:-46px;padding:6px 12px;border-radius:11px;font-size:13px;background:var(--glass);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 8px 24px rgba(0,0,0,.3),0 0 0 .5px var(--line)}
 .sug{position:fixed;z-index:9800;border-radius:18px;padding:6px;background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 16px 48px rgba(0,0,0,.35),0 0 0 .5px var(--line);transform-origin:top center;transform:scale(.98) translateY(-4px);opacity:0;pointer-events:none;transition:transform var(--t-pop) var(--ease),opacity var(--t-ui) var(--ease);font-size:13px}
@@ -286,6 +288,9 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .store-tile:active{transform:translateY(-1px) scale(.99)}
 .store-art{width:62px;height:62px;border-radius:15px;display:grid;place-items:center;position:relative;overflow:hidden;color:#fff;font-size:26px;font-weight:700;background:var(--art,linear-gradient(145deg,#8ec5ff,#5968df));box-shadow:0 4px 12px rgba(0,0,0,.14)}
 .store-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+/* Flathub artwork covers the tile, so the fallback gradient and its shadow would only show as a
+   coloured square behind the logo. A picture that fails to load removes itself and the tile returns. */
+.store-art:has(img){background:none;box-shadow:none}
 .store-meta{min-width:0}.store-meta h4{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.store-meta p{font-size:11px;opacity:.58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
 .store-tile .stb{align-self:flex-start;padding:5px 15px;background:color-mix(in srgb,var(--accent) 12%,var(--sfield));border-radius:999px;font-size:12px}
 .store-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:12px;padding:9px 10px;border-radius:14px;cursor:pointer;transition:background var(--t-tap) var(--ease)}
@@ -395,7 +400,13 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .dd{max-width:calc(100vw - 16px);max-height:calc(100vh - 40px);overflow:auto;overscroll-behavior:contain}
 .sl,input[type=range]{cursor:var(--curp)!important}.sl::-webkit-slider-thumb,input[type=range]::-webkit-slider-thumb{cursor:var(--curp)}
 /* Control Centre — macOS tile grid */
-.cc{--cc-blue:#0a84ff;--cc-purple:#5e5ce6;width:min(344px,calc(100vw - 16px));max-width:100%;padding:9px;border-radius:24px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cc{--cc-blue:#0a84ff;--cc-purple:#5e5ce6;--cc-pad:9px;--cc-gap:9px;width:min(344px,calc(100vw - 16px));max-width:100%;padding:var(--cc-pad);border-radius:24px;position:relative;overflow:hidden}
+/* Two layers, one box: the tiles slide left while the radio pane slides in from the right, so opening a
+   list never resizes the popover under the pointer the way an appended tile used to. */
+.cc-main{min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:var(--cc-gap);transition:transform var(--t-space) var(--ease),opacity var(--t-ui) var(--ease)}
+.cc-detail{position:absolute;inset:var(--cc-pad);display:grid;grid-template-rows:minmax(0,1fr);transform:translateX(100%);visibility:hidden;transition:transform var(--t-space) var(--ease),visibility 0s var(--t-space)}
+.cc.detail-open .cc-detail{transform:none;visibility:visible;transition-delay:0s}
+.cc.detail-open .cc-main{transform:translateX(-100%);opacity:0;pointer-events:none}
 .cc-tile{min-width:0;border:1px solid var(--cc-tile-line);border-radius:15px;background:var(--cc-tile);color:inherit;font:inherit;text-align:left}
 .cc-radio{grid-column:1;grid-row:1/span 2;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:6px}
 .cc-service{position:relative;display:flex;align-items:center;min-width:0;border-radius:10px;transition:background .18s}
@@ -417,7 +428,7 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .cc-dnd:hover{background:color-mix(in srgb,var(--cc-tile) 72%,var(--cc-hover))}
 .cc-dnd:active{transform:scale(.98)}
 .cc-dnd.on .cc-glyph{background:var(--cc-purple)}
-.cc-duo{grid-column:2;grid-row:2;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cc-duo{grid-column:2;grid-row:2;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:var(--cc-gap)}
 .cc-mini{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:9px 5px;text-align:center}
 .cc-mini span{font-size:9.5px;font-weight:600;line-height:1.2}
 .cc-mini .cc-glyph{width:24px;height:24px}
@@ -460,17 +471,53 @@ input.cc-range:disabled{cursor:default;opacity:.5}
 .cc-media-actions button:active:not(:disabled){transform:scale(.86)}
 .cc-media-actions button:disabled{opacity:.35;cursor:default}
 .cc-media-actions svg{width:15px;height:15px}
-.cc-pane{grid-column:1/span 2;padding:9px 10px}
-.cc-pane-head{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:650}
+.cc-pane{min-width:0;display:flex;flex-direction:column;gap:4px}
+/* Panes are shown and hidden with the hidden attribute, and the flex rule above would otherwise
+   outvote the browser default and stack both lists in the same layer. */
+.cc-pane[hidden]{display:none}
+.cc-pane-head{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650}
 .cc-pane-head strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-back{width:24px;height:24px;flex:none;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:inherit;cursor:var(--curp);transition:background var(--t-ui) var(--ease),transform var(--t-tap)}
+.cc-back:hover{background:var(--cc-hover)}
+.cc-back:active{transform:scale(.86)}
+.cc-back svg{width:11px;height:11px;display:block;transform:rotate(180deg)}
+.cc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;border:1px solid var(--cc-tile-line);border-radius:15px;background:var(--cc-tile);padding:8px 10px}
+.cc-row-label{font-size:11.5px;font-weight:600}
+.cc-switch{position:relative;display:block;width:38px;height:22px;flex:none}
+.cc-switch input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:var(--curp)}
+.cc-switch i{display:block;position:relative;width:100%;height:100%;border-radius:999px;background:var(--cc-track);transition:background var(--t-ui) var(--ease)}
+.cc-switch i::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform var(--t-ui) var(--spring)}
+.cc-switch input:checked+i{background:#34c759}
+.cc-switch input:checked+i::after{transform:translateX(16px)}
+.cc-switch input:disabled{cursor:default}
+.cc-switch input:disabled+i{opacity:.45}
 .cc-chip{border:0;border-radius:8px;padding:4px 9px;background:var(--cc-track);color:inherit;font:inherit;font-size:10px;font-weight:600;cursor:var(--curp)}
 .cc-chip:hover{background:var(--cc-hover)}
 .cc-pane-info{min-height:13px;margin:6px 0 3px;font-size:10px;line-height:1.35;opacity:.62}
-.cc-pane-list{display:grid;gap:1px;max-height:150px;overflow:auto;overscroll-behavior:contain}
-.cc-net{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;padding:5px 6px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:11px;text-align:left;cursor:var(--curp)}
+.cc-pane-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto;overscroll-behavior:contain}
+.cc-group{min-width:0}
+.cc-group>h6{margin:7px 2px 2px;font-size:9.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;opacity:.5}
+.cc-pane-list{display:grid;gap:1px}
+.cc-net{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;padding:6px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:11.5px;text-align:left;cursor:var(--curp);transition:background var(--t-tap)}
 .cc-net:hover{background:var(--cc-hover)}
 .cc-net small{flex:none;opacity:.55;font-size:9.5px}
+.cc-net-name{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-net.on .cc-net-name{font-weight:650}
+.cc-net-mark{width:17px;flex:none;display:grid;place-items:center;color:var(--cc-blue)}
+.cc-net-mark svg{width:15px;height:12px;display:block}
+.cc-net-side{flex:none;display:flex;align-items:center;gap:7px}
+.cc-net-lock{display:grid;place-items:center;opacity:.55}
+.cc-net-lock svg{width:10px;height:10px;display:block}
+.cc-net-check{color:var(--cc-blue);font-size:12px;font-weight:700}
+.cc-bars{display:flex;align-items:flex-end;gap:1.5px;height:11px}
+.cc-bars i{width:3px;border-radius:1px;background:currentColor;opacity:.25}
+.cc-bars i:nth-child(1){height:3.5px}
+.cc-bars i:nth-child(2){height:6px}
+.cc-bars i:nth-child(3){height:8.5px}
+.cc-bars i:nth-child(4){height:11px}
+.cc-bars[data-level="2"] i:nth-child(-n+2),.cc-bars[data-level="3"] i:nth-child(-n+3),.cc-bars[data-level="4"] i{opacity:1}
 .cc-join{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--cc-tile-line)}
+.cc-join[hidden]{display:none}
 .cc-join strong{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
 .cc-join input{width:96px;min-width:44px;height:25px;padding:0 7px;border:0;border-radius:8px;background:var(--cc-track);color:inherit;font:inherit;font-size:10.5px;user-select:text;outline:0}
 .cc-foot{grid-column:1/span 2;display:flex;align-items:center;gap:8px;padding:0 2px}
@@ -483,7 +530,7 @@ input.cc-range:disabled{cursor:default;opacity:.5}
 @keyframes cc-moon{0%{transform:rotate(-42deg) scale(.55);opacity:.25}100%{transform:none;opacity:1}}
 .cc-dnd.pulse .cc-glyph{animation:cc-pop .36s var(--spring)}
 .cc-dnd.pulse .cc-glyph svg{animation:cc-moon .36s var(--ease)}
-@media(max-width:380px){.cc{padding:7px;gap:7px;border-radius:20px}.cc-glyph{width:24px;height:24px}.cc-copy strong{font-size:11px}}
+@media(max-width:380px){.cc{--cc-pad:7px;--cc-gap:7px;border-radius:20px}.cc-glyph{width:24px;height:24px}.cc-copy strong{font-size:11px}}
 .sl{cursor:var(--curp)!important;touch-action:pan-y}.sl::-webkit-slider-thumb{cursor:var(--curp)}
 .resapp{min-width:0;background:var(--win)}.reshead{min-width:0;justify-content:space-between;gap:16px;padding:16px 20px}
 .residentity{display:flex;align-items:center;gap:11px;min-width:0}.resbadge{width:38px;height:38px;display:grid;place-items:center;flex:none;border-radius:12px;background:linear-gradient(145deg,#45d483,#168b52);color:#fff;font-size:20px;box-shadow:0 5px 14px #168b5238}

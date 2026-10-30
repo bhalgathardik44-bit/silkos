@@ -19,9 +19,9 @@
 - Linux live image: Debian trixie, Openbox, Picom, libinput touchpad gestures, WhiteSur theming for native windows, and canonical dbusmenu global menus for native GTK apps.
 
 ## Repository map and ownership
-- `main.js`: Electron lifecycle, BrowserWindow, IPC handlers, OS services, native app launch, Store backend, gesture monitoring (libinput), and the native menu helper subprocess.
+- `main.js`: Electron lifecycle, BrowserWindow, IPC handlers, OS services, native app launch, Store backend, gesture monitoring (libinput), and the native menu helper subprocess. Store search goes straight to Flathub's HTTPS API and only falls back to `flatpak search`, so nothing waits on the multi-megabyte appstream download except the installed-versus-latest comparison.
 - `preload.js`: contextBridge API exposed as `window.silk`; renderer-to-main boundary.
-- `touchpad-gestures.js`: libinput `debug-events` parsing into shell gesture events; independently exercised by Node tests.
+- `touchpad-gestures.js`: libinput `debug-events` parsing into shell gesture events; independently exercised by Node tests. Gesture lines are read from their timestamp, not a fixed field position, because `debug-events` prefixes a right-aligned batch count to every event after the first in a dispatch.
 - `native-menu.js`: com.canonical.dbusmenu property and JSON-frame conversion for native app menus; independently exercised by Node tests. The helper that owns the D-Bus conversation is `distro/config/includes.chroot/usr/local/bin/silkos-appmenu`.
 - `app/index.html`: minimal desktop DOM, startup overlay and scoped inline startup CSS, ordered script loading.
 - `app/desktop.css`: extracted desktop styles, motion tokens, layout, and app styling.
@@ -61,6 +61,8 @@
 - Browser startup maximize remains 700ms plus its startup-list index * 100ms.
 - These scheduled animations are not prerequisites for dismissing the startup overlay.
 - Preserve Lite Mode, reduced-motion handling, gesture tracking/settling, dock magnification, and existing close/minimize/maximize transitions.
+- The Control Center is one fixed-size box holding two layers: `.cc-main` (tiles) and `.cc-detail` (radio panes) that swap with a slide. A radio list must never grow the popover, which is what made the old expanded tile look detached from the switch that opened it.
+- Any element whose class rule sets `display` needs an explicit `[hidden]{display:none}` partner, or the author rule outvotes the browser default and a "hidden" pane or form keeps painting.
 - Byte/source checks establish structure, not fully verified animation equivalence or a speed improvement.
 
 ## Startup contract and errors
@@ -113,6 +115,9 @@
 - Edit Notes and immediately close/reload; verify the final pending edit survives.
 - Compare dock, menus, window transitions, Launchpad, gestures, themes, settings, and persistence against the baseline.
 - Test Linux power, radios, audio/brightness, native apps, persistence, and multitouch on suitable Linux hardware/VMs separately.
+- Openbox matches WM_CLASS with GLib patterns that fold no case, and silently ignores `wmctrl -b add,sticky`; `<desktop>all</desktop>` inside an application rule is the only stickiness Openbox 3.6 honours, so the session passes Electron an explicit `--class` and the hook pins both spellings.
+- `app/index.html` opens from a `file://` URL with a stubbed `window.silk`, which is the practical way to check Control Center geometry, grouping and overflow on Windows. It says nothing about nmcli, BlueZ or real radios.
+- A hidden browser tab freezes the CSS transition clock: a computed transform can still read its start value seconds after the class changed. Re-measure after the page paints before concluding a slide rule is broken.
 - Linux hardware remains untested in this Windows documentation task; VMs may not pass through multitouch.
 - PRs should state scope, preserved contracts, commands actually run, observed results, manual coverage, and untested platforms.
 - Distinguish planned validation from completed validation; do not assert speed gains or full animation equivalence without evidence.

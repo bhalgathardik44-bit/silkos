@@ -531,13 +531,23 @@ const mapLimit = async (items, limit, fn) => {
   }));
   return out;
 };
-let fpReady = null;
-const fpSetup = () => fpReady || (fpReady = (async () => {
+let fpRemoteReady = null;
+/* Adding the flathub remote is a local config check, so it is what every Store action may wait for.
+   The appstream catalog below is a multi-megabyte download, and flatpak install fetches the pieces it
+   needs by itself while streaming progress, so nothing may block on it before the download starts. */
+const fpRemote = () => fpRemoteReady || (fpRemoteReady = (async () => {
   if (!IS_LINUX) return 'The Store works when SilkOS runs on Linux.';
   const r = await fp(['remote-add', '--user', '--if-not-exists', 'flathub', 'https://dl.flathub.org/repo/flathub.flatpakrepo'], 60000);
-  if (!r.ok) { fpReady = null; return /ENOENT/.test(r.err) ? 'Flatpak is not installed.' : `Could not connect to Flathub: ${fpDetails(r) || 'check your internet connection.'}`; }
+  if (!r.ok) { fpRemoteReady = null; return /ENOENT/.test(r.err) ? 'Flatpak is not installed.' : `Could not connect to Flathub: ${fpDetails(r) || 'check your internet connection.'}`; }
+  return '';
+})());
+let fpCatalogReady = null;
+/* Only flatpak search and remote-info read the catalog from disk, so only they wait for this. */
+const fpCatalog = () => fpCatalogReady || (fpCatalogReady = (async () => {
+  const remoteError = await fpRemote();
+  if (remoteError) return remoteError;
   const catalog = await fp(['update', '--user', '--appstream', 'flathub'], 180000);
-  if (!catalog.ok) { fpReady = null; return `Could not load the Flathub app catalog: ${fpDetails(catalog) || 'check your internet connection.'}`; }
+  if (!catalog.ok) { fpCatalogReady = null; return `Could not load the Flathub app catalog: ${fpDetails(catalog) || 'check your internet connection.'}`; }
   return '';
 })());
 const fpIcon = id => {
@@ -569,9 +579,51 @@ ipcMain.handle('persist:setup', async (_, name) => {
   const r = await new Promise(res => execFile('sudo', ['-n', '/usr/local/bin/silkos-persist-setup', name], { timeout: 300000 }, (e, out, err) => res({ ok: !e, error: String(err || out || (e && e.message) || '').trim() })));
   return r;
 });
+/* Flathub's search endpoint answers in one request with the name, summary and real icon for every
+   hit, so the Store can paint a full result list without flatpak and without a detail call per app. */
+const FH_SEARCH = 'https://flathub.org/api/v2/search';
+const fhSearch = async query => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const reply = await fetch(FH_SEARCH, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ query, page: 1, per_page: 40 })
+    });
+    if (!reply.ok) throw new Error(`HTTP ${reply.status}`);
+    const json = await reply.json();
+    const seen = new Set();
+    const hits = Array.isArray(json.hits) ? json.hits : [];
+    return hits.filter(hit => hit && okId(hit.app_id) && !seen.has(hit.app_id) && seen.add(hit.app_id))
+      .slice(0, 40)
+      .map(hit => ({
+        id: hit.app_id,
+        name: hit.name || hit.app_id,
+        desc: hit.summary || '',
+        summary: hit.summary || '',
+        icon: hit.icon || '',
+        developer: hit.developer_name || '',
+        verified: hit.verification_verified === true
+      }));
+  } finally {
+    clearTimeout(timer);
+  }
+};
 ipcMain.handle('store:search', async (_, q) => {
-  const e = await fpSetup(); if (e) return { error: e };
-  const r = await fp(['search', '--user', '--columns=name,description,application', String(q).slice(0, 80)], 30000);
+  const query = String(q).slice(0, 80).trim();
+  if (!query) return { apps: [] };
+  let offline = false;
+  try {
+    return { apps: await fhSearch(query) };
+  } catch {
+    offline = true;
+  }
+  /* No Flathub over HTTPS: fall back to the catalog flatpak already has on disk. */
+  const setupError = await fpCatalog();
+  if (setupError) return { error: offline ? 'Could not reach Flathub. ' + setupError : setupError };
+  const r = await fp(['search', '--user', '--columns=name,description,application', query], 30000);
   if (!r.ok) return { error: fpFailure(r, 'Could not search Flathub') };
   const seen = new Set();
   return { apps: fpRows(r.out).filter(x => okId(x[2]) && !seen.has(x[2]) && seen.add(x[2])).slice(0, 40).map(([name, desc, id]) => ({ id, name, desc })) };
@@ -603,26 +655,27 @@ ipcMain.handle('store:detail', async (_, id) => {
 });
 ipcMain.handle('store:install', async (event, id) => {
   if (!okId(id)) return { ok: false, error: 'Invalid app ID.' };
-  const setupError = await fpSetup();
+  const setupError = await fpRemote();
   if (setupError) return { ok: false, error: setupError };
   const r = await fpStream(event.sender, id, ['install', '--user', '-y', '--noninteractive', 'flathub', id], 30 * 60000);
   return { ok: r.ok, error: r.ok ? '' : fpFailure(r, 'Could not install app') };
 });
 ipcMain.handle('store:uninstall', async (event, id) => {
   if (!okId(id)) return { ok: false, error: 'Invalid app ID.' };
-  const setupError = await fpSetup();
+  const setupError = await fpRemote();
   if (setupError) return { ok: false, error: setupError };
   const r = await fpStream(event.sender, id, ['uninstall', '--user', '-y', '--noninteractive', id], 10 * 60000);
   return { ok: r.ok, error: r.ok ? '' : fpFailure(r, 'Could not uninstall app') };
 });
 /* Compare each installed app against the Flathub appstream catalog that is already on disk. */
 ipcMain.handle('store:updates', async () => {
-  const setupError = await fpSetup();
-  if (setupError) return { error: setupError };
   const r = await fp(['list', '--user', '--app', '--columns=application,name,version'], 15000);
   if (!r.ok) return { error: fpFailure(r, 'Could not check for updates') };
   const apps = fpRows(r.out).filter(row => okId(row[0]));
+  /* With nothing from the Store installed there is nothing to compare, so the catalog never loads. */
   if (!apps.length) return { updates: [] };
+  const setupError = await fpCatalog();
+  if (setupError) return { error: setupError };
   let failures = 0;
   const results = await mapLimit(apps, 4, async ([id, name, version]) => {
     const info = await fp(['remote-info', '--user', '--columns=version', 'flathub', id], 20000);
@@ -636,7 +689,7 @@ ipcMain.handle('store:updates', async () => {
 });
 ipcMain.handle('store:update-all', async (event, id) => {
   if (id !== undefined && id !== null && !okId(id)) return { ok: false, error: 'Invalid app ID.' };
-  const setupError = await fpSetup();
+  const setupError = await fpRemote();
   if (setupError) return { ok: false, error: setupError };
   const r = await fpStream(event.sender, id || '', ['update', '--user', '--noninteractive', '-y', ...(id ? [id] : [])], 30 * 60000);
   return { ok: r.ok, error: r.ok ? '' : fpFailure(r, id ? 'Could not update app' : 'Could not update apps') };
@@ -809,9 +862,13 @@ const startTouchpadGestureMonitor = win => {
   const startMonitor = () => {
     if (isQuitting || win.isDestroyed()) return;
     const strategy = LIBINPUT_COMMANDS[strategyIndex];
+    /* libinput's line format has silently changed before, and a parser that stops matching looks
+       exactly like a broken touchpad. One line in the log settles which of the two it is. */
+    let sawGesture = false;
     // A fresh parser per attempt, so a half-read line from a dead process cannot blend into
     // the next process's output and invent a gesture.
     const parser = createLibinputGestureParser(gesture => {
+      if (!sawGesture) { sawGesture = true; console.log('Touchpad gestures: libinput is delivering recognised gestures to SilkOS'); }
       if (!win.isDestroyed()) win.webContents.send('touchpad-gesture', gesture);
     });
     let child;

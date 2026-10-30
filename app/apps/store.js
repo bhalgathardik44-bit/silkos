@@ -66,7 +66,7 @@ function storeInit(el){
   const best=sizes.reduce((a,s)=>Math.abs(+a.width-900)<=Math.abs(+s.width-900)?a:s);
   const w=+best.width,h=+best.height;return {src:best.src,ratio:w>0&&h>0&&w/h<4?String(+(w/h).toFixed(3)):''}};
  const formatDate=stamp=>{const time=Number(stamp);if(!time)return '';const d=new Date(time<1e11?time*1e3:time);return isNaN(d.getTime())?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})};
- const stubOf=id=>{const base=baseOf(id);return {id,name:base.name,summary:base.summary,developer:'',license:'',version:'',date:'',homepage:'',bugtracker:'',help:'',cats:[base.tag||'App'],icon:guessIcon(id),mark:base.mark,shots:[],desc:'',verified:false,free:true,loaded:false}};
+ const stubOf=id=>{const base=baseOf(id);return {id,name:base.name,summary:base.summary,developer:'',license:'',version:'',date:'',homepage:'',bugtracker:'',help:'',cats:[base.tag||'App'],icon:base.icon||guessIcon(id),mark:base.mark,shots:[],desc:'',verified:false,free:true,loaded:false}};
  function normalize(raw,base){
   const releases=raw.releases||[],latest=releases.find(item=>item&&item.version)||releases[0]||{},urls=raw.urls||{},meta=raw.metadata||{};
   const matched=(raw.categories||[]).filter(cat=>FLATHUB_CATS.includes(cat));
@@ -75,7 +75,7 @@ function storeInit(el){
   return {id:base.id,name:(editorial||{}).name||raw.name||base.name,summary:raw.summary||base.summary,developer:raw.developer_name||'',
    license:raw.project_license||'',version:latest.version||'',date:formatDate(latest.timestamp),
    homepage:urls.homepage||'',bugtracker:urls.bugtracker||'',help:urls.help||'',
-   cats:matched.length?matched:[base.tag||'App'],icon:raw.icon||guessIcon(base.id),mark:base.mark,
+   cats:matched.length?matched:[base.tag||'App'],icon:raw.icon||base.icon||guessIcon(base.id),mark:base.mark,
    shots:(raw.screenshots||[]).map(pickShot).filter(Boolean),desc:safeHtml(raw.description),
    verified:meta['flathub::verification::verified']===true,free:raw.is_free_license!==false,loaded:true};
  }
@@ -110,7 +110,10 @@ function storeInit(el){
   });
   if(app===id||!app&&id===heroShown&&content.scrollTop<40)render();
  }
- const artHTML=id=>`<div class="store-art" style="--art:${tint(id)}">${esc(baseOf(id).mark||markOf(id))}<img src="${esc((info.get(id)||{}).icon||guessIcon(id))}" alt="" loading="lazy" decoding="async" onerror="this.remove()"></div>`;
+ /* A search hit arrives with its own icon, so a result list paints with real artwork instead of waiting
+    on one detail request per app. */
+ const iconOf=id=>(info.get(id)||{}).icon||(baseOf(id)||{}).icon||guessIcon(id);
+ const artHTML=id=>`<div class="store-art" style="--art:${tint(id)}">${esc(baseOf(id).mark||markOf(id))}<img src="${esc(iconOf(id))}" alt="" loading="lazy" decoding="async" onerror="this.remove()"></div>`;
  function actionHTML(id,label,act){
   const job=jobs.get(id);
   if(job)return `<button class="stb" type="button" disabled>${esc(job.label||label||'Working…')}</button><div class="store-prog${job.percent===null?' run':''}"><i${job.percent===null?'':` style="width:${job.percent}%"`}></i></div>`;
@@ -142,7 +145,9 @@ function storeInit(el){
   if(searchError){paint(`<div class="stm">${esc(searchError)}</div>`,'search');return}
   if(!searchResults.length){paint('<div class="stm">No apps matched that search. Try another word.</div>','search');return}
   paint(`<div class="store-section"><h3>Results</h3><span>${searchResults.length} found</span></div><div class="store-list">${searchResults.map(item=>rowHTML(item.id,installed.has(item.id)?'Open':'Get',installed.has(item.id)?'run':'install')).join('')}</div>`,'search');
-  ensureDetails(searchResults.slice(0,12).map(item=>item.id));
+  /* Flathub's search reply already carries the name, summary and icon, so only rows that came back
+     without artwork need a detail request. Opening an app page fetches the rest on demand. */
+  ensureDetails(searchResults.filter(item=>!item.icon).slice(0,12).map(item=>item.id));
  }
  function paintInstalled(){
   if(!S){paint('<div class="stm">Installed apps appear when SilkOS runs on Linux.</div>','installed');return}
@@ -230,7 +235,14 @@ function storeInit(el){
    else if(act==='uninstall'){installed.delete(id);say(`${nameOf(id)} was uninstalled.`)}
    else say('Your apps are up to date.');
   }catch(error){console.error('Store action failed:',error);say(error.message||'The Store could not finish that action.')}
-  finally{jobs.delete(id);await Promise.all([loadInstalled(),loadUpdates()]);renderNav();render()}
+  finally{
+   jobs.delete(id);
+   await loadInstalled();
+   renderNav();render();
+   /* The update check can spend minutes fetching the Flathub catalog, so it finishes in the background
+      instead of holding the repaint after an install. */
+   loadUpdates().then(()=>{renderNav();render()});
+  }
  }
  async function runSearch(query){
   const request=++searchRequest;
@@ -245,7 +257,7 @@ function storeInit(el){
     items=apps.filter(item=>`${item.name} ${item.tag} ${item.summary}`.toLowerCase().includes(needle));
    }
    if(request!==searchRequest||q.value.trim()!==query)return;
-   items.filter(item=>item&&item.id).forEach(item=>{if(!bases.has(item.id))bases.set(item.id,{id:item.id,name:item.name||item.id,tag:'',category:'',summary:item.desc||item.summary||'',mark:markOf(item.id)})});
+   items.filter(item=>item&&item.id).forEach(item=>{if(!bases.has(item.id))bases.set(item.id,{id:item.id,name:item.name||item.id,tag:'',category:'',summary:item.desc||item.summary||'',mark:markOf(item.id),icon:item.icon||''})});
    searchResults=items.filter(item=>item&&item.id&&item.name);
   }catch(error){
    if(request===searchRequest)searchError=error.message||'Could not search Flathub.';
@@ -283,5 +295,7 @@ function storeInit(el){
  el._refresh=()=>render();
  renderNav();
  render();
- Promise.all([loadInstalled(),loadUpdates()]).then(()=>{renderNav();render()});
+ /* Opening the Store shows the library immediately; the update count fills in once Flathub answers. */
+ loadInstalled().then(()=>{renderNav();render()});
+ loadUpdates().then(()=>{renderNav();render()});
 }

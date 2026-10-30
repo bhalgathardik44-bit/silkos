@@ -17,6 +17,11 @@ sed -i '/<theme>/,/<\/theme>/ {
   s|<titleLayout>[^<]*</titleLayout>|<titleLayout>CIML</titleLayout>|
 }' "$OPENBOX_RC"
 sed -i '/<desktops>/,/<\/desktops>/ s|<number>[^<]*</number>|<number>4</number>|' "$OPENBOX_RC"
+# The whole desktop - wallpaper, menu bar, dock and SilkOS windows - is drawn by one fullscreen X
+# window, so Openbox has to show it on every desktop. Without this the other three are bare X root.
+# Openbox matches WM_CLASS with GLib pattern matching, which folds no case, so both spellings of the
+# name silkos-xsession asks Electron for are listed.
+sed -i '/<applications>/,/<\/applications>/ s|</applications>|<application class="SilkOS"><desktop>all</desktop></application><application class="silkos"><desktop>all</desktop></application></applications>|' "$OPENBOX_RC"
 # silkos-xsession rewrites <margins><top> at the display scale to keep native windows out of the
 # SilkOS menu bar, so the block has to exist for that substitution to have anything to match.
 grep -q '<margins>' "$OPENBOX_RC"
@@ -27,6 +32,8 @@ sed -i '/<keybind key="C-A-Left">/,/<\/keybind>/d; /<keybind key="C-A-Right">/,/
 grep -q '<name>SilkOS</name>' "$OPENBOX_RC"
 grep -q '<titleLayout>CIML</titleLayout>' "$OPENBOX_RC"
 grep -q '<number>4</number>' "$OPENBOX_RC"
+grep -q '<application class="SilkOS"><desktop>all</desktop></application>' "$OPENBOX_RC"
+grep -q '<application class="silkos"><desktop>all</desktop></application>' "$OPENBOX_RC"
 ! grep -q '<keybind key="A-\(S-\)\?Tab">' "$OPENBOX_RC"
 ! grep -q '<keybind key="C-A-\(Left\|Right\)">' "$OPENBOX_RC"
 # polkitd reads its rule files as an unprivileged user, so they must be world-readable.

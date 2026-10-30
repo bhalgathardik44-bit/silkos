@@ -11,6 +11,9 @@ case "$CMDLINE" in
 esac
 FLAGS=""
 case "$CMDLINE" in *silkos.nosandbox*) FLAGS="--no-sandbox" ;; esac
+# The rc.xml rule that keeps the desktop shell on all four Openbox desktops matches this window by
+# class, so name it instead of leaving the result to whatever Electron picks for WM_CLASS.
+FLAGS="$FLAGS --class=SilkOS"
 
 xset s off; xset -dpms; xset s noblank
 # Use the image-wide config so stale per-user Openbox settings cannot override

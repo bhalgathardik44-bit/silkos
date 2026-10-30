@@ -132,3 +132,12 @@ test('enabling reduced motion immediately resets enlarged dock icons', () => {
  assert.equal(cancelled, 42); assert.equal(h.magRaf, null); assert.equal(h.mx, null);
  assert.ok(h.icons.every(icon => icon._s === 1 && icon.style.width === '56px' && icon.style.height === '56px'));
 });
+
+test('a Store app with its own artwork is not painted on a synthetic colour block', () => {
+ const flatpak = section('function syncFlatpaks()', 'const LPSVG');
+ assert.match(flatpak, /photo:!!a\.icon/);
+ assert.match(flatpak, /c:a\.icon\?''/);
+ assert.match(section('function addIcon(', 'Object.keys(apps).forEach(addIcon)'), /d\.className='ic'\+\(a\.photo\?' photo':''\)/);
+ const launchpad = section('function lpDraw()', 'const LP_VARS');
+ assert.match(launchpad, /a\.photo\?' class="photo"'|` style="background:\$\{a\.c\}"`/);
+});

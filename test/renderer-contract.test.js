@@ -13,7 +13,13 @@ test('desktop styling preserves the extracted baseline outside fullscreen and ma
  const fullscreen = css.slice(css.indexOf('.win.fullscreen,'), css.indexOf('#dock{border-radius:28px}'));
  assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-menu-visible #menubar/);
  assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-dock-visible #dockwrap #dock/);
- assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), '6885654fcebad288026842f5af36fb7902be7a9c5ffb2ace9ea8b9c998547636');
+ assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), 'a10a44a291722dda83e2e0277a6a1586587a71bd0c30ee5642d6c5651a0a6417');
+});
+
+test('real app artwork drops the synthetic frame drawn around the built-in icons', () => {
+ const css = read('app/desktop.css');
+ assert.match(css, /\.ic\.photo i::after\{box-shadow:none\}/);
+ assert.match(css, /\.store-art:has\(img\)\{background:none;box-shadow:none\}/);
 });
 
 test('materials stay translucent in both schemes without per-window blur layers', () => {
@@ -40,6 +46,36 @@ test('the shell derives window vibrancy from the painted wallpaper whenever conf
  assert.match(shell, /classList\.toggle\('photo-wallpaper',!!cfg\.wallpaperImage\)/);
  const applyCfg = shell.slice(shell.indexOf('function applyCfg('));
  assert.ok(applyCfg.slice(0, applyCfg.indexOf('\nfunction ')).includes('applyWindowVibrancy(wall)'), 'applyCfg refreshes window vibrancy');
+});
+
+test('the Control Center slides a radio pane over the tiles instead of growing the popover', () => {
+ const css = read('app/desktop.css');
+ assert.match(css, /\.cc-detail\{position:absolute;inset:var\(--cc-pad\);display:grid;grid-template-rows:minmax\(0,1fr\);transform:translateX\(100%\);visibility:hidden/);
+ assert.match(css, /\.cc\.detail-open \.cc-detail\{transform:none;visibility:visible;transition-delay:0s\}/);
+ assert.match(css, /\.cc\.detail-open \.cc-main\{transform:translateX\(-100%\);opacity:0;pointer-events:none\}/);
+ // Both panes set display:flex, which outvotes the browser default for [hidden] and would stack the
+ // Bluetooth list on top of the Wi-Fi list inside the same layer.
+ assert.match(css, /\.cc-pane\[hidden\]\{display:none\}/);
+ assert.match(css, /\.cc-join\[hidden\]\{display:none\}/);
+ assert.match(css, /@media\(max-width:380px\)\{\.cc\{--cc-pad:7px;--cc-gap:7px/);
+ const shell = read('app/shell.js');
+ const markup = shell.slice(shell.indexOf('function ccEl('), shell.indexOf('const status=el.querySelector'));
+ assert.ok(markup.includes('<div class="cc-main">') && markup.includes('<div class="cc-detail">'), 'two layers in one box');
+ assert.equal((markup.match(/data-radio-open="wifi"/g) || []).length, 2, 'the Wi-Fi tile body and its chevron both open the pane');
+ assert.ok(markup.includes('data-radio-close'), 'the pane carries a back button');
+ assert.ok(markup.includes('data-radio-switch="wifi"'), 'the pane carries the Wi-Fi on/off switch');
+ assert.ok(markup.includes('<h6>Preferred Network</h6>') && markup.includes('<h6>Other Networks</h6>'), 'networks group like the macOS list');
+ assert.ok(markup.includes('data-radio-other="wifi"'), 'the other-networks heading hides with its list');
+ assert.equal((markup.match(/aria-pressed/g) || []).length, 1, 'only Do Not Disturb stays a pressed toggle');
+ const body = shell.slice(shell.indexOf('const radioSwitch=name=>'), shell.indexOf(' wifiForm.onsubmit'));
+ assert.match(body, /const service=\(name,enabled,detail,available=true\)=>\{const row=el\.querySelector\(`\[data-service="\$\{name\}"\]`\);/);
+ assert.match(body, /el\.classList\.add\('detail-open'\)/);
+ assert.match(body, /loadWifiNetworks\(!wifiList\.childElementCount\)/);
+ assert.match(body, /const toggleRadio=async\(name,read,write,next\)=>\{const box=radioSwitch\(name\)/);
+ assert.match(body, /async function loadWifiNetworks\(rescan=true\)/);
+ // The switch is the only writer now, so it passes the state the user asked for and rescans either way.
+ assert.match(shell, /await toggleRadio\(name,name==='wifi'\?refreshWifi:refreshBluetooth[^;]*,box\.checked\);if\(name==='wifi'\)loadWifiNetworks\(true\)/);
+ assert.doesNotMatch(shell, /serviceMain/);
 });
 
 test('renderer assets exist, parse as classic scripts, and are included in production packaging', () => {
