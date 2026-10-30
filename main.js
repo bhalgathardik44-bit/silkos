@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, shell, globalShortcut, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, globalShortcut, dialog, desktopCapturer, screen, clipboard } = require('electron');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
@@ -251,7 +251,7 @@ ipcMain.handle('sys:wifi:networks', async () => {
   }
   return { available: true, enabled: true, networks: [...found.values()].sort((a, b) => Number(b.active) - Number(a.active) || b.signal - a.signal).slice(0, 40) };
 });
-ipcMain.handle('sys:wifi:connect', async (_, ssid, password = '') => {
+ipcMain.handle('sys:wifi:connect', async (_, ssid, password = '', hidden = false) => {
   if (!IS_LINUX) return { ok: false, error: 'Wi-Fi connections are only available on Linux.' };
   if (typeof ssid !== 'string' || typeof password !== 'string' || !ssid.trim() ||
     Buffer.byteLength(ssid, 'utf8') > 32 || Buffer.byteLength(password, 'utf8') > 128 ||
@@ -260,11 +260,29 @@ ipcMain.handle('sys:wifi:connect', async (_, ssid, password = '') => {
   }
   const args = ['device', 'wifi', 'connect', ssid];
   if (password) args.push('password', password);
+  /* A hidden network has no scan entry to join by name, so nmcli has to join it from the probe request. */
+  if (hidden === true) args.push('hidden', 'yes');
   const result = await runDetailed('nmcli', args, 30000);
   if (result.ok) return { ok: true };
   // execFile's fallback message echoes the command line, which contains the password.
   const detail = result.stderr.trim().slice(-600);
   return { ok: false, error: detail ? `Could not connect to the Wi-Fi network: ${detail}` : 'Could not connect to the Wi-Fi network. Check the password and try again.' };
+});
+/* NetworkManager runs its own captive-portal probe, so the shell only has to read the verdict and hand
+   back the gateway that serves the sign-in page. */
+ipcMain.handle('sys:portal:check', async () => {
+  if (!IS_LINUX) return { available: false };
+  const current = await run('nmcli', ['-t', '-f', 'CONNECTIVITY', 'general']);
+  if (current === null) return { available: false, error: 'NetworkManager is unavailable.' };
+  let state = current.trim().toLowerCase();
+  if (state !== 'full' && state !== 'portal') {
+    const checked = await run('nmcli', ['networking', 'connectivity', 'check'], 15000);
+    if (checked) state = checked.trim().toLowerCase();
+  }
+  if (state !== 'portal') return { available: true, portal: false, state };
+  const route = await run('ip', ['-4', 'route', 'show', 'default']);
+  const gateway = route && route.match(/default via (\S+)/)?.[1];
+  return { available: true, portal: true, state, url: gateway ? `http://${gateway}/` : '' };
 });
 ipcMain.handle('sys:bluetooth', async (_, enabled) => {
   if (!IS_LINUX) return null;
@@ -380,6 +398,83 @@ ipcMain.handle('sys:volume', async (_, v) => {
   const m = out && out.match(/([\d.]+)/);
   return m ? Math.round(parseFloat(m[1]) * 100) : null;
 });
+/* ---- Audio routing ---- */
+/* pactl speaks for both PipeWire's PulseAudio server and plain PulseAudio, and its JSON output keeps
+   descriptions with commas and brackets intact where `list short` would split them. */
+const pactlJson = async args => {
+  const result = await runDetailed('pactl', ['-f', 'json', ...args], 6000);
+  if (!result.ok) return null;
+  try {
+    const parsed = JSON.parse(result.out || '[]');
+    return Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+};
+const pactlVolume = item => {
+  const levels = Object.values(item?.volume || {}).map(channel => parseFloat(channel?.value_percent) || 0);
+  return levels.length ? Math.round(levels.reduce((sum, level) => sum + level, 0) / levels.length) : 0;
+};
+const audioDevice = (item, active) => ({
+  name: String(item.name || ''),
+  description: String(item.description || item.name || ''),
+  volume: pactlVolume(item),
+  muted: item.mute === true,
+  active
+});
+const audioEndpoints = async kind => {
+  const isOutput = kind === 'output';
+  const [devices, info] = await Promise.all([
+    pactlJson(['list', isOutput ? 'sinks' : 'sources']),
+    run('pactl', ['info'])
+  ]);
+  if (!devices || info === null) return null;
+  const defaults = info.match(new RegExp(`^Default ${isOutput ? 'Sink' : 'Source'}:\\s*(.+)$`, 'm'))?.[1]?.trim() || '';
+  const usable = devices.filter(item => item?.name && !String(item.name).includes('.monitor'));
+  return {
+    devices: usable.map(item => audioDevice(item, item.name === defaults)),
+    defaultName: defaults,
+    names: usable.map(item => item.name)
+  };
+};
+ipcMain.handle('sys:audio:devices', async () => {
+  if (!IS_LINUX) return { available: false };
+  const [outputs, inputs] = await Promise.all([audioEndpoints('output'), audioEndpoints('input')]);
+  if (!outputs || !inputs) return { available: false, error: 'Audio routing requires PipeWire or PulseAudio.' };
+  return {
+    available: true,
+    outputs: outputs.devices,
+    inputs: inputs.devices,
+    defaultOutput: outputs.defaultName,
+    defaultInput: inputs.defaultName
+  };
+});
+ipcMain.handle('sys:audio:select', async (_, kind, name) => {
+  const isOutput = kind === 'output';
+  if (!IS_LINUX || (kind !== 'output' && kind !== 'input') || typeof name !== 'string' ||
+    !name || name.length > 256 || /[\0\r\n]/.test(name)) {
+    return { ok: false, error: 'Invalid audio device.' };
+  }
+  const endpoints = await audioEndpoints(kind);
+  if (!endpoints || !endpoints.names.includes(name)) return { ok: false, error: 'That audio device is no longer available.' };
+  const previous = endpoints.defaultName;
+  const changed = await runDetailed('pactl', [isOutput ? 'set-default-sink' : 'set-default-source', name], 6000);
+  if (!changed.ok) return { ok: false, error: isOutput ? 'Could not switch the audio output.' : 'Could not switch the audio input.' };
+  /* PulseAudio leaves every existing stream on the device it started on, so after the default moves the
+     streams that were on the old default follow it, while a stream pinned elsewhere stays there. */
+  if (previous && previous !== name) {
+    const table = await pactlJson(['list', isOutput ? 'sinks' : 'sources']);
+    const oldIndex = table?.find(item => item?.name === previous)?.index;
+    if (oldIndex !== undefined) {
+      const streams = (await run('pactl', ['list', 'short', isOutput ? 'sink-inputs' : 'source-outputs'])) || '';
+      for (const line of streams.split('\n')) {
+        const columns = line.split('\t');
+        if (columns.length > 2 && Number(columns[1]) === Number(oldIndex)) {
+          await run('pactl', [isOutput ? 'move-sink-input' : 'move-source-output', columns[0], name], 6000);
+        }
+      }
+    }
+  }
+  return { ok: true, defaultName: name };
+});
 /* Screens with no controllable backlight (external monitors, many VMs) are dimmed through the display's
    gamma ramp. Unlike an overlay inside the window, the ramp is applied to everything on screen, pointer included. */
 let gammaBrightness = null;
@@ -411,17 +506,62 @@ ipcMain.handle('sys:brightness', async (_, v) => {
   const m = out && out.match(/(\d+)%/);
   return m ? +m[1] : gammaBrightness;
 });
-ipcMain.handle('sys:trackpad:tap-to-click', async (_, enabled) => {
-  if (!IS_LINUX || typeof enabled !== 'boolean') return { available: false, error: 'Tap to click is only available on Linux.' };
+/* libinput exposes both settings as device properties, so one xinput write per device that advertises it
+   reaches external trackpads and built-in ones alike. */
+const setTrackpadProperty = async (property, enabled, missing) => {
+  if (!IS_LINUX || typeof enabled !== 'boolean') return { available: false, error: 'Trackpad settings are only available on Linux.' };
   const listing = await run('xinput', ['list', '--id-only']);
   if (listing === null) return { available: false, error: 'xinput is not available.' };
   let touchpads = 0;
   for (const id of listing.split(/\s+/).filter(value => /^\d+$/.test(value))) {
     const props = await run('xinput', ['list-props', id]);
-    if (!props || !/libinput Tapping Enabled \(\d+\)/.test(props)) continue;
-    if (await run('xinput', ['set-prop', id, 'libinput Tapping Enabled', enabled ? '1' : '0']) !== null) touchpads += 1;
+    if (!props || !new RegExp(`${property} \\(\\d+\\)`).test(props)) continue;
+    if (await run('xinput', ['set-prop', id, property, enabled ? '1' : '0']) !== null) touchpads += 1;
   }
-  return touchpads ? { available: true, enabled } : { available: false, error: 'No touchpad that supports tapping was found.' };
+  return touchpads ? { available: true, enabled } : { available: false, error: missing };
+};
+ipcMain.handle('sys:trackpad:tap-to-click', (_, enabled) => setTrackpadProperty('libinput Tapping Enabled', enabled, 'No touchpad that supports tapping was found.'));
+ipcMain.handle('sys:trackpad:natural-scroll', (_, enabled) => setTrackpadProperty('libinput Natural Scrolling Enabled', enabled, 'No touchpad that supports natural scrolling was found.'));
+/* ---- Display scale ----
+   The shell is one page, so a CSS zoom resizes all of it. Native toolkits read Xft.dpi instead, which
+   silkos-display-scale updates together with the Openbox margin that keeps windows below the menu bar. */
+const DISPLAY_SCALES = [1, 1.25, 1.5, 2];
+const displayConf = () => path.join(os.homedir(), '.config', 'silkos');
+const displayModeFile = () => path.join(displayConf(), 'display-scale.mode');
+/* A 13" 2K panel is about 226 PPI, so automatic lands on 200% there and stays at 100% on a normal monitor. */
+const autoDisplayScale = ppi => ppi >= 200 ? 2 : ppi >= 170 ? 1.5 : ppi >= 125 ? 1.25 : 1;
+const panelPpi = async () => {
+  const out = await run('xrandr', ['--query']);
+  if (!out) return 0;
+  for (const line of out.split(/\r?\n/)) {
+    if (!/ connected /.test(line)) continue;
+    const size = line.match(/(\d+)x(\d+)\+(-?\d+)\+(-?\d+)/);
+    const mm = line.match(/(\d+)mm\s+x\s+(\d+)mm/);
+    if (size && mm) return Number(size[1]) * 25.4 / Number(mm[1]);
+  }
+  return 0;
+};
+const resolveDisplayScale = async mode => {
+  if (mode !== 'auto') return DISPLAY_SCALES.includes(Number(mode)) ? Number(mode) : 1;
+  const ppi = await panelPpi();
+  return ppi ? autoDisplayScale(ppi) : 1;
+};
+const applyDisplayScale = async mode => {
+  const scale = await resolveDisplayScale(mode);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(scale);
+  try {
+    await fs.promises.mkdir(displayConf(), { recursive: true });
+    await fs.promises.writeFile(path.join(displayConf(), 'display-scale'), String(scale));
+    await fs.promises.writeFile(displayModeFile(), mode === 'auto' ? 'auto' : String(scale));
+  } catch (error) { console.error('Could not save the display scale:', error); }
+  if (IS_LINUX) void run('silkos-display-scale', [String(scale)], 8000);
+  return { ok: true, mode, scale };
+};
+ipcMain.handle('sys:display:scale', async (_, requested) => {
+  if (!IS_LINUX) return { available: false, error: 'Display scaling is available when SilkOS runs on Linux.' };
+  const mode = requested === 'auto' ? 'auto' : Number(requested);
+  if (mode !== 'auto' && !DISPLAY_SCALES.includes(mode)) return { available: true, ok: false, error: 'That interface scale is not supported.' };
+  return { available: true, ...(await applyDisplayScale(mode)) };
 });
 ipcMain.handle('sys:resources', async () => {
   let cpus;
@@ -699,7 +839,8 @@ ipcMain.handle('store:run', (_, id) => IS_LINUX && okId(id) ? launchExt('flatpak
 const isDir = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
 ipcMain.handle('fs:home', () => {
   const h = os.homedir();
-  for (const d of ['Desktop', 'Documents', 'Downloads']) try { fs.mkdirSync(path.join(h, d), { recursive: true }); } catch {}
+  /* Screenshots land in Pictures, so every account keeps the folder even before the first capture. */
+  for (const d of ['Desktop', 'Documents', 'Downloads', 'Pictures']) try { fs.mkdirSync(path.join(h, d), { recursive: true }); } catch {}
   return h;
 });
 ipcMain.handle('fs:list', async (_, d, showHidden = false) => {
@@ -707,6 +848,125 @@ ipcMain.handle('fs:list', async (_, d, showHidden = false) => {
     const ents = await fs.promises.readdir(String(d), { withFileTypes: true });
     return { items: ents.filter(e => showHidden === true || !e.name.startsWith('.')).map(e => ({ name: e.name, dir: e.isDirectory() || (e.isSymbolicLink() && isDir(path.join(d, e.name))) })).sort((a, b) => b.dir - a.dir || a.name.localeCompare(b.name)) };
   } catch (e) { return { error: e.code === 'EACCES' ? 'You don\'t have permission to open this folder.' : 'Folder not found.' }; }
+});
+/* Sizes and dates are read in one batch after the rows are already on screen, so a folder with hundreds
+   of entries paints at listing speed instead of waiting on a stat per file. */
+ipcMain.handle('fs:stat', async (_, targets) => {
+  if (!Array.isArray(targets) || !targets.length || targets.length > 500) return { ok: false, error: 'Could not read item details.' };
+  const items = await Promise.all(targets.map(async target => {
+    if (typeof target !== 'string' || target.length > 4096) return null;
+    try {
+      const info = await fs.promises.stat(target);
+      return { path: target, size: info.size, mtime: info.mtimeMs, dir: info.isDirectory() };
+    } catch { return null; }
+  }));
+  return { ok: true, items: items.filter(Boolean) };
+});
+/* Finder writes stay inside the home folder: that is the only tree the desktop session owns without a
+   privilege prompt, and reads elsewhere (including "Computer") remain open. */
+const homeRoot = () => path.resolve(os.homedir());
+const inHome = candidate => {
+  const root = homeRoot();
+  return candidate === root || candidate.startsWith(root + path.sep);
+};
+const validFileName = name => typeof name === 'string' && name.length > 0 && name.length <= 255 &&
+  name === name.trim() && name !== '.' && name !== '..' && !/[/\0]/.test(name);
+const writeError = error => {
+  if (error.code === 'EACCES' || error.code === 'EPERM') return 'You don\'t have permission to change this item.';
+  if (error.code === 'EEXIST' || error.code === 'ENOTEMPTY') return 'An item with that name already exists.';
+  if (error.code === 'ENOENT') return 'That item no longer exists.';
+  if (error.code === 'ENOSPC') return 'There is not enough space on this drive.';
+  return 'Could not change this item.';
+};
+ipcMain.handle('fs:mkdir', async (_, dir, name) => {
+  if (!validFileName(name)) return { ok: false, error: 'Enter a valid folder name.' };
+  const base = path.resolve(String(dir));
+  if (!inHome(base)) return { ok: false, error: 'SilkOS can only change files in your home folder.' };
+  const target = path.join(base, name);
+  try {
+    await fs.promises.mkdir(target);
+    return { ok: true, path: target };
+  } catch (error) { return { ok: false, error: writeError(error) }; }
+});
+ipcMain.handle('fs:rename', async (_, source, name) => {
+  if (!validFileName(name)) return { ok: false, error: 'Enter a valid name.' };
+  const from = path.resolve(String(source));
+  if (!inHome(from) || from === homeRoot()) return { ok: false, error: 'SilkOS can only change files in your home folder.' };
+  const to = path.join(path.dirname(from), name);
+  if (to === from) return { ok: true, path: to };
+  try {
+    await fs.promises.access(to);
+    return { ok: false, error: 'An item with that name already exists.' };
+  } catch (error) { if (error.code !== 'ENOENT') return { ok: false, error: writeError(error) }; }
+  try {
+    await fs.promises.rename(from, to);
+    return { ok: true, path: to };
+  } catch (error) { return { ok: false, error: writeError(error) }; }
+});
+const trashStamp = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+ipcMain.handle('fs:trash', async (_, sources) => {
+  if (!Array.isArray(sources) || !sources.length || sources.length > 200) return { ok: false, error: 'Select files to move to the Trash.' };
+  const root = homeRoot();
+  const trash = path.join(root, '.local', 'share', 'Trash');
+  const files = path.join(trash, 'files'), info = path.join(trash, 'info');
+  try {
+    await fs.promises.mkdir(files, { recursive: true });
+    await fs.promises.mkdir(info, { recursive: true });
+  } catch { return { ok: false, error: 'Could not open the Trash.' }; }
+  let trashed = 0;
+  for (const source of sources) {
+    const from = path.resolve(String(source));
+    if (!inHome(from) || from === root) return { ok: false, error: 'SilkOS can only change files in your home folder.' };
+    const base = path.basename(from);
+    let name = base, suffix = 1;
+    while (fs.existsSync(path.join(files, name)) || fs.existsSync(path.join(info, `${name}.trashinfo`))) {
+      name = `${base}.${suffix++}`;
+      if (suffix > 999) return { ok: false, error: 'The Trash is full.' };
+    }
+    try {
+      await fs.promises.rename(from, path.join(files, name));
+    } catch (error) {
+      if (error.code !== 'EXDEV') return { ok: false, error: writeError(error) };
+      try {
+        await fs.promises.cp(from, path.join(files, name), { recursive: true });
+        await fs.promises.rm(from, { recursive: true, force: true });
+      } catch { return { ok: false, error: 'Could not move the item to the Trash.' }; }
+    }
+    const entry = `[Trash Info]\nPath=${encodeURI(from)}\nDeletionDate=${trashStamp(new Date())}\n`;
+    try { await fs.promises.writeFile(path.join(info, `${name}.trashinfo`), entry); } catch {}
+    trashed += 1;
+  }
+  return { ok: true, trashed };
+});
+ipcMain.handle('fs:move', async (_, sources, destination) => {
+  if (!Array.isArray(sources) || !sources.length || sources.length > 200) return { ok: false, error: 'Select files to move.' };
+  const dest = path.resolve(String(destination));
+  if (!inHome(dest)) return { ok: false, error: 'SilkOS can only change files in your home folder.' };
+  if (!isDir(dest)) return { ok: false, error: 'The destination folder no longer exists.' };
+  let moved = 0;
+  for (const source of sources) {
+    const from = path.resolve(String(source));
+    if (!inHome(from) || from === homeRoot()) return { ok: false, error: 'SilkOS can only change files in your home folder.' };
+    /* Moving a folder into its own subtree would detach it from the tree while copying. */
+    if (dest === from || dest.startsWith(from + path.sep)) return { ok: false, error: 'A folder cannot be moved inside itself.' };
+    const target = path.join(dest, path.basename(from));
+    if (target === from) continue;
+    try {
+      await fs.promises.access(target);
+      return { ok: false, error: `“${path.basename(from)}” already exists in that folder.` };
+    } catch (error) { if (error.code !== 'ENOENT') return { ok: false, error: writeError(error) }; }
+    try {
+      await fs.promises.rename(from, target);
+    } catch (error) {
+      if (error.code !== 'EXDEV') return { ok: false, error: writeError(error) };
+      try {
+        await fs.promises.cp(from, target, { recursive: true });
+        await fs.promises.rm(from, { recursive: true, force: true });
+      } catch { return { ok: false, error: 'Could not move this item.' }; }
+    }
+    moved += 1;
+  }
+  return { ok: true, moved };
 });
 /* Launch a native app, log its output, and bring its window in front of SilkOS (which is fullscreen). */
 const xWins = async () => new Set(((await run('wmctrl', ['-l'])) || '').split('\n').map(l => l.split(' ')[0]).filter(Boolean));
@@ -744,6 +1004,136 @@ ipcMain.handle('fs:open', (_, p) => {
 });
 ipcMain.handle('sys:terminal', () => {
   if (IS_LINUX) detach('xterm', ['-fa', 'DejaVu Sans Mono', '-fs', '11', '-bg', '#1e1e1e', '-fg', '#e6e6e6', '-geometry', '100x30', '-T', 'Terminal'], os.homedir());
+});
+/* ---- Screenshots ----
+ * A capture is frozen before the shell raises itself, so the selection overlay never photographs the
+ * open menu that started it. The overlay lives inside the shell, which keeps it above every SilkOS
+ * surface without fighting Openbox's fullscreen layer for a second window. */
+const SCREENSHOT_DELAY_MS = 180;
+let captureInFlight = false;
+let regionPending = null;
+const screenshotDir = async () => {
+  const dir = path.join(os.homedir(), 'Pictures', 'Screenshots');
+  await fs.promises.mkdir(dir, { recursive: true });
+  return dir;
+};
+const screenshotTarget = async () => {
+  const dir = await screenshotDir();
+  const now = new Date(), pad = value => String(value).padStart(2, '0');
+  const base = `Screenshot ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} at ${pad(now.getHours())}.${pad(now.getMinutes())}.${pad(now.getSeconds())}`;
+  let name = `${base}.png`, suffix = 1;
+  while (fs.existsSync(path.join(dir, name))) name = `${base} (${++suffix}).png`;
+  return path.join(dir, name);
+};
+const saveScreenshot = async image => {
+  const target = await screenshotTarget();
+  await fs.promises.writeFile(target, image.toPNG());
+  try { clipboard.writeImage(image); } catch (error) { console.error('Could not copy the screenshot to the clipboard:', error); }
+  const size = image.getSize();
+  return { path: target, url: pathToFileURL(target).href, width: size.width, height: size.height };
+};
+const announceScreenshot = result => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('screenshot:saved', result);
+};
+const announceScreenshotError = message => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('screenshot:error', message);
+};
+const grabDisplay = async followWindow => {
+  const display = followWindow && mainWindow && !mainWindow.isDestroyed()
+    ? screen.getDisplayMatching(mainWindow.getBounds())
+    : screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const scale = display.scaleFactor || 1;
+  const sources = await desktopCapturer.getSources({
+    types: ['screen'],
+    thumbnailSize: {
+      width: Math.max(1, Math.round(display.size.width * scale)),
+      height: Math.max(1, Math.round(display.size.height * scale))
+    }
+  });
+  const source = sources.find(item => String(item.display_id) === String(display.id)) || sources[0];
+  const image = source && source.thumbnail;
+  if (!image || image.isEmpty()) throw new Error('The screen could not be captured.');
+  return { image, display };
+};
+const captureFullScreen = async () => {
+  if (!IS_LINUX) return { ok: false, error: 'Screenshots are only available on Linux.' };
+  if (captureInFlight) return { ok: false, error: 'A screenshot is already in progress.' };
+  captureInFlight = true;
+  try {
+    /* The click that opened the menu is still fading its dropdown, so every capture waits it out. */
+    await new Promise(resolve => setTimeout(resolve, SCREENSHOT_DELAY_MS));
+    const { image } = await grabDisplay(mainWindow && mainWindow.isFocused());
+    const saved = await saveScreenshot(image);
+    announceScreenshot(saved);
+    return { ok: true, ...saved };
+  } catch (error) {
+    const message = error.message || 'Could not take the screenshot.';
+    console.error('Screenshot failed:', error);
+    announceScreenshotError(message);
+    return { ok: false, error: message };
+  } finally { captureInFlight = false; }
+};
+const beginRegionCapture = async () => {
+  if (!IS_LINUX) return { ok: false, error: 'Screenshots are only available on Linux.' };
+  if (captureInFlight) return { ok: false, error: 'A screenshot is already in progress.' };
+  captureInFlight = true;
+  try {
+    await new Promise(resolve => setTimeout(resolve, SCREENSHOT_DELAY_MS));
+    const win = mainWindow;
+    if (!win || win.isDestroyed()) throw new Error('The desktop window is not available.');
+    const { image, display } = await grabDisplay(true);
+    /* The shell can be maximized inside an Openbox margin, so the frozen copy is cropped to the window
+       it will be shown in rather than to the whole display. */
+    const content = win.getContentBounds();
+    const scale = display.scaleFactor || 1;
+    const size = image.getSize();
+    const crop = {
+      x: Math.max(0, Math.round((content.x - display.bounds.x) * scale)),
+      y: Math.max(0, Math.round((content.y - display.bounds.y) * scale))
+    };
+    crop.width = Math.max(1, Math.min(Math.round(content.width * scale), size.width - crop.x));
+    crop.height = Math.max(1, Math.min(Math.round(content.height * scale), size.height - crop.y));
+    const frozen = image.crop(crop);
+    regionPending = frozen;
+    if (!win.isFocused()) { win.show(); win.focus(); }
+    win.webContents.send('screenshot:init', { dataUrl: frozen.toDataURL(), width: frozen.getSize().width, height: frozen.getSize().height });
+    return { ok: true };
+  } catch (error) {
+    const message = error.message || 'Could not start the screenshot.';
+    console.error('Screenshot failed:', error);
+    announceScreenshotError(message);
+    return { ok: false, error: message };
+  } finally { captureInFlight = false; }
+};
+ipcMain.handle('screenshot:full', captureFullScreen);
+ipcMain.handle('screenshot:region', beginRegionCapture);
+ipcMain.handle('screenshot:cancel', () => { regionPending = null; return true; });
+ipcMain.handle('screenshot:complete', async (_, rect) => {
+  const image = regionPending;
+  regionPending = null;
+  if (!image) return { ok: false, error: 'No screenshot is in progress.' };
+  const clamp = (value, max) => Math.max(0, Math.min(max, Number(value) || 0));
+  const x = clamp(rect?.x, 1), y = clamp(rect?.y, 1), width = clamp(rect?.width, 1), height = clamp(rect?.height, 1);
+  if (width < 0.004 || height < 0.004 || x + width > 1.001 || y + height > 1.001) {
+    return { ok: false, error: 'The selected area was too small.' };
+  }
+  const size = image.getSize();
+  const crop = {
+    x: Math.min(size.width - 1, Math.round(x * size.width)),
+    y: Math.min(size.height - 1, Math.round(y * size.height)),
+    width: Math.max(1, Math.round(width * size.width)),
+    height: Math.max(1, Math.round(height * size.height))
+  };
+  crop.width = Math.min(crop.width, size.width - crop.x);
+  crop.height = Math.min(crop.height, size.height - crop.y);
+  try {
+    const saved = await saveScreenshot(image.crop(crop));
+    announceScreenshot(saved);
+    return { ok: true, ...saved };
+  } catch (error) {
+    console.error('Could not save the screenshot:', error);
+    return { ok: false, error: 'Could not save the screenshot.' };
+  }
 });
 const getLinuxWorkspaces = async () => {
   if (!IS_LINUX) return { available: false, workspaces: [], current: 0 };
@@ -921,14 +1311,24 @@ app.on('will-quit', () => {
 });
 if (IS_LINUX) {
   app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
+  /* The page is zoomed to the chosen scale, so Chromium must not also scale it from Xft.dpi. */
+  app.commandLine.appendSwitch('force-device-scale-factor', '1');
   if (process.env.SILKOS_SOFTWARE === '1') { app.disableHardwareAcceleration(); app.commandLine.appendSwitch('disable-gpu'); }
 }
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   const win = mainWindow = new BrowserWindow({
     width: 1280, height: 800, show: false, backgroundColor: '#3b3b8f', autoHideMenuBar: true,
     webPreferences: { webviewTag: true, contextIsolation: true, preload: path.join(__dirname, 'preload.js') }
   });
+  if (IS_LINUX) {
+    let savedDisplayMode = 'auto';
+    try {
+      const value = (await fs.promises.readFile(displayModeFile(), 'utf8')).trim();
+      savedDisplayMode = value === 'auto' ? 'auto' : Number(value);
+    } catch {}
+    void applyDisplayScale(savedDisplayMode);
+  }
   win.setTitle('SilkOS');
   win.maximize();
   if (IS_LINUX && process.env.SILKOS_KIOSK === '1') win.setFullScreen(true);
@@ -948,10 +1348,12 @@ app.whenReady().then(() => {
   let localWindowSwitchPending = false;
   let windowSwitchTimer = null;
   if (IS_LINUX && globalShortcut) {
-    for (const [accelerator, shortcut] of [['Alt+Tab', 'alt-tab'], ['Alt+Shift+Tab', 'alt-tab-reverse'], ['Ctrl+Alt+Left', 'space-left'], ['Ctrl+Alt+Right', 'space-right'], ['F4', 'lp']]) {
+    for (const [accelerator, shortcut] of [['Alt+Tab', 'alt-tab'], ['Alt+Shift+Tab', 'alt-tab-reverse'], ['Ctrl+Alt+Left', 'space-left'], ['Ctrl+Alt+Right', 'space-right'], ['F4', 'lp'], ['Super+Shift+3', 'screenshot-full'], ['Super+Shift+4', 'screenshot-region']]) {
       try {
         if (globalShortcut.register(accelerator, async () => {
           if (screenLocked) return;
+          if (shortcut === 'screenshot-full') { void captureFullScreen(); return; }
+          if (shortcut === 'screenshot-region') { void beginRegionCapture(); return; }
           if (shortcut === 'lp') {
             win.restore();
             win.show();
@@ -981,9 +1383,9 @@ app.whenReady().then(() => {
             void cycleNativeWindows(shortcut === 'alt-tab-reverse');
           }
         })) globalWindowShortcuts.add(accelerator);
-        else console.error(`Could not register the ${accelerator} window-switching shortcut.`);
+        else console.error(`Could not register the ${accelerator} shortcut.`);
       } catch (error) {
-        console.error(`Could not register the ${accelerator} window-switching shortcut:`, error);
+        console.error(`Could not register the ${accelerator} shortcut:`, error);
       }
     }
     win.on('blur', () => {

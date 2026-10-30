@@ -109,6 +109,15 @@ function browserInit(el){
  /* The slot stays in the tab even before an icon arrives, so titles do not jump when a site reports one. */
  const tabIcon=t=>{const slot=t.tabEl&&t.tabEl.querySelector('.tf');if(!slot||slot.dataset.src===(t.icon||''))return;
   slot.dataset.src=t.icon||'';slot.innerHTML=t.icon?`<img src="${esc(t.icon)}" alt="" onerror="this.remove()">`:''};
+ /* A hidden webview captures as blank, so every tab keeps the last picture taken while its page was
+    on screen and the overview paints from that instead of asking hidden guests for a blank frame. */
+ function cacheThumb(t){
+  if(!t||!t.v)return Promise.resolve(null);
+  try{return t.v.capturePage().then(img=>{
+   const size=img&&img.getSize?img.getSize():{width:0,height:0};
+   if(img&&!(img.isEmpty&&img.isEmpty())&&size.width>1&&size.height>1){const url=img.toDataURL();if(url){t.thumb=url;return url}}
+   return t.thumb||null}).catch(()=>t.thumb||null)}catch(error){return Promise.resolve(t.thumb||null)}
+ }
  function refresh(){
   list.forEach(t=>{if(!t.tabEl)mkTab(t);t.tabEl.classList.toggle('on',t===cur);t.tabEl.querySelector('span').textContent=t.title;tabIcon(t)});
   stabs.classList.toggle('open',list.length>1);
@@ -122,7 +131,8 @@ function browserInit(el){
   stabs.appendChild(n);void n.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>n.classList.add('in')))}
  function sel(t){if(t!==cur)hideFind(cur);cur=t;ov.classList.remove('open');navState();refresh();
   start.style.display=t.v?'none':'flex';if(!t.v){start.classList.remove('enter');void start.offsetWidth;start.classList.add('enter')}list.forEach(x=>x.v&&x.v.classList.toggle('on',x===t));
-  url.value=t.url||'';dom(t);showFail();t.loading?prog(1):(bar.style.transition='none',bar.style.width='0',bar.style.opacity=0)}
+  url.value=t.url||'';dom(t);showFail();t.loading?prog(1):(bar.style.transition='none',bar.style.width='0',bar.style.opacity=0);
+  if(t.v)requestAnimationFrame(()=>{if(cur===t&&!t.loading)cacheThumb(t)})}
  function go(t,u){u=norm(u);t.url=u;
   if(!t.v){const v=document.createElement('webview');v.setAttribute('allowpopups','');t.v=v;
    const nv=e=>{if(!e.url)return;
@@ -134,12 +144,28 @@ function browserInit(el){
    v.addEventListener('page-title-updated',e=>{t.title=e.title;logHist(t.url,e.title);refresh()});
    v.addEventListener('did-start-loading',()=>{t.loading=1;t.fail='';if(cur===t){prog(1);navState();showFail()}});
    /* A finished load drops the page highlight, so re-run the query rather than leave a stale match count showing. */
-   v.addEventListener('did-stop-loading',()=>{t.loading=0;if(cur===t){prog(0);navState();if(fin.classList.contains('on'))findStep()}});
+   v.addEventListener('did-stop-loading',()=>{t.loading=0;if(cur===t){prog(0);navState();if(fin.classList.contains('on'))findStep();cacheThumb(t)}});
    v.addEventListener('did-fail-load',e=>{if(!e.isMainFrame)return;
     const note=failNote(e.errorCode,hostOf(e.validatedURL||t.url));
     if(!note)return;
     t.fail={code:e.errorCode,url:e.validatedURL||t.url};
     if(cur===t){prog(0);navState();showFail()}});
+   /* Chromium already tells the embedder where the click landed, so the page menu opens at the same
+      spot inside the page and offers the browser actions a page right-click is expected to have. */
+   v.addEventListener('context-menu',e=>{
+    const p=e.params||{},rect=v.getBoundingClientRect(),items=[];
+    if(p.linkURL)items.push(['Open Link in New Tab',()=>add(p.linkURL)],['Copy Link Address',()=>copyText(p.linkURL)],'-');
+    if(p.selectionText)items.push(['Copy',()=>{try{v.copy()}catch(error){}}],'-');
+    else if(p.isEditable)items.push(['Cut',()=>{try{v.cut()}catch(error){}}],['Paste',()=>{try{v.paste()}catch(error){}}],'-');
+    items.push(
+     ['Back',()=>{try{v.goBack()}catch(error){}}],
+     ['Forward',()=>{try{v.goForward()}catch(error){}}],
+     ['Reload',()=>{try{v.reload()}catch(error){}}],
+     '-',
+     ['Copy Page Address',()=>t.url&&copyText(t.url),'',!t.url]
+    );
+    showContextMenu(items,rect.left+(p.x||0),rect.top+(p.y||0))
+   });
    v.addEventListener('dom-ready',()=>applyWebCursor(t));v.src=u;pages.appendChild(v)}
   else{try{t.v.loadURL(u)}catch(e){t.v.src=u}}
   sel(t)}
@@ -149,9 +175,62 @@ function browserInit(el){
   if(cur===t)sel(list[Math.min(i,list.length-1)]);else refresh();
   if(ov.classList.contains('open'))buildOv()}
  function buildOv(){
-  ov.innerHTML=list.map((t,i)=>`<div class="card" data-i="${i}"><div class="thumb">${t.v?'':'Start Page'}</div><div class="ct"><span>${esc(t.title)}</span><b>✕</b></div></div>`).join('');
-  ov.querySelectorAll('.card').forEach(n=>{const i=+n.dataset.i,t=list[i];n.onclick=()=>sel(t);n.querySelector('b').onclick=e=>{e.stopPropagation();close(i)};
-   if(t.v)try{t.v.capturePage().then(img=>{n.querySelector('.thumb').style.backgroundImage='url('+img.toDataURL()+')'}).catch(()=>{})}catch(e){}})}
+  const thumb=t=>t.thumb?`<img src="${t.thumb}" alt="Preview of ${esc(t.title)}">`:`<span class="ov-fallback">${esc(t.v?t.title||'Tab':'Start Page')}</span>`;
+  ov.innerHTML=list.map((t,i)=>`<div class="card" data-i="${i}"><div class="thumb">${thumb(t)}</div><div class="ct"><span>${esc(t.title)}</span><b>✕</b></div></div>`).join('');
+  ov.querySelectorAll('.card').forEach(n=>{const i=+n.dataset.i,t=list[i];n.onclick=()=>sel(t);n.querySelector('b').onclick=e=>{e.stopPropagation();close(i)}});
+  const active=list.find(t=>t===cur);
+  if(active&&active.v)cacheThumb(active).then(url=>{
+   if(!url||!ov.classList.contains('open'))return;
+   const card=ov.querySelector(`.card[data-i="${list.indexOf(active)}"]`);
+   if(card)card.querySelector('.thumb').innerHTML=`<img src="${url}" alt="Preview of ${esc(active.title)}">`
+  })
+ }
+ /* Right-click belongs to the tab strip, the address field and the page itself, so each offers the
+    actions that make sense there; the rest of the window falls through to the shared window menu. */
+ const copyText=text=>{navigator.clipboard?.writeText(text).catch(error=>console.error('Could not copy the text:',error))};
+ const canGo=dir=>{try{return !!(cur&&cur.v&&cur.v[dir]())}catch(error){return false}};
+ const navAction=action=>{try{if(!cur||!cur.v)return;if(action==='b'&&cur.v.canGoBack())cur.v.goBack();else if(action==='f'&&cur.v.canGoForward())cur.v.goForward();else if(action==='r')cur.v.reload()}catch(error){}};
+ stabs.addEventListener('contextmenu',e=>{
+  e.preventDefault();e.stopPropagation();
+  const index=list.findIndex(t=>t.tabEl===e.target.closest('.stab'));
+  if(index<0)return;
+  const t=list[index];
+  showContextMenu([
+   ['Reload Tab',()=>{if(t.v){try{t.v.reload()}catch(error){}}else if(t.url)go(t,t.url)}],
+   ['Duplicate Tab',()=>add(t.url)],
+   '-',
+   ['Close Tab',()=>close(index)],
+   ['Close Other Tabs',()=>{const keep=list[index];list.slice().forEach(other=>{if(other!==keep)close(list.indexOf(other))});sel(keep)}],
+   '-',
+   ['New Tab',()=>add('')]
+  ],e.clientX,e.clientY)
+ });
+ q('.addr').addEventListener('contextmenu',e=>{
+  e.preventDefault();e.stopPropagation();
+  showContextMenu([
+   ['Back',()=>navAction('b'),'',!canGo('canGoBack')],
+   ['Forward',()=>navAction('f'),'',!canGo('canGoForward')],
+   ['Reload',()=>navAction('r'),'',!cur?.v],
+   '-',
+   ['Copy Page Address',()=>cur?.url&&copyText(cur.url),'',!cur?.url],
+   ['Bookmark This Page',addBm,'',!cur?.url],
+   '-',
+   ['New Tab',()=>add('')]
+  ],e.clientX,e.clientY)
+ });
+ ov.addEventListener('contextmenu',e=>{
+  e.preventDefault();e.stopPropagation();
+  const card=e.target.closest('.card');
+  if(!card){showContextMenu([['New Tab',()=>add('')],['Close Overview',()=>ov.classList.remove('open')]],e.clientX,e.clientY);return}
+  const index=+card.dataset.i;
+  showContextMenu([
+   ['Open Tab',()=>sel(list[index])],
+   ['Close Tab',()=>close(index)],
+   '-',
+   ['New Tab',()=>add('')],
+   ['Close Overview',()=>ov.classList.remove('open')]
+  ],e.clientX,e.clientY)
+ });
  function toast(m){if(cfg.quietMode)return;const n=document.createElement('div');n.className='toast';n.textContent=m;q('.bwrap').appendChild(n);requestAnimationFrame(()=>n.classList.add('on'));setTimeout(()=>{n.classList.remove('on');setTimeout(()=>n.remove(),350)},1500)}
  const sug=document.createElement('div');sug.className='sug';document.body.appendChild(sug);
  let items=[],si=-1,typed='',rid=0,tm=0,del=false,remote=[];

@@ -46,7 +46,7 @@ function addIcon(id){const a=apps[id];
  d.draggable=false;d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launch(id)}};dock.appendChild(d);icons.push(d);if(iconOrderReady){applySavedOrder(dock,'.ic','dockOrder');queueMicrotask(measureDock)}}
 Object.keys(apps).forEach(addIcon);
 const DEF={theme:'auto',accent:'#0a60ff',wall:0,wallpaperImage:'',lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,dockOrder:[],launchpadOrder:[],engine:'google',sugg:true,bri:100,
- clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false,tapToClick:false};
+ clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false,tapToClick:false,naturalScroll:true,displayScale:'auto'};
 const cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('silk.cfg'))||{}}catch(e){return{}}})());
 let activeSpace=0,spacesAvailable=false,workspaceNames=Array.from({length:4},(_,index)=>`Desktop ${index+1}`);
 function normalizedIconOrder(order,ids){const available=new Set(ids);return[...new Set((Array.isArray(order)?order:[]).filter(id=>typeof id==='string'&&available.has(id))),...ids.filter(id=>!Array.isArray(order)||!order.includes(id))]}
@@ -125,7 +125,34 @@ function trackGestureSpeed(state,progress){
 function updateSpaceGesture(state,progress){
  trackGestureSpeed(state,progress);
  state.progress=Math.max(0,Math.min(1,progress));
- const width=innerWidth,offset=state.progress*width,direction=state.direction;
+ smoothGesture(state,value=>paintSpaceGesture(state,value))
+}
+/* Fingers arrive in discrete libinput steps; macOS filters them into one even glide. Every gesture paints
+   a value that eases toward the finger position, while the commit decision keeps reading the raw travel. */
+const GESTURE_SMOOTH_MS=60;
+function smoothGesture(state,render){
+ if(cfg.reduceMotion){cancelGestureSmoothing(state);render(Math.max(0,Math.min(1,state.progress||0)));return}
+ const frame=state.smoothing||(state.smoothing={value:null,frame:0,at:0});
+ frame.render=render;
+ if(frame.value===null){frame.value=state.progress||0;frame.at=performance.now();frame.render(frame.value)}
+ if(frame.frame)return;
+ const step=now=>{
+  const target=state.progress||0,delta=Math.min(64,Math.max(8,now-frame.at));
+  frame.at=now;
+  frame.value+=(target-frame.value)*(1-Math.exp(-delta/GESTURE_SMOOTH_MS));
+  if(Math.abs(target-frame.value)<.0015)frame.value=target;
+  frame.frame=0;frame.render(frame.value);
+  if(frame.value!==target)frame.frame=requestAnimationFrame(step)
+ };
+ frame.frame=requestAnimationFrame(step)
+}
+function cancelGestureSmoothing(state){
+ const frame=state?.smoothing;if(!frame)return;
+ if(frame.frame)cancelAnimationFrame(frame.frame);
+ state.smoothing=null
+}
+function paintSpaceGesture(state,progress){
+ const width=innerWidth,offset=progress*width,direction=state.direction;
  $('#wall').style.setProperty('--space-swipe-x',`${-direction*offset}px`);
  state.incomingWall.style.setProperty('--space-swipe-x',`${direction*(width-offset)}px`);
  Object.values(wins).forEach(win=>{
@@ -135,6 +162,7 @@ function updateSpaceGesture(state,progress){
  })
 }
 function clearSpaceGesture(state){
+ cancelGestureSmoothing(state);
  document.body.classList.remove('space-swipe-active','space-swipe-settling');
  $('#wall').classList.remove('space-swipe-outgoing');
  $('#wall').style.removeProperty('--space-swipe-x');
@@ -142,11 +170,39 @@ function clearSpaceGesture(state){
  Object.values(wins).forEach(win=>{
   win.classList.remove('space-swipe','space-swipe-settling');
   win.style.removeProperty('--space-swipe-x');
+  ['--vibe-w','--vibe-h','--vibe-x','--vibe-y'].forEach(property=>win.style.removeProperty(property));
   if(Number(win.dataset.space)===activeSpace&&!win.classList.contains('min'))win.classList.remove('space-hidden');
   else win.classList.add('space-hidden')
  });
  if(spaceTransition===state){spaceTransition=null;document.documentElement.style.removeProperty('--space-settle')}
  spaceSettleTimer=null;syncFullscreenChrome()
+}
+let wallpaperPhoto={url:'',w:0,h:0};
+/* The fixed window glass sizes a photo with cover against the viewport, so emulating it without
+   background-attachment:fixed needs the photo's natural size. */
+function probeWallpaper(url){
+ if(!url){wallpaperPhoto={url:'',w:0,h:0};return}
+ if(wallpaperPhoto.url===url)return;
+ wallpaperPhoto={url,w:0,h:0};
+ const probe=new Image();
+ probe.onload=()=>{if(wallpaperPhoto.url===url&&probe.naturalWidth&&probe.naturalHeight)wallpaperPhoto={url,w:probe.naturalWidth,h:probe.naturalHeight}};
+ probe.src=url
+}
+/* A fixed wallpaper is repainted for every window on every frame of a desktop swipe, and a transformed
+   window cannot keep a viewport-fixed background steady. For the length of the swipe the same rectangle is
+   painted as a scroll-attached background, so the window and its glass travel as one layer and land exactly
+   where the fixed copy sat when the gesture started. */
+function prepareSwipeVibrancy(win){
+ const viewWidth=innerWidth,viewHeight=innerHeight;
+ let width=viewWidth*1.2,height=viewHeight*1.2;
+ if(wallpaperPhoto.w&&wallpaperPhoto.h){
+  const cover=Math.max(viewWidth/wallpaperPhoto.w,viewHeight/wallpaperPhoto.h);
+  width=wallpaperPhoto.w*cover;height=wallpaperPhoto.h*cover
+ }
+ win.style.setProperty('--vibe-w',`${width}px`);
+ win.style.setProperty('--vibe-h',`${height}px`);
+ win.style.setProperty('--vibe-x',`${(viewWidth-width)/2-win.offsetLeft}px`);
+ win.style.setProperty('--vibe-y',`${(viewHeight-height)/2-win.offsetTop}px`)
 }
 function beginSpaceGesture(direction){
  if(lpOn()||![-1,1].includes(direction))return null;
@@ -161,10 +217,10 @@ function beginSpaceGesture(direction){
  Object.values(wins).forEach(win=>{
   const desktop=Number(win.dataset.space);
   if((desktop===state.from||desktop===state.to)&&!win.classList.contains('min')&&!win.classList.contains('closing')){
-   win.classList.remove('space-hidden','space-leaving','space-entering');win.style.display='';win.classList.add('space-swipe')
+   win.classList.remove('space-hidden','space-leaving','space-entering');win.style.display='';win.classList.add('space-swipe');prepareSwipeVibrancy(win)
   }
  });
- updateSpaceGesture(state,0);syncFullscreenChrome();
+ updateSpaceGesture(state,0);paintSpaceGesture(state,0);syncFullscreenChrome();
  return state
 }
 function finishSpaceGesture(commit,immediate=false){
@@ -178,7 +234,9 @@ function finishSpaceGesture(commit,immediate=false){
  document.body.classList.add('space-swipe-settling');
  Object.values(wins).forEach(win=>{if(win.classList.contains('space-swipe'))win.classList.add('space-swipe-settling')});
  state.incomingWall.classList.add('space-swipe-settling');
- updateSpaceGesture(state,completed?1:0);
+ /* The settle transition starts from the last painted frame, so a lagging filter still lands exactly. */
+ cancelGestureSmoothing(state);
+ paintSpaceGesture(state,completed?1:0);
  if(completed&&window.silk?.platform==='linux'&&silk.workspaces){
   silk.workspaces.switchTo(state.to).then(result=>{if(!result?.ok)console.error('Could not switch desktop workspace:',result?.error||'unknown error')}).catch(error=>console.error('Could not switch desktop workspace:',error))
  }
@@ -298,7 +356,7 @@ function maxToggle(el){
 function dragify(el,h){
  h.addEventListener('dblclick',e=>{if(cfg.titlebarDoubleClick&&!e.target.closest('.dot,button,input'))maxToggle(el)});
  h.addEventListener('pointerdown',e=>{
-  if(e.target.closest('.dot,button,input')||el.dataset.max||el.dataset.fullscreen)return;
+  if(e.button!==0||e.target.closest('.dot,button,input')||el.dataset.max||el.dataset.fullscreen)return;
   const sx=e.clientX-el.offsetLeft,sy=e.clientY-el.offsetTop;
   el.classList.add('drag');h.setPointerCapture(e.pointerId);
   const mv=ev=>{const left=Math.max(8,Math.min(innerWidth-el.offsetWidth-8,ev.clientX-sx)),top=Math.max(28,Math.min(innerHeight-el.offsetHeight-8,ev.clientY-sy));el.style.left=left+'px';el.style.top=top+'px'};
@@ -377,8 +435,12 @@ document.addEventListener('pointermove',e=>{
 document.addEventListener('pointerleave',()=>{mx=null;kickMagnify()});
 measureDock();kickMagnify();
 /* clock */
-function clk(){const now=new Date(),date=cfg.showDate?now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+' ':'';
- $('#clock').textContent=date+now.toLocaleTimeString([],{hour:cfg.clock24?'2-digit':'numeric',minute:'2-digit',...(cfg.clockSeconds?{second:'2-digit'}:{}),...(cfg.clock24?{hourCycle:'h23'}:{})})}
+function clk(){const clock=$('#clock');if(!clock)return;
+ let text=clock.querySelector('.clock-text');
+ if(!text){clock.innerHTML='<span class="clock-text"></span><i class="clock-badge" hidden></i>';text=clock.querySelector('.clock-text')}
+ const now=new Date(),date=cfg.showDate?now.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})+' ':'';
+ text.textContent=date+now.toLocaleTimeString([],{hour:cfg.clock24?'2-digit':'numeric',minute:'2-digit',...(cfg.clockSeconds?{second:'2-digit'}:{}),...(cfg.clock24?{hourCycle:'h23'}:{})});
+ syncNoticeBadge()}
 setInterval(()=>$('#clock')&&clk(),1000);
 /* apps */
 let openTab=null;
@@ -432,7 +494,10 @@ const IC={
  cc:'<svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x=".7" y=".7" width="14.600" height="5" rx="2.500"/><circle cx="4" cy="3.200" r="1.300" fill="currentColor" stroke="none"/><rect x=".7" y="8.300" width="14.600" height="5" rx="2.500"/><circle cx="12" cy="10.800" r="1.300" fill="currentColor" stroke="none"/></svg>',
  srch:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round"><circle cx="6" cy="6" r="4.600"/><path d="m9.500 9.500 3.300 3.300"/></svg>',
  chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 4 8 8-8 8"/></svg>',
- mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="m16 10 5 5m0-5-5 5"/></svg>'};
+ mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="m16 10 5 5m0-5-5 5"/></svg>',
+ mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>',
+ camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h2.8l1.4-2h7.6l1.4 2H20a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13.2" r="3.3"/></svg>',
+ speaker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.5" width="14" height="19" rx="3"/><circle cx="12" cy="14.5" r="4"/><circle cx="12" cy="7" r="1.3" fill="currentColor" stroke="none"/></svg>'};
 let curApp=null,dd=null,ddKey=null,curMenus={},bri=100,volume=50,lastAudibleVolume=50,hardwareBrightness=false,batInfo=null,nativeBar=null,nativeChild=[],nativeClearPending=false;
 const mleft=$('#mleft'),mright=$('#mright');
 const toggleLite=()=>{cfg.lite=document.body.classList.toggle('lite');save()};
@@ -505,9 +570,9 @@ function menusFor(id){
  const A=id?apps[id].n:'SilkOS',w=id&&wins[id],b=id==='browser'&&w?w._b:null,x=!w,m={};
  const cl=()=>w&&w.querySelector('.dot.r').click();
  m[A]=[['About '+A,()=>launch('settings')],'-',['Hide '+A,()=>w&&minimize(w,id),'',x],['Quit '+A,cl,'',x]];
- m.File=b?[['New Tab',()=>b.add(''),'Ctrl+T'],['Open Location…',b.addr,'Ctrl+L'],['Close Tab',b.closeCur,'Ctrl+W'],['Add Bookmark',b.addBm,'Ctrl+D'],'-',['Import Bookmarks…',b.impBm],['Import History…',b.impHist]]:[['Close Window',cl,'',x]];
+ m.File=b?[['New Tab',()=>b.add(''),'Ctrl+T'],['Open Location…',b.addr,'Ctrl+L'],['Close Tab',b.closeCur,'Ctrl+W'],['Add Bookmark',b.addBm,'Ctrl+D'],'-',['Import Bookmarks…',b.impBm],['Import History…',b.impHist]]:id==='finder'&&w?[['New Folder',()=>w._newFolder?.(),'Shift+Ctrl+N'],['New Window',()=>launch('finder')],'-',['Move to Trash',()=>w._trashSelected?.()],['Rename',()=>w._renameSelected?.()],'-',['Find',()=>w._focusSearch?.(),'Ctrl+F'],'-',['Close Window',cl]]:[['Close Window',cl,'',x]];
  m.Edit=[['Undo',()=>document.execCommand('undo')],['Redo',()=>document.execCommand('redo')],'-',['Cut',()=>document.execCommand('cut')],['Copy',()=>document.execCommand('copy')],['Paste',()=>document.execCommand('paste')],['Select All',()=>document.execCommand('selectAll')]];
- m.View=(b?[['Reload Page',b.reload,'Ctrl+R'],['Show Tab Overview',b.ov],['Toggle Sidebar',b.side],'-']:[]).concat([['Enter Full Screen',toggleFS,'F11']]);
+ m.View=(b?[['Reload Page',b.reload,'Ctrl+R'],['Show Tab Overview',b.ov],['Toggle Sidebar',b.side],'-']:id==='finder'&&w?[['Refresh',()=>w._refresh?.(),'Ctrl+R'],[(cfg.showHiddenFiles?'✓ ':'    ')+'Show Hidden Files',()=>w._toggleHiddenFiles?.()],'-']:[]).concat([['Enter Full Screen',toggleFS,'F11']]);
  m.Window=[['Minimize',()=>w&&minimize(w,id),'',x],['Zoom',()=>w&&maxToggle(w),'',x],'-'].concat(Object.keys(wins).map(k=>[(k===id?'✓ ':'    ')+apps[k].n,()=>launch(k)]));
  m.Help=[['Search',()=>spot(true),'Ctrl+K'],['SilkOS Help',()=>launch('settings')]];
  return m}
@@ -638,7 +703,7 @@ function setVolume(value,immediate=false,statusEl=null){
  },immediate);
 }
 function ccEl(){const el=document.createElement('div');el.className='cc';el.setAttribute('role','group');el.setAttribute('aria-label','Control Center');
- el.innerHTML=`<div class="cc-main"><div class="cc-radio cc-tile"><div class="cc-service" data-service="wifi"><button type="button" class="cc-service-main" data-radio-open="wifi" aria-haspopup="true" aria-expanded="false"><span class="cc-glyph">${IC.wifi}</span><span class="cc-copy"><strong>Wi-Fi</strong><small>Checking…</small></span></button><button type="button" class="cc-more" data-radio-open="wifi" aria-label="Choose a Wi-Fi network">${IC.chevron}</button></div><div class="cc-service" data-service="bluetooth"><button type="button" class="cc-service-main" data-radio-open="bluetooth" aria-haspopup="true" aria-expanded="false"><span class="cc-glyph">${IC.bluetooth}</span><span class="cc-copy"><strong>Bluetooth</strong><small>Checking…</small></span></button><button type="button" class="cc-more" data-radio-open="bluetooth" aria-label="Show nearby Bluetooth devices">${IC.chevron}</button></div><div class="cc-service" data-off><button type="button" class="cc-service-main" disabled><span class="cc-glyph">${IC.airdrop}</span><span class="cc-copy"><strong>AirDrop</strong><small>Not available</small></span></button></div></div><button type="button" class="cc-dnd cc-tile${cfg.quietMode?' on':''}" data-feature="quiet" aria-pressed="${!!cfg.quietMode}"><span class="cc-glyph">${IC.moon}</span><span class="cc-copy"><strong>Do Not Disturb</strong><small>${cfg.quietMode?'On':'Off'}</small></span></button><div class="cc-duo"><div class="cc-mini cc-tile"><span class="cc-glyph">${IC.keyboard}</span><span>Keyboard Brightness</span><small class="cc-kbd-value">Checking…</small><input class="cc-kbd-range" type="range" min="0" max="100" value="0" aria-label="Keyboard brightness" disabled hidden></div><button type="button" class="cc-mini cc-tile" disabled><span class="cc-glyph">${IC.mirror}</span><span>Screen Mirroring</span></button></div><section class="cc-slider cc-tile"><div class="cc-slider-head"><span>Display</span><small class="cc-bright-value">${bri}%</small></div><div class="cc-slider-row"><span class="cc-cap">${IC.sun}<i></i><input class="cc-range cc-brightness" type="range" min="5" max="100" value="${bri}" aria-label="Brightness"></span></div></section><section class="cc-slider cc-tile"><div class="cc-slider-head"><span>Sound</span><small class="cc-volume-value">Loading…</small></div><div class="cc-slider-row"><span class="cc-cap">${IC.volumeLow}<i></i><input class="cc-range cc-volume" type="range" min="0" max="100" value="${volume}" aria-label="Volume"></span><button type="button" class="cc-out${cfg.muted?' on':''}" data-a="mute" aria-label="Mute output">${IC.mute}</button></div></section><section class="cc-media cc-tile"><span class="cc-media-art">${IC.music}</span><span class="cc-media-meta"><strong class="cc-track">No media playing</strong><small class="cc-artist">Open a player to see controls</small></span><span class="cc-media-actions"><button data-media="previous" aria-label="Previous track" disabled>${IC.previous}</button><button data-media="play-pause" aria-label="Play or pause" disabled>${IC.play}</button><button data-media="next" aria-label="Next track" disabled>${IC.next}</button></span></section><div class="cc-foot"><p class="cc-status" role="status" aria-live="polite"></p><button type="button" class="cc-chip cc-lock" data-a="lock"><span class="cc-lock-icon">${IC.lock}</span>Lock Screen</button></div></div><div class="cc-detail"><section class="cc-pane" data-radio-pane="wifi" hidden aria-label="Wi-Fi networks"><header class="cc-pane-head"><button type="button" class="cc-back" data-radio-close aria-label="Back to Control Center">${IC.chevron}</button><strong>Wi-Fi</strong><button type="button" class="cc-chip" data-radio-refresh="wifi">Scan</button></header><div class="cc-row"><span class="cc-row-label">Wi-Fi</span><label class="cc-switch"><input type="checkbox" data-radio-switch="wifi" aria-label="Turn Wi-Fi on or off"><i></i></label></div><p class="cc-pane-info" data-radio-info="wifi">Scan for nearby networks.</p><div class="cc-pane-body"><div class="cc-group" data-radio-current="wifi" hidden><h6>Preferred Network</h6><div data-radio-keep="wifi"></div></div><div class="cc-group" data-radio-other="wifi" hidden><h6>Other Networks</h6><div class="cc-pane-list" data-radio-list="wifi"></div></div></div><form class="cc-join" hidden><strong></strong><input type="password" name="password" autocomplete="current-password" aria-label="Wi-Fi password" placeholder="Password"><button type="submit" class="cc-chip">Join</button><button type="button" class="cc-chip" data-wifi-cancel>Cancel</button></form></section><section class="cc-pane" data-radio-pane="bluetooth" hidden aria-label="Bluetooth devices"><header class="cc-pane-head"><button type="button" class="cc-back" data-radio-close aria-label="Back to Control Center">${IC.chevron}</button><strong>Bluetooth</strong><button type="button" class="cc-chip" data-radio-refresh="bluetooth">Scan</button></header><div class="cc-row"><span class="cc-row-label">Bluetooth</span><label class="cc-switch"><input type="checkbox" data-radio-switch="bluetooth" aria-label="Turn Bluetooth on or off"><i></i></label></div><p class="cc-pane-info" data-radio-info="bluetooth">Scan for nearby devices.</p><div class="cc-pane-body"><div class="cc-pane-list" data-radio-list="bluetooth"></div></div></section></div>`;
+ el.innerHTML=`<div class="cc-main"><div class="cc-radio cc-tile"><div class="cc-service" data-service="wifi"><button type="button" class="cc-service-main" data-radio-open="wifi" aria-haspopup="true" aria-expanded="false"><span class="cc-glyph">${IC.wifi}</span><span class="cc-copy"><strong>Wi-Fi</strong><small>Checking…</small></span></button><button type="button" class="cc-more" data-radio-open="wifi" aria-label="Choose a Wi-Fi network">${IC.chevron}</button></div><div class="cc-service" data-service="bluetooth"><button type="button" class="cc-service-main" data-radio-open="bluetooth" aria-haspopup="true" aria-expanded="false"><span class="cc-glyph">${IC.bluetooth}</span><span class="cc-copy"><strong>Bluetooth</strong><small>Checking…</small></span></button><button type="button" class="cc-more" data-radio-open="bluetooth" aria-label="Show nearby Bluetooth devices">${IC.chevron}</button></div><div class="cc-service" data-off><button type="button" class="cc-service-main" disabled><span class="cc-glyph">${IC.airdrop}</span><span class="cc-copy"><strong>AirDrop</strong><small>Not available</small></span></button></div></div><button type="button" class="cc-dnd cc-tile${cfg.quietMode?' on':''}" data-feature="quiet" aria-pressed="${!!cfg.quietMode}"><span class="cc-glyph">${IC.moon}</span><span class="cc-copy"><strong>Do Not Disturb</strong><small>${cfg.quietMode?'On':'Off'}</small></span></button><div class="cc-duo"><div class="cc-mini cc-tile"><span class="cc-glyph">${IC.keyboard}</span><span>Keyboard Brightness</span><small class="cc-kbd-value">Checking…</small><input class="cc-kbd-range" type="range" min="0" max="100" value="0" aria-label="Keyboard brightness" disabled hidden></div><button type="button" class="cc-mini cc-tile" disabled><span class="cc-glyph">${IC.mirror}</span><span>Screen Mirroring</span></button></div><section class="cc-slider cc-tile"><div class="cc-slider-head"><span>Display</span><small class="cc-bright-value">${bri}%</small></div><div class="cc-slider-row"><span class="cc-cap">${IC.sun}<i></i><input class="cc-range cc-brightness" type="range" min="5" max="100" value="${bri}" aria-label="Brightness"></span></div></section><section class="cc-slider cc-tile"><div class="cc-slider-head"><span>Sound</span><small class="cc-volume-value">Loading…</small></div><div class="cc-slider-row"><span class="cc-cap">${IC.volumeLow}<i></i><input class="cc-range cc-volume" type="range" min="0" max="100" value="${volume}" aria-label="Volume"></span><button type="button" class="cc-out${cfg.muted?' on':''}" data-a="mute" aria-label="Mute output">${IC.mute}</button><button type="button" class="cc-out cc-out-more" data-radio-open="sound" aria-haspopup="true" aria-expanded="false" aria-label="Choose an audio output">${IC.chevron}</button></div></section><section class="cc-media cc-tile"><span class="cc-media-art">${IC.music}</span><span class="cc-media-meta"><strong class="cc-track">No media playing</strong><small class="cc-artist">Open a player to see controls</small></span><span class="cc-media-actions"><button data-media="previous" aria-label="Previous track" disabled>${IC.previous}</button><button data-media="play-pause" aria-label="Play or pause" disabled>${IC.play}</button><button data-media="next" aria-label="Next track" disabled>${IC.next}</button></span></section><div class="cc-foot"><p class="cc-status" role="status" aria-live="polite"></p><button type="button" class="cc-chip cc-lock" data-a="lock"><span class="cc-lock-icon">${IC.lock}</span>Lock Screen</button></div></div><div class="cc-detail"><section class="cc-pane" data-radio-pane="wifi" hidden aria-label="Wi-Fi networks"><header class="cc-pane-head"><button type="button" class="cc-back" data-radio-close aria-label="Back to Control Center">${IC.chevron}</button><strong>Wi-Fi</strong><button type="button" class="cc-chip" data-radio-refresh="wifi">Scan</button></header><div class="cc-row"><span class="cc-row-label">Wi-Fi</span><label class="cc-switch"><input type="checkbox" data-radio-switch="wifi" aria-label="Turn Wi-Fi on or off"><i></i></label></div><p class="cc-pane-info" data-radio-info="wifi">Scan for nearby networks.</p><div class="cc-pane-body"><div class="cc-portal" data-portal hidden><span data-portal-label>This network needs a sign-in.</span><button type="button" class="cc-chip" data-portal-open>Sign In</button></div><div class="cc-group" data-radio-current="wifi" hidden><h6>Preferred Network</h6><div data-radio-keep="wifi"></div></div><div class="cc-group" data-radio-other="wifi" hidden><h6>Other Networks</h6><div class="cc-pane-list" data-radio-list="wifi"></div></div><button type="button" class="cc-net cc-net-other" data-wifi-other><span class="cc-net-mark">${I.plus}</span><span class="cc-net-name">Join Other Network…</span></button></div><form class="cc-join" hidden><strong></strong><input type="text" name="ssid" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Network name" placeholder="Network name" hidden><input type="password" name="password" autocomplete="current-password" aria-label="Wi-Fi password" placeholder="Password"><label class="cc-hidden" hidden><input type="checkbox" name="hidden"> Hidden network</label><button type="submit" class="cc-chip">Join</button><button type="button" class="cc-chip" data-wifi-cancel>Cancel</button></form></section><section class="cc-pane" data-radio-pane="bluetooth" hidden aria-label="Bluetooth devices"><header class="cc-pane-head"><button type="button" class="cc-back" data-radio-close aria-label="Back to Control Center">${IC.chevron}</button><strong>Bluetooth</strong><button type="button" class="cc-chip" data-radio-refresh="bluetooth">Scan</button></header><div class="cc-row"><span class="cc-row-label">Bluetooth</span><label class="cc-switch"><input type="checkbox" data-radio-switch="bluetooth" aria-label="Turn Bluetooth on or off"><i></i></label></div><p class="cc-pane-info" data-radio-info="bluetooth">Scan for nearby devices.</p><div class="cc-pane-body"><div class="cc-pane-list" data-radio-list="bluetooth"></div></div></section><section class="cc-pane" data-radio-pane="sound" hidden aria-label="Audio devices"><header class="cc-pane-head"><button type="button" class="cc-back" data-radio-close aria-label="Back to Control Center">${IC.chevron}</button><strong>Sound</strong><button type="button" class="cc-chip" data-audio-refresh>Refresh</button></header><p class="cc-pane-info" data-audio-info>Choose where sound plays and records.</p><div class="cc-pane-body"><div class="cc-group"><h6>Output</h6><div class="cc-pane-list" data-audio-list="output"></div></div><div class="cc-group"><h6>Input</h6><div class="cc-pane-list" data-audio-list="input"></div></div></div></section></div>`;
  const status=el.querySelector('.cc-status'),brightness=el.querySelector('.cc-brightness'),volumeSlider=el.querySelector('.cc-volume');
  const setStatus=text=>{status.textContent=text||''};
  /* The capsule fill is painted from the value because a native range cannot style its own track fill. */
@@ -653,11 +718,56 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
     back from the tile, which would be one step behind. */
  const toggleRadio=async(name,read,write,next)=>{const box=radioSwitch(name),label=el.querySelector(`[data-service="${name}"] small`);box.disabled=true;label.textContent='Updating…';try{const result=await write(next);if(!result?.available){setStatus(result?.error||`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);await read();return}await read();setStatus('')}catch(error){console.error(`Could not change ${name} state:`,error);box.checked=!next;box.disabled=false;label.textContent='Could not change';setStatus(`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`)}};
  const CC_PANE_MS=320;
+ /* A pane replaces the tiles, so the popover should only be as tall as what it shows. The pane is laid
+    out by itself once, its natural height is capped to the room below the menu bar, and the difference
+    is animated. Any scan or form that changes the pane's content measures again. */
+ const paneHeight=name=>{
+  const pane=el.querySelector(`.cc-pane[data-radio-pane="${name}"]`);
+  if(!pane)return 0;
+  const pad=parseFloat(getComputedStyle(el).getPropertyValue('--cc-pad'))||9;
+  const previous=el.style.height;
+  el.classList.add('measuring');
+  el.style.height='auto';
+  const natural=Math.ceil(pane.getBoundingClientRect().height+pad*2);
+  el.style.height=previous;
+  el.classList.remove('measuring');
+  return natural
+ };
+ const fitPaneHeight=()=>{
+  if(!el.classList.contains('detail-open'))return;
+  const pane=[...el.querySelectorAll('.cc-pane')].find(item=>!item.hidden);
+  if(!pane)return;
+  const room=Math.max(180,innerHeight-el.getBoundingClientRect().top-12);
+  el.style.height=`${Math.min(paneHeight(pane.dataset.radioPane),room)}px`
+ };
  /* The radio list is a pane that slides over the tiles, not another tile appended under them, which is
     what made the old popover grow mid-screen and look detached from the switch that opened it. */
- const openRadioPane=name=>{el.querySelectorAll('.cc-pane').forEach(pane=>pane.hidden=pane.dataset.radioPane!==name);el.classList.add('detail-open');el.querySelectorAll('[data-radio-open]').forEach(button=>button.setAttribute('aria-expanded',String(button.dataset.radioOpen===name)));if(name==='wifi')loadWifiNetworks(!wifiList.childElementCount);else loadBluetoothDevices()};
- const closeRadioPane=()=>{if(!el.classList.contains('detail-open'))return;el.classList.remove('detail-open');el.querySelectorAll('[data-radio-open]').forEach(button=>button.setAttribute('aria-expanded','false'));setTimeout(()=>{if(!el.classList.contains('detail-open'))el.querySelectorAll('.cc-pane').forEach(pane=>{pane.hidden=true})},CC_PANE_MS)};
- const wifiList=el.querySelector('[data-radio-list="wifi"]'),wifiKeep=el.querySelector('[data-radio-keep="wifi"]'),wifiGroup=el.querySelector('[data-radio-current="wifi"]'),wifiOther=wifiList.parentElement,wifiInfo=el.querySelector('[data-radio-info="wifi"]'),wifiForm=el.querySelector('.cc-join'),wifiPassword=wifiForm.querySelector('input');
+ const openRadioPane=name=>{
+  const from=el.offsetHeight;
+  el.querySelectorAll('.cc-pane').forEach(pane=>pane.hidden=pane.dataset.radioPane!==name);
+  el.style.height=`${from}px`;el.classList.add('detail-open');
+  el.querySelectorAll('[data-radio-open]').forEach(button=>button.setAttribute('aria-expanded',String(button.dataset.radioOpen===name)));
+  if(name==='wifi'){paintPortalBanner();loadWifiNetworks(!wifiList.childElementCount)}
+  else if(name==='bluetooth')loadBluetoothDevices();
+  else loadAudioDevices();
+  fitPaneHeight()
+ };
+ const closeRadioPane=()=>{
+  if(!el.classList.contains('detail-open'))return;
+  const from=el.offsetHeight;
+  el.classList.remove('detail-open');
+  el.style.height='auto';void el.offsetHeight;
+  const target=el.offsetHeight;
+  el.style.height=`${from}px`;void el.offsetHeight;el.style.height=`${target}px`;
+  el.querySelectorAll('[data-radio-open]').forEach(button=>button.setAttribute('aria-expanded','false'));
+  setTimeout(()=>{
+   if(el.classList.contains('detail-open'))return;
+   el.style.height='';
+   el.querySelectorAll('.cc-pane').forEach(pane=>{pane.hidden=true})
+  },CC_PANE_MS)
+ };
+ const wifiList=el.querySelector('[data-radio-list="wifi"]'),wifiKeep=el.querySelector('[data-radio-keep="wifi"]'),wifiGroup=el.querySelector('[data-radio-current="wifi"]'),wifiOther=wifiList.parentElement,wifiInfo=el.querySelector('[data-radio-info="wifi"]'),wifiForm=el.querySelector('.cc-join'),wifiPassword=wifiForm.querySelector('input[name="password"]');
+ const wifiSsid=wifiForm.querySelector('input[name="ssid"]'),wifiHiddenLabel=wifiForm.querySelector('.cc-hidden'),wifiHidden=wifiHiddenLabel.querySelector('input'),wifiJoinTitle=wifiForm.querySelector('strong');
  /* Four bars lit by signal strength, the way macOS draws the list. */
  const signalLevel=signal=>Math.max(1,Math.min(4,Math.ceil(Math.max(0,Number(signal)||0)/25)));
  function netRow(network){
@@ -665,19 +775,35 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
   item.title=`${network.ssid} · ${network.signal}% · ${network.security||'Open'}`;
   item.innerHTML=`<span class="cc-net-mark">${network.active?IC.wifi:''}</span><span class="cc-net-name"></span><span class="cc-net-side">${network.security?`<span class="cc-net-lock">${IC.lock}</span>`:''}<span class="cc-bars" data-level="${signalLevel(network.signal)}"><i></i><i></i><i></i><i></i></span>${network.active?'<span class="cc-net-check">✓</span>':''}</span>`;
   item.querySelector('.cc-net-name').textContent=network.ssid;
-  item.onclick=()=>{wifiForm.querySelector('strong').textContent=network.ssid;wifiPassword.hidden=!network.security;wifiPassword.required=!!network.security;wifiPassword.value='';wifiForm.hidden=false;if(network.security)wifiPassword.focus();else connectToWifi(network.ssid)};
+  item.onclick=()=>network.security?openJoinForm(network.ssid,true):connectToWifi(network.ssid);
   return item;
  }
- async function connectToWifi(ssid,password=''){
+ /* One form serves a scanned network and a hand-typed one; only the hand-typed path shows the name
+    field and the hidden-network switch. */
+ function openJoinForm(ssid,security,manual=false){
+  wifiForm.classList.toggle('manual',manual);
+  wifiJoinTitle.textContent=manual?'Join Other Network':ssid;
+  wifiJoinTitle.hidden=manual;
+  wifiSsid.hidden=!manual;wifiSsid.required=manual;wifiSsid.value='';
+  wifiHiddenLabel.hidden=!manual;wifiHidden.checked=false;
+  wifiPassword.hidden=!manual&&!security;
+  wifiPassword.required=!manual&&!!security;
+  wifiPassword.value='';
+  /* The form contains <input name="hidden">, so form.hidden resolves to that control, not the attribute. */
+  wifiForm.removeAttribute('hidden');fitPaneHeight();
+  setTimeout(()=>{(manual?wifiSsid:wifiPassword.hidden?wifiForm.querySelector('button[type="submit"]'):wifiPassword).focus()},30)
+ }
+ async function connectToWifi(ssid,password='',hidden=false){
   wifiInfo.textContent=`Connecting to ${ssid}…`;
-  try{const result=await silk.connectWifi(ssid,password);if(!result?.ok)throw new Error(result?.error||'Could not connect to this network.');wifiForm.hidden=true;wifiPassword.value='';await refreshWifi();const message=`Connected to ${ssid}.`;await loadWifiNetworks(true);wifiInfo.textContent=message}
+  try{const result=await silk.connectWifi(ssid,password,hidden);if(!result?.ok)throw new Error(result?.error||'Could not connect to this network.');wifiForm.setAttribute('hidden','');wifiPassword.value='';wifiSsid.value='';await refreshWifi();void checkPortal();const message=`Connected to ${ssid}.`;await loadWifiNetworks(true);wifiInfo.textContent=message}
   catch(error){console.error('Could not connect to Wi-Fi:',error);wifiInfo.textContent=error.message||'Could not connect to this network.'}
+  fitPaneHeight()
  }
  /* nmcli can hold a rescan for seconds, so opening the pane reuses the last list when it has one and only
     the Scan chip - or an empty list - asks for a fresh one. */
  async function loadWifiNetworks(rescan=true){
-  wifiInfo.textContent=rescan?'Scanning for Wi-Fi networks…':'Checking for new networks…';wifiForm.hidden=true;wifiGroup.hidden=!wifiKeep.childElementCount;wifiOther.hidden=!wifiList.childElementCount;
-  if(!window.silk||silk.platform!=='linux'||!silk.wifiNetworks){wifiGroup.hidden=true;wifiOther.hidden=true;wifiList.replaceChildren();wifiKeep.replaceChildren();wifiInfo.textContent='Wi-Fi scanning requires the Linux desktop app.';return}
+  wifiInfo.textContent=rescan?'Scanning for Wi-Fi networks…':'Checking for new networks…';wifiForm.setAttribute('hidden','');wifiGroup.hidden=!wifiKeep.childElementCount;wifiOther.hidden=!wifiList.childElementCount;
+  if(!window.silk||silk.platform!=='linux'||!silk.wifiNetworks){wifiGroup.hidden=true;wifiOther.hidden=true;wifiList.replaceChildren();wifiKeep.replaceChildren();wifiInfo.textContent='Wi-Fi scanning requires the Linux desktop app.';fitPaneHeight();return}
   try{
    const result=await silk.wifiNetworks();if(!result?.available)throw new Error(result?.error||'Wi-Fi is unavailable.');
    wifiList.replaceChildren();wifiKeep.replaceChildren();wifiGroup.hidden=wifiOther.hidden=true;
@@ -688,27 +814,98 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
    wifiInfo.textContent=others.length?'Select a network to connect.':(joined.length?`Connected to ${joined[0].ssid}.`:'No Wi-Fi networks found. Try scanning again.');
    others.forEach(network=>wifiList.appendChild(netRow(network)));wifiOther.hidden=!others.length
   }catch(error){console.error('Could not scan for Wi-Fi networks:',error);wifiInfo.textContent=error.message||'Could not scan for Wi-Fi networks.'}
+  finally{fitPaneHeight()}
  }
- wifiForm.onsubmit=event=>{event.preventDefault();connectToWifi(wifiForm.querySelector('strong').textContent,wifiPassword.value)};
- wifiForm.querySelector('[data-wifi-cancel]').onclick=()=>{wifiForm.hidden=true;wifiPassword.value=''};
+ wifiForm.onsubmit=event=>{
+  event.preventDefault();
+  if(!wifiSsid.hidden){
+   const ssid=wifiSsid.value.trim();
+   if(!ssid){wifiInfo.textContent='Enter the network name.';wifiSsid.focus();return}
+   connectToWifi(ssid,wifiPassword.value,wifiHidden.checked);
+   return
+  }
+  connectToWifi(wifiJoinTitle.textContent,wifiPassword.value)
+ };
+ wifiForm.querySelector('[data-wifi-cancel]').onclick=()=>{wifiForm.setAttribute('hidden','');wifiPassword.value='';wifiSsid.value='';fitPaneHeight()};
+ el.querySelector('[data-wifi-other]').onclick=()=>openJoinForm('',false,true);
+ el.querySelector('[data-portal-open]').onclick=openPortal;
  const bluetoothList=el.querySelector('[data-radio-list="bluetooth"]'),bluetoothInfo=el.querySelector('[data-radio-info="bluetooth"]');
  async function loadBluetoothDevices(){
   bluetoothInfo.textContent='Scanning for Bluetooth devices…';bluetoothList.replaceChildren();
-  if(!window.silk||silk.platform!=='linux'||!silk.bluetoothDevices){bluetoothInfo.textContent='Bluetooth scanning requires the Linux desktop app.';return}
+  if(!window.silk||silk.platform!=='linux'||!silk.bluetoothDevices){bluetoothInfo.textContent='Bluetooth scanning requires the Linux desktop app.';fitPaneHeight();return}
   try{
    const result=await silk.bluetoothDevices();if(!result?.available)throw new Error(result?.error||'Bluetooth scanning is unavailable.');
    if(!result.devices?.length){bluetoothInfo.textContent='No nearby devices found. Put your device in pairing mode and scan again.';return}
    bluetoothInfo.textContent='Select a device to pair or connect.';
    result.devices.forEach(device=>{const item=document.createElement('button');item.type='button';item.className='cc-net';item.innerHTML='<span class="cc-net-name"></span><small>Connect</small>';item.querySelector('.cc-net-name').textContent=device.name;item.onclick=async()=>{item.disabled=true;bluetoothInfo.textContent=`Connecting to ${device.name}…`;try{const connected=await silk.connectBluetooth(device.address);if(!connected?.ok)throw new Error(connected?.error||'Could not connect to the Bluetooth device.');bluetoothInfo.textContent=`Connected to ${device.name}.`}catch(error){console.error('Could not connect Bluetooth device:',error);bluetoothInfo.textContent=error.message||'Could not connect to the Bluetooth device.'}finally{item.disabled=false}};bluetoothList.appendChild(item)})
   }catch(error){console.error('Could not scan for Bluetooth devices:',error);bluetoothInfo.textContent=error.message||'Could not scan for Bluetooth devices.'}
+  finally{fitPaneHeight()}
  }
+ const audioInfo=el.querySelector('[data-audio-info]');
+ /* Switching the default sink does not carry its volume into the Sound slider, which reads the default
+    through wpctl, so the slider is refreshed from the new sink after a switch. */
+ const refreshAudioOutput=async()=>{
+  if(!window.silk?.volume)return;
+  try{
+   const actual=await silk.volume();
+   if(!Number.isFinite(actual))return;
+   volume=cfg.volume=actual;cfg.muted=actual===0;
+   if(actual>0)lastAudibleVolume=cfg.lastAudibleVolume=actual;
+   volumeSlider.value=String(actual);
+   const label=el.querySelector('.cc-volume-value'),mute=el.querySelector('[data-a="mute"]');
+   if(label)label.textContent=`${actual}%`;
+   paintFill(volumeSlider);
+   if(mute)mute.classList.toggle('on',cfg.muted);
+   save()
+  }catch(error){console.error('Could not read the new audio output volume:',error)}
+ };
+ async function loadAudioDevices(){
+  audioInfo.textContent='Looking for audio devices…';
+  ['output','input'].forEach(kind=>el.querySelector(`[data-audio-list="${kind}"]`)?.replaceChildren());
+  if(!window.silk||silk.platform!=='linux'||!silk.audio){audioInfo.textContent='Audio routing requires the Linux desktop app.';fitPaneHeight();return}
+  try{
+   const result=await silk.audio.devices();
+   if(!result?.available)throw new Error(result?.error||'Audio routing is unavailable.');
+   const add=(kind,devices)=>{
+    const list=el.querySelector(`[data-audio-list="${kind}"]`);
+    if(!devices.length){list.innerHTML='<div class="cc-empty-row">No devices found.</div>';return}
+    devices.forEach(device=>{
+     const row=document.createElement('button');row.type='button';row.className='cc-net cc-audio'+(device.active?' on':'');
+     row.innerHTML=`<span class="cc-net-mark">${device.active?(kind==='output'?IC.speaker:IC.mic):''}</span><span class="cc-net-name"></span><span class="cc-net-side">${device.active?'<span class="cc-net-check">✓</span>':''}</span>`;
+     row.querySelector('.cc-net-name').textContent=device.description||device.name;
+     row.title=`${device.description||device.name}\n${device.name} · ${device.volume}%${device.muted?' · Muted':''}`;
+     row.onclick=async()=>{
+      if(device.active||row.disabled)return;
+      row.disabled=true;row.classList.add('busy');
+      try{
+       const switched=await silk.audio.select(kind,device.name);
+       if(!switched?.ok)throw new Error(switched?.error||'Could not switch audio devices.');
+       if(kind==='output')await refreshAudioOutput();
+       await loadAudioDevices();
+       audioInfo.textContent=`${kind==='output'?'Output':'Input'} changed to ${device.description||device.name}.`
+      }catch(error){
+       console.error('Could not switch audio device:',error);
+       audioInfo.textContent=error.message||'Could not switch audio devices.';
+       row.disabled=false;row.classList.remove('busy')
+      }
+     };
+     list.appendChild(row)
+    })
+   };
+   add('output',result.outputs||[]);
+   add('input',result.inputs||[]);
+   audioInfo.textContent='Choose where sound plays and records.'
+  }catch(error){console.error('Could not list audio devices:',error);audioInfo.textContent=error.message||'Could not list audio devices.'}
+  finally{fitPaneHeight()}
+ }
+ el.querySelector('[data-audio-refresh]').onclick=()=>loadAudioDevices();
  el.querySelectorAll('[data-radio-open]').forEach(button=>button.onclick=()=>openRadioPane(button.dataset.radioOpen));
  el.querySelectorAll('[data-radio-refresh]').forEach(button=>button.onclick=()=>button.dataset.radioRefresh==='wifi'?loadWifiNetworks(true):loadBluetoothDevices());
  el.querySelectorAll('[data-radio-close]').forEach(button=>button.onclick=closeRadioPane);
  /* Either transition changes what the list should hold, so the switch rescans: on to fill it, off to empty it. */
  el.querySelectorAll('[data-radio-switch]').forEach(box=>box.onchange=async()=>{const name=box.dataset.radioSwitch;await toggleRadio(name,name==='wifi'?refreshWifi:refreshBluetooth,enabled=>name==='wifi'?silk.wifi(enabled):silk.bluetooth(enabled),box.checked);if(name==='wifi')loadWifiNetworks(true)});
  const quiet=el.querySelector('[data-feature="quiet"]');
- quiet.onclick=()=>{cfg.quietMode=!cfg.quietMode;quiet.classList.toggle('on',cfg.quietMode);quiet.setAttribute('aria-pressed',String(cfg.quietMode));quiet.querySelector('small').textContent=cfg.quietMode?'On':'Off';quiet.classList.remove('pulse');void quiet.offsetWidth;quiet.classList.add('pulse');saveSettings(true)};
+ quiet.onclick=()=>{setQuietMode(!cfg.quietMode);quiet.classList.remove('pulse');void quiet.offsetWidth;quiet.classList.add('pulse')};
  el.querySelector('[data-a="lock"]').onclick=()=>lockScreen();
  const kbd=el.querySelector('.cc-kbd-range'),kbdValue=el.querySelector('.cc-kbd-value');
  const showKbd=value=>{kbd.hidden=false;kbd.value=String(value);kbdValue.textContent=`${value}%`};
@@ -718,7 +915,7 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
  kbd.oninput=()=>updateKbd(false);kbd.onchange=()=>updateKbd(true);
  const loadMedia=async()=>{const buttons=el.querySelectorAll('[data-media]');if(!window.silk||silk.platform!=='linux'||!silk.media){buttons.forEach(button=>button.disabled=true);return}try{const result=await silk.media();if(!el.isConnected)return;buttons.forEach(button=>button.disabled=!result?.available);el.querySelector('.cc-track').textContent=result?.available?result.title:'No media playing';el.querySelector('.cc-artist').textContent=result?.available?result.artist:'Open a player to see controls';if(result?.available){const play=el.querySelector('[data-media="play-pause"]');play.innerHTML=result.playing?IC.pause:IC.play;play.setAttribute('aria-label',result.playing?'Pause':'Play')}}catch(error){console.error('Could not read media status:',error);buttons.forEach(button=>button.disabled=true)}};
  el.querySelectorAll('[data-media]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{const result=await silk.media(button.dataset.media);if(!result?.available)setStatus('Media controls are unavailable.');await loadMedia()}catch(error){console.error('Could not control media playback:',error);setStatus('Could not control media playback.')}});
- refreshWifi();refreshBluetooth();loadMedia();
+ refreshWifi();refreshBluetooth();loadMedia();paintPortalBanner();updateQuietControls();
  const brightValue=el.querySelector('.cc-bright-value'),volumeValue=el.querySelector('.cc-volume-value'),muteButton=el.querySelector('[data-a="mute"]');
  const updateBri=immediate=>{brightValue.textContent=`${brightness.value}%`;paintFill(brightness);setBrightness(brightness.value,immediate,status)};
  brightness.oninput=()=>updateBri(false);brightness.onchange=()=>updateBri(true);
@@ -745,10 +942,401 @@ function fitPopup(el,x,y,alignRight=false){
  el.style.top=`${Math.max(margin,Math.min(innerHeight-height-margin,top))}px`;
  el.style.transformOrigin=alignRight?'top right':'top left';
 }
+/* Every right-click menu is the menu-bar dropdown under another name, so the shell has one menu
+   look, one outside-click rule and one close path. */
+function showContextMenu(items,x,y,alignRight=false){
+ if(!items||!items.length)return null;
+ closeDd(true);
+ const el=listEl(items);dd=el;ddKey='ctx';el.classList.add('dd');document.body.appendChild(el);
+ fitPopup(el,x,y,alignRight);requestAnimationFrame(()=>el.classList.add('on'));return el
+}
+/* ---- Notifications ----
+ * Banners and the clock's notification centre share one list. A banner is a look at a notice that
+ * already belongs to that list, so dismissing a banner never loses the notification. */
+const NOTICE_LIMIT=60;
+const notices=[];
+let noticeUnread=0,noticeSeq=0;
+document.body.insertAdjacentHTML('beforeend','<div id="toasts" role="region" aria-label="Notifications"></div>');
+const noticeGlyph=icon=>/^\s*</.test(String(icon||''))?icon:esc(icon||'');
+function notify(input){
+ const notice={
+  id:++noticeSeq,
+  app:input.app||'SilkOS',
+  title:String(input.title||'Notification'),
+  body:String(input.body||''),
+  icon:input.icon||IC.logo,
+  image:input.image||'',
+  actions:Array.isArray(input.actions)?input.actions.filter(action=>action&&typeof action.run==='function'):[],
+  time:new Date()
+ };
+ notices.unshift(notice);
+ if(notices.length>NOTICE_LIMIT)notices.length=NOTICE_LIMIT;
+ if(!cfg.quietMode){noticeUnread++;toastNotice(notice)}
+ syncNoticeBadge();
+ if(ddKey==='clock')paintNoticeCenter(dd);
+ return notice
+}
+window.silkNotify=notify;
+function noticeIcon(notice,className='ntoast-icon'){
+ const host=document.createElement('span');host.className=className;
+ if(/^\s*</.test(String(notice.icon)))host.innerHTML=notice.icon;else host.textContent=notice.icon;
+ return host
+}
+function toastNotice(notice){
+ const host=$('#toasts');
+ if(!host)return;
+ while(host.children.length>=3)host.lastElementChild.remove();
+ const toast=document.createElement('div');toast.className='ntoast glass';toast.setAttribute('role','status');
+ toast.innerHTML=`<span class="ntoast-src"></span><span class="ntoast-copy"><em class="ntoast-app"></em><strong></strong><p></p></span>${notice.image?'<img class="ntoast-thumb" alt="">':''}<button type="button" class="ntoast-x" aria-label="Dismiss notification">${I.x}</button>`;
+ toast.querySelector('.ntoast-src').append(noticeIcon(notice));
+ toast.querySelector('.ntoast-src').dataset.app=notice.app;
+ toast.querySelector('.ntoast-app').textContent=notice.app;
+ toast.querySelector('.ntoast-copy strong').textContent=notice.title;
+ toast.querySelector('.ntoast-copy p').textContent=notice.body;
+ toast.querySelector('.ntoast-copy p').hidden=!notice.body;
+ if(notice.image)toast.querySelector('.ntoast-thumb').src=notice.image;
+ const dismiss=()=>removeToast(toast);
+ toast.querySelector('.ntoast-x').onclick=event=>{event.stopPropagation();dismiss()};
+ toast.onclick=()=>{
+  if(notice.actions.length){const action=notice.actions[0];closeDd();setTimeout(action.run,80)}
+  dismiss()
+ };
+ let timer=setTimeout(dismiss,notice.actions.length?7600:5600);
+ toast.onpointerenter=()=>clearTimeout(timer);
+ toast.onpointerleave=()=>{timer=setTimeout(dismiss,2400)};
+ host.prepend(toast);
+}
+function removeToast(toast){
+ if(!toast||!toast.isConnected||toast.dataset.leaving)return;
+ toast.dataset.leaving='1';
+ /* Collapsing the card's own height lets the stack below slide up instead of jumping. */
+ const height=toast.offsetHeight,margin=getComputedStyle(toast).marginBottom;
+ toast.style.height=`${height}px`;toast.style.marginBottom=margin;toast.style.overflow='hidden';void toast.offsetHeight;
+ toast.classList.add('leaving');
+ toast.style.height='0px';toast.style.marginBottom='0px';
+ setTimeout(()=>toast.remove(),300)
+}
+function syncNoticeBadge(){
+ const badge=document.querySelector('#clock .clock-badge');
+ if(!badge)return;
+ const quiet=!!cfg.quietMode,unread=noticeUnread>0;
+ badge.hidden=!quiet&&!unread;
+ badge.classList.toggle('quiet',quiet);
+ badge.classList.toggle('unread',!quiet&&unread);
+ badge.innerHTML=quiet?IC.moon:'';
+ badge.title=quiet?'Do Not Disturb is on':unread?`${noticeUnread} unread notification${noticeUnread===1?'':'s'}`:'';
+}
+function markNoticesRead(){noticeUnread=0;syncNoticeBadge()}
+function updateQuietControls(){
+ document.querySelectorAll('[data-feature="quiet"]').forEach(button=>{
+  button.classList.toggle('on',!!cfg.quietMode);
+  button.setAttribute('aria-pressed',String(!!cfg.quietMode));
+  const small=button.querySelector('small');
+  if(small)small.textContent=cfg.quietMode?'On':'Off'
+ })
+}
+function setQuietMode(on){
+ cfg.quietMode=!!on;saveSettings(true);
+ if(cfg.quietMode)$('#toasts')?.replaceChildren();else noticeUnread=0;
+ syncNoticeBadge();updateQuietControls();
+ if(ddKey==='clock')paintNoticeCenter(dd)
+}
+function noticeGroup(time){
+ const now=new Date();
+ if(now-time<5*60*1000)return 'Now';
+ const day=date=>`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+ return day(now)===day(time)?'Earlier Today':time.toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'})
+}
+function paintNoticeCenter(el){
+ const scroll=el.querySelector('.nc-list')?.scrollTop||0;
+ el.replaceChildren();
+ const head=document.createElement('div');head.className='nc-head';
+ head.innerHTML='<strong>Notifications</strong>';
+ if(notices.length){const clear=document.createElement('button');clear.type='button';clear.className='nc-clear';clear.textContent='Clear All';clear.onclick=()=>{notices.length=0;noticeUnread=0;syncNoticeBadge();paintNoticeCenter(el)};head.append(clear)}
+ el.append(head);
+ if(cfg.quietMode){
+  const quiet=document.createElement('div');quiet.className='nc-quiet';
+  quiet.innerHTML=`<span class="nc-quiet-icon">${IC.moon}</span><span>Do Not Disturb is on. Notifications stay here without a banner.</span>`;
+  const off=document.createElement('button');off.type='button';off.className='nc-act';off.textContent='Turn Off';off.onclick=()=>setQuietMode(false);
+  quiet.append(off);el.append(quiet)
+ }
+ const cal=calEl();cal.className+=' nc-cal';el.append(cal);
+ const list=document.createElement('div');list.className='nc-list';
+ if(!notices.length){
+  list.innerHTML=`<div class="nc-empty">${IC.moon}<span>No Notifications</span><small>Alerts from SilkOS appear here.</small></div>`;
+ }else{
+  let label='';
+  notices.forEach(notice=>{
+   const group=noticeGroup(notice.time);
+   if(group!==label){label=group;const heading=document.createElement('div');heading.className='nc-date';heading.textContent=group;list.append(heading)}
+   const item=document.createElement('article');item.className='nc-item';
+   item.append(noticeIcon(notice));
+   const copy=document.createElement('div');copy.className='nc-copy';
+   const meta=document.createElement('div');meta.className='nc-meta';
+   meta.innerHTML=`<span class="nc-app"></span><time></time>`;
+   meta.querySelector('.nc-app').textContent=notice.app;
+   meta.querySelector('time').textContent=notice.time.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+   copy.append(meta);
+   const title=document.createElement('strong');title.textContent=notice.title;copy.append(title);
+   if(notice.body){const body=document.createElement('p');body.textContent=notice.body;copy.append(body)}
+   if(notice.image){const image=document.createElement('img');image.className='nc-img';image.src=notice.image;image.alt='';copy.append(image)}
+   if(notice.actions.length){
+    const actions=document.createElement('div');actions.className='nc-actions';
+    notice.actions.forEach(action=>{const run=document.createElement('button');run.type='button';run.className='nc-act';run.textContent=action.label||'Open';run.onclick=()=>{closeDd();setTimeout(action.run,80)};actions.append(run)});
+    copy.append(actions)
+   }
+   item.append(copy);list.append(item)
+  })
+ }
+ el.append(list);
+ requestAnimationFrame(()=>{const next=el.querySelector('.nc-list');if(next)next.scrollTop=scroll});
+}
+function ncEl(){const el=document.createElement('div');el.className='nc';paintNoticeCenter(el);return el}
+/* A Finder window created from a notification may still be booting; retry until it offers its hook. */
+function openFolderInFinder(dir){
+ launch('finder');
+ const attempt=tries=>setTimeout(()=>{
+  const win=wins.finder;
+  if(win&&win._goFolder){win._goFolder(dir);return}
+  if(tries<12)attempt(tries+1)
+ },80);
+ attempt(0)
+}
+/* ---- Screenshots ---- */
+document.body.insertAdjacentHTML('beforeend','<section id="shot" hidden aria-label="Take a screenshot"><img class="shot-bg" alt="" draggable="false"><div class="shot-shade"></div><div class="shot-box"><span class="shot-size"></span></div><div class="shot-hint">Drag to select an area<span>Esc to cancel</span></div><div class="shot-bar"><button type="button" class="shot-save" data-shot-save>Save</button><button type="button" class="shot-cancel" data-shot-cancel>Cancel</button><small>Return to save · Esc to cancel</small></div></section>');
+const shot=$('#shot'),shotBg=shot.querySelector('.shot-bg'),shotBox=shot.querySelector('.shot-box'),shotSize=shot.querySelector('.shot-size'),shotBar=shot.querySelector('.shot-bar');
+let shotDrag=null,shotSelection=null,shotSaving=false,shotClosed=true;
+async function captureShot(region){
+ const api=window.silk?.capture;
+ if(!api){
+  notify({app:'Screenshots',title:'Screenshots Unavailable',body:'Taking screenshots requires the SilkOS desktop app.',icon:IC.camera});
+  return
+ }
+ try{
+  const result=await (region?api.region():api.full());
+  if(result&&result.ok===false)notify({app:'Screenshots',title:'Screenshot Failed',body:result.error||'Could not take the screenshot.',icon:IC.camera})
+ }catch(error){
+  console.error('Could not take the screenshot:',error);
+  notify({app:'Screenshots',title:'Screenshot Failed',body:'Could not take the screenshot.',icon:IC.camera})
+ }
+}
+function resetShotSelection(){
+ shotDrag=null;shotSelection=null;
+ shot.classList.remove('selecting','has-selection');
+ shotBox.classList.remove('on');shotBar.classList.remove('on');
+ shotSize.textContent='';
+}
+function openShotOverlay(payload){
+ if(!payload?.dataUrl)return;
+ shotBg.src=payload.dataUrl;resetShotSelection();
+ shotClosed=false;shotSaving=false;shot.hidden=false;
+ requestAnimationFrame(()=>shot.classList.add('on'))
+}
+function closeShotOverlay(){
+ shot.classList.remove('on');
+ shot.classList.add('closing');
+ setTimeout(()=>{
+  shot.hidden=true;shot.classList.remove('closing');shotBg.removeAttribute('src');
+  resetShotSelection();shotSaving=false;shotClosed=true
+ },180)
+}
+function cancelShot(){
+ if(shotClosed)return;
+ if(!shotSaving){window.silk?.capture?.cancel?.()}
+ closeShotOverlay()
+}
+const clampShot=(value,min,max)=>Math.max(min,Math.min(max,value));
+function paintShotRect(rect){
+ shotSelection=rect;
+ shotBox.style.left=`${rect.x}px`;shotBox.style.top=`${rect.y}px`;
+ shotBox.style.width=`${rect.width}px`;shotBox.style.height=`${rect.height}px`;
+ shotBox.classList.add('on');
+ shotSize.textContent=`${Math.round(rect.width)} × ${Math.round(rect.height)}`;
+ shot.classList.add('selecting','has-selection');
+ if(!shotBar.classList.contains('on'))return;
+ placeShotBar(rect)
+}
+function placeShotBar(rect){
+ shotBar.classList.add('on');
+ const width=shotBar.offsetWidth||180,height=shotBar.offsetHeight||38,margin=8;
+ const left=clampShot(rect.x+rect.width-width,margin,innerWidth-width-margin);
+ let top=rect.y+rect.height+8;
+ if(top+height>innerHeight-margin)top=rect.y-height-8;
+ if(top<34)top=Math.min(innerHeight-height-margin,rect.y+rect.height-height-8);
+ shotBar.style.left=`${left}px`;shotBar.style.top=`${Math.max(34,top)}px`
+}
+function shotRectFrom(x0,y0,x1,y1){
+ const left=clampShot(Math.min(x0,x1),0,innerWidth),top=clampShot(Math.min(y0,y1),0,innerHeight);
+ return {x:left,y:top,width:clampShot(Math.abs(x1-x0),0,innerWidth-left),height:clampShot(Math.abs(y1-y0),0,innerHeight-top)}
+}
+async function saveShot(){
+ if(!shotSelection||shotSaving)return;
+ shotSaving=true;shotBar.classList.remove('on');
+ const rect={
+  x:shotSelection.x/innerWidth,y:shotSelection.y/innerHeight,
+  width:shotSelection.width/innerWidth,height:shotSelection.height/innerHeight
+ };
+ shot.classList.add('closing');
+ try{
+  const result=await window.silk?.capture?.complete(rect);
+  if(result&&result.ok===false)throw new Error(result.error||'Could not save the screenshot.');
+ }catch(error){
+  console.error('Could not save the screenshot:',error);
+  notify({app:'Screenshots',title:'Screenshot Failed',body:error.message||'Could not save the screenshot.',icon:IC.camera})
+ }finally{
+  setTimeout(closeShotOverlay,120)
+ }
+}
+shot.addEventListener('pointerdown',event=>{
+ if(shotSaving||event.button!==0||event.target.closest('.shot-bar'))return;
+ event.preventDefault();event.stopPropagation();
+ if(shotClosed)return;
+ shot.setPointerCapture(event.pointerId);
+ resetShotSelection();
+ shotDrag={x:event.clientX,y:event.clientY}
+});
+shot.addEventListener('pointermove',event=>{
+ if(!shotDrag)return;
+ paintShotRect(shotRectFrom(shotDrag.x,shotDrag.y,event.clientX,event.clientY))
+});
+shot.addEventListener('pointerup',event=>{
+ if(!shotDrag)return;
+ shotDrag=null;
+ if(!shotSelection||shotSelection.width<10||shotSelection.height<10){resetShotSelection();return}
+ paintShotRect(shotSelection);placeShotBar(shotSelection)
+});
+shot.addEventListener('pointercancel',()=>{if(!shotSaving)resetShotSelection()});
+shot.addEventListener('dblclick',event=>{
+ if(shotSaving||event.target.closest('.shot-bar'))return;
+ if(shotSelection)void saveShot()
+});
+shot.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();cancelShot()});
+shot.querySelector('[data-shot-save]').onclick=()=>void saveShot();
+shot.querySelector('[data-shot-cancel]').onclick=cancelShot;
+window.addEventListener('keydown',event=>{
+ if(shotClosed)return;
+ if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();cancelShot()}
+ else if(event.key==='Enter'&&shotSelection&&!shotSaving){event.preventDefault();event.stopImmediatePropagation();void saveShot()}
+},true);
+window.addEventListener('resize',()=>{if(!shotClosed&&!shotSaving)resetShotSelection()});
+if(window.silk?.capture)window.silk.capture.onInit(openShotOverlay);
+if(window.silk?.capture)window.silk.capture.onSaved(shotInfo=>{
+ const name=String(shotInfo.path||'').split(/[\\/]/).pop();
+ notify({
+  app:'Screenshots',title:'Screenshot Saved',body:name,icon:IC.camera,image:shotInfo.url,
+  actions:[{label:'Show in Finder',run:()=>openFolderInFinder(String(shotInfo.path||'').replace(/[\\/][^\\/]+$/,''))}]
+ })
+});
+if(window.silk?.capture)window.silk.capture.onError(message=>notify({app:'Screenshots',title:'Screenshot Failed',body:message,icon:IC.camera}));
+function noticeBattery(result){
+ if(!result)return;
+ const level=Number(result.level);
+ if(result.charging||level>25){noticeBattery.low=0;return}
+ if(level<=10&&noticeBattery.low<10){noticeBattery.low=10;notify({app:'Power',title:'Battery Critically Low',body:`${Math.round(level)}% remaining. Connect a charger now.`,icon:IC.bat,actions:[{label:'Open Settings',run:()=>openSettings('gen')}]});return}
+ if(level<=20&&noticeBattery.low<20){noticeBattery.low=20;notify({app:'Power',title:'Battery Low',body:`${Math.round(level)}% remaining. Connect a charger soon.`,icon:IC.bat,actions:[{label:'Open Settings',run:()=>openSettings('gen')}]})}
+}
+noticeBattery.low=0;
+let wifiNoticeState=null;
+function noticeWifi(result){
+ if(!result||!result.available){wifiNoticeState=null;return}
+ if(!result.enabled){wifiNoticeState='';return}
+ const name=result.connected?result.name||'Wi-Fi':null;
+ if(wifiNoticeState===null){wifiNoticeState=name;return}
+ if(name===wifiNoticeState){return}
+ if(name)notify({app:'Wi-Fi',title:'Wi-Fi Connected',body:name,icon:IC.wifi});
+ else notify({app:'Wi-Fi',title:'Wi-Fi Disconnected',body:'No wireless network is connected.',icon:IC.wifi});
+ wifiNoticeState=name
+}
+let portalInfo=null;
+function paintPortalBanner(){
+ document.querySelectorAll('[data-portal]').forEach(banner=>{
+  const active=!!portalInfo?.portal;
+  banner.hidden=!active;
+  const label=banner.querySelector('[data-portal-label]');
+  if(label)label.textContent=portalInfo?.url?'This network needs a sign-in.':'This network may need a sign-in.';
+ })
+}
+function setPortalInfo(info){
+ const was=!!portalInfo?.portal;portalInfo=info||null;paintPortalBanner();
+ if(portalInfo?.portal&&!was){
+  notify({
+   app:'Wi-Fi',title:'Sign In to This Network',body:'This Wi-Fi network needs a browser sign-in before the internet works.',icon:IC.wifi,
+   actions:[{label:'Open Sign-In',run:()=>portalInfo?.url?openUrl(portalInfo.url):undefined}]
+  })
+ }
+}
+function openPortal(){
+ const url=portalInfo?.url;
+ if(url){url&&openUrl(url);return}
+ openSettings('gen')
+}
+/* NetworkManager already runs the captive-portal probe; the shell only reads the verdict so a hotel or
+   airport network can offer its sign-in page instead of silently failing to reach the internet. */
+async function checkPortal(){
+ if(!window.silk?.portal)return;
+ try{
+  const result=await silk.portal();
+  setPortalInfo(result?.available?result:null)
+ }catch(error){console.error('Could not check for a captive portal:',error)}
+}
+function openSettings(page){launch('settings');setTimeout(()=>wins.settings&&wins.settings._go(page),60)}
+function closeWindow(id){const win=wins[id];if(win)win.querySelector('.dot.r')?.click()}
+function moveWindowToSpace(win,index){
+ if(!Number.isInteger(index)||index<0||index>3)return;
+ win.dataset.space=String(index);
+ if(index===activeSpace&&!win.classList.contains('min'))win.classList.remove('space-hidden');
+ else if(index!==activeSpace)win.classList.add('space-hidden');
+ refreshDockIndicators();saveSessionWindows()
+}
+function windowMenu(win){
+ const id=Object.keys(wins).find(key=>wins[key]===win);
+ if(!id)return[];
+ const space=Number(win.dataset.space),items=[
+  ['Minimize',()=>minimize(win,id)],
+  [win.dataset.max?'Restore Size':'Zoom',()=>maxToggle(win)],
+  [win.dataset.fullscreen?'Exit Full Screen':'Enter Full Screen',()=>fullscreenToggle(win)],
+  '-'
+ ];
+ items.push(...workspaceNames.map((name,index)=>[(index===space?'✓ ':'    ')+'Move to '+name,()=>moveWindowToSpace(win,index),'',index===space]));
+ items.push('-',['Close Window',()=>closeWindow(id)]);
+ return items
+}
+function dockIconMenu(icon){
+ const id=icon.dataset.id;
+ if(id==='launchpad')return[['Open Launchpad',()=>launchpad(true)],'-',['Desktop & Dock Settings…',()=>openSettings('desk')]];
+ const a=apps[id],win=wins[id],items=[];
+ if(a.run)items.push(['Open '+a.n,()=>launch(id)]);
+ else if(win){
+  const hidden=win.classList.contains('min');
+  items.push([hidden?'Show':'Bring to Front',()=>{if(hidden)restore(win,id);focus(win,id)}],['Hide',()=>minimize(win,id)],'-',['Quit '+a.n,()=>closeWindow(id)]);
+ }else items.push(['Open '+a.n,()=>launch(id)]);
+ items.push('-',['Desktop & Dock Settings…',()=>openSettings('desk')]);
+ return items
+}
+function dockMenu(){
+ const position=(name,value)=>[(cfg.dockPosition===value?'✓ ':'    ')+name,()=>{cfg.dockPosition=value;save();applyCfg()}];
+ return[
+  ['Desktop & Dock Settings…',()=>openSettings('desk')],
+  '-',
+  [cfg.hide?'Turn Hiding Off':'Turn Hiding On',()=>{cfg.hide=!cfg.hide;save();applyCfg()}],
+  '-',
+  position('Position: Bottom','bottom'),position('Position: Left','left'),position('Position: Right','right')
+ ]
+}
+function launchpadMenu(tile){
+ const id=tile?.dataset.id,a=id&&apps[id],items=[];
+ if(a){
+  items.push(['Open '+a.n,()=>lpGo(id)]);
+  if(wins[id])items.push(['Show '+a.n,()=>{launchpad(false);launch(id)}]);
+  items.push('-')
+ }
+ items.push(['Close Launchpad',()=>launchpad(false)],['Desktop & Dock Settings…',()=>openSettings('desk')]);
+ return items
+}
 function openK(b){const k=b.dataset.k,right=b.parentNode===mright;let el;
- if(k==='apple')el=listEl([['About SilkOS',()=>launch('settings')],'-',[(document.body.classList.contains('lite')?'✓ ':'    ')+'Lite Mode (no blur)',toggleLite],['Enter Full Screen',toggleFS,'F11'],'-',['Lock Screen',lockScreen],['Sleep',()=>power('sleep')],['Restart…',()=>power('restart')],['Shut Down…',()=>power('off')]]);
+ if(k==='apple')el=listEl([['About SilkOS',()=>launch('settings')],'-',[(document.body.classList.contains('lite')?'✓ ':'    ')+'Lite Mode (no blur)',toggleLite],['Enter Full Screen',toggleFS,'F11'],'-',['Take Screenshot',()=>captureShot(false),'Shift+Super+3'],['Take Screenshot of Area…',()=>captureShot(true),'Shift+Super+4'],'-',['Lock Screen',lockScreen],['Sleep',()=>power('sleep')],['Restart…',()=>power('restart')],['Shut Down…',()=>power('off')]]);
  else if(k==='spaces')el=listEl([...workspaceNames.map((name,index)=>[(index===activeSpace?'✓ ':'    ')+name,()=>switchSpace(index),index===activeSpace?'Current':'Ctrl+Alt+'+(index<activeSpace?'←':'→'),index===activeSpace]),'-',['Swipe with three to five fingers to switch desktops',null,'',true]]);
- else if(k==='cc')el=ccEl();else if(k==='clock')el=calEl();
+ else if(k==='cc')el=ccEl();else if(k==='clock'){el=ncEl();markNoticesRead()}
  else if(k==='wifi')el=listEl([[wfInfo?(wfInfo.connected?(wfInfo.type==='wifi'?'Wi-Fi: ':'Network: ')+(wfInfo.name||'Connected'):'Not connected'):'Wi-Fi: '+(navigator.onLine?'Connected':'Not connected'),null,'',true]]);
  else if(k==='bat')el=listEl([[batInfo?Math.round(batInfo.level*100)+'% · '+(batInfo.charging?'Charging':'On battery'):'Battery',null,'',true]]);
  else if(k.startsWith(NATIVE_KEY)){el=document.createElement('div');const node=nativeNode(Number(k.slice(NATIVE_KEY.length)));nativeMenuItems(el,node?node.children:[])}
@@ -774,9 +1362,10 @@ function statusPoll(interval,poll){
  document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();else start()});
  start()
 }
-if(window.silk&&silk.platform==='linux'&&silk.battery)statusPoll(30000,()=>silk.battery().then(r=>{if(!r){$('#bat').style.display='none';return}batInfo={level:r.level/100,charging:r.charging};$('#bat').style.display='';$('#bat').innerHTML=IC.bat+'<span>'+r.level+'%</span>'}));else if(navigator.getBattery)navigator.getBattery().then(b=>{batInfo=b;const u=()=>{$('#bat').innerHTML=IC.bat+'<span>'+Math.round(b.level*100)+'%</span>'};u();b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u)}).catch(()=>{});
+if(window.silk&&silk.platform==='linux'&&silk.battery)statusPoll(30000,()=>silk.battery().then(r=>{if(!r){$('#bat').style.display='none';return}batInfo={level:r.level/100,charging:r.charging};$('#bat').style.display='';$('#bat').innerHTML=IC.bat+'<span>'+r.level+'%</span>';noticeBattery(r)}));else if(navigator.getBattery)navigator.getBattery().then(b=>{batInfo=b;const u=()=>{$('#bat').innerHTML=IC.bat+'<span>'+Math.round(b.level*100)+'%</span>'};u();b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u)}).catch(()=>{});
 let wfInfo=null;const wf=mright.querySelector('[data-k=wifi]'),wfu=()=>wf.style.opacity=(wfInfo?wfInfo.connected:navigator.onLine)?1:.4;wfu();addEventListener('online',wfu);addEventListener('offline',wfu);
-if(window.silk&&silk.platform==='linux'&&silk.wifi)statusPoll(10000,()=>silk.wifi().then(r=>{wfInfo=r;wfu()}));
+if(window.silk&&silk.platform==='linux'&&silk.wifi)statusPoll(10000,()=>silk.wifi().then(r=>{wfInfo=r;wfu();noticeWifi(r)}));
+if(window.silk?.platform==='linux'&&silk.portal)statusPoll(60000,checkPortal);
 /* Re-apply the saved brightness once at startup: screen dimming through gamma does not survive a restart of the display server. */
 if(window.silk?.platform==='linux'&&silk.brightness&&cfg.bri<100)setBrightness(cfg.bri,true);
 if(window.silk?.platform==='linux'&&silk.workspaces)statusPoll(900,async()=>{await syncSystemWorkspace()});
@@ -806,10 +1395,10 @@ function lpDraw(){const l=lpList(),q=!!lpi.value.trim();
  lpg.innerHTML=ordered.length?ordered.map((k,i)=>`<div class="lpa${q&&!i?' sel':''}" data-id="${esc(k)}" role="button" tabindex="0" aria-label="Launch ${esc(apps[k].n)}. Drag to reorder." style="--lp-delay:${Math.min(i,16)*12}ms;--lp-out-delay:${Math.max(0,Math.min(16,ordered.length-i-1))*10}ms">${tile(k)}<span>${esc(apps[k].n)}</span></div>`).join(''):'<div class="lpe">No Results</div>'}
 const LP_VARS=['--lp-progress','--lp-blur','--lp-dim','--lp-grid-y','--lp-grid-scale','--lp-icon-y','--lp-icon-scale'];
 const LP_BLUR=44,LP_DIM=.56;
+const launchpadGesture={progress:0,smoothing:null};
 /* The pinch maps straight onto the blur and the dim, so the desktop recedes exactly as far as the fingers travel.
    --lp-blur and --lp-dim are registered with @property, which is what lets the click-open path animate them too. */
-function setLaunchpadGestureProgress(progress){
- const value=Math.max(0,Math.min(1,progress));
+function paintLaunchpadGesture(value){
  lp.style.setProperty('--lp-progress',String(value));
  lp.style.setProperty('--lp-blur',`${(LP_BLUR*value).toFixed(2)}px`);
  lp.style.setProperty('--lp-dim',String(+(LP_DIM*value).toFixed(3)));
@@ -818,11 +1407,17 @@ function setLaunchpadGestureProgress(progress){
  lp.style.setProperty('--lp-icon-y',`${12*(1-value)}px`);
  lp.style.setProperty('--lp-icon-scale',String(.9+.1*value));
 }
+function setLaunchpadGestureProgress(progress){
+ launchpadGesture.progress=Math.max(0,Math.min(1,progress));
+ if(!lp.classList.contains('gesture-active')){cancelGestureSmoothing(launchpadGesture);paintLaunchpadGesture(launchpadGesture.progress);return}
+ smoothGesture(launchpadGesture,paintLaunchpadGesture)
+}
 function beginLaunchpadGesture(startOpen,progress){
  if(!startOpen){closeDd(true);spot(false);mx=null;lpi.value='';lpDraw()}
  document.body.classList.add('launchpad-open');lp.classList.add('gesture-active');setLaunchpadGestureProgress(progress);syncFullscreenChrome()
 }
 function clearLaunchpadGesture(){
+ cancelGestureSmoothing(launchpadGesture);
  lp.classList.remove('gesture-active');
  LP_VARS.forEach(property=>lp.style.removeProperty(property));
  if(!lpOn())document.body.classList.remove('launchpad-open');
@@ -878,11 +1473,14 @@ function updateVerticalGesture(state,progress){
  if(!state)return;
  trackGestureSpeed(state,progress);
  state.progress=Math.max(0,Math.min(1,progress));
- if(state.kind==='switcher')switcher.style.setProperty('--sw-progress',String(state.progress));else setDesktopExposeProgress(state.progress)
+ smoothGesture(state,value=>{
+  if(state.kind==='switcher')switcher.style.setProperty('--sw-progress',String(value));else setDesktopExposeProgress(value)
+ })
 }
 function finishVerticalGesture(state,commit){
  if(!state)return;
  const completed=commit&&shouldCommit(state);
+ cancelGestureSmoothing(state);
  if(state.kind==='switcher'){
   switcher.classList.remove('gesture');switcher.style.removeProperty('--sw-progress');
   if(completed)switcher.classList.add('on');else finishWindowSwitch(false);
@@ -1017,7 +1615,7 @@ function finishWindowSwitch(commit){
  const id=commit?switchState.ids[switchState.index]:null;switchState=null;switcher.classList.remove('on');
  if(id&&wins[id]){const win=wins[id];if(win.classList.contains('min'))restore(win,id);focus(win,id)}
 }
-function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4,true,-1);if(k==='space-right')return switchSpace((activeSpace+1)%4,true,1);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
+function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4,true,-1);if(k==='space-right')return switchSpace((activeSpace+1)%4,true,1);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='screenshot-full')return void captureShot(false);if(k==='screenshot-region')return void captureShot(true);if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const finder=curApp==='finder'&&wins.finder;if(finder&&k==='f')return void finder._focusSearch?.();if(finder&&k==='r')return void finder._refresh?.();if(finder&&k==='w')return closeWindow('finder');const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
  if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='f')b.find();else if(k==='d')b.addBm()}
 if(window.silk&&silk.onShortcut)silk.onShortcut(shortcut);
 document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','f','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Enter'&&switchState){e.preventDefault();finishWindowSwitch(true)}else if(e.key==='Escape'){if(desktopExposed)restoreDesktop();if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false);const bf=curApp==='browser'&&wins.browser&&wins.browser._b;if(bf)bf.findOff()}});
@@ -1026,7 +1624,8 @@ if(!window.silk){
  document.addEventListener('keyup',e=>{if(e.key==='Alt'||e.key==='AltGraph')finishWindowSwitch(true)});
 }
 lastAudibleVolume=cfg.lastAudibleVolume||cfg.volume||50;
-const save=()=>{try{localStorage.setItem('silk.cfg',JSON.stringify(cfg))}catch(e){}};
+/* A function declaration so the startup brightness re-apply, which runs earlier in this file, can save too. */
+function save(){try{localStorage.setItem('silk.cfg',JSON.stringify(cfg))}catch(e){}}
 const ENG={google:{n:'Google',u:'https://www.google.com/search?q='},ddg:{n:'DuckDuckGo',u:'https://duckduckgo.com/?q='},bing:{n:'Bing',u:'https://www.bing.com/search?q='}};
 function searchURL(v){return(ENG[cfg.engine]||ENG.google).u+encodeURIComponent(v)}
 const WALLS=[['Aurora','radial-gradient(60% 60% at 20% 20%,#7aa7ff,transparent),radial-gradient(50% 50% at 80% 30%,#ff8fc7,transparent),radial-gradient(60% 60% at 60% 90%,#ffc27a,transparent),#3b3b8f'],['Sunset','radial-gradient(70% 60% at 30% 100%,#ff5e62,transparent),radial-gradient(60% 60% at 80% 20%,#ffc371,transparent),#5b2a86'],['Ocean','radial-gradient(60% 60% at 20% 30%,#4facfe,transparent),radial-gradient(60% 70% at 85% 80%,#00f2c3,transparent),#0b2a5b'],['Forest','radial-gradient(60% 60% at 25% 25%,#9be15d,transparent),radial-gradient(60% 60% at 80% 80%,#00a99d,transparent),#0f3d2e'],['Graphite','radial-gradient(60% 60% at 30% 20%,#6b7280,transparent),radial-gradient(60% 60% at 80% 90%,#374151,transparent),#111827']];
@@ -1036,13 +1635,28 @@ function applyWindowVibrancy(wall){const painted=getComputedStyle(wall),R=docume
  R.style.setProperty('--material-vibrancy',painted.backgroundImage);
  R.style.setProperty('--material-base',/,\s*0\)$/.test(base)?'var(--win)':base);
  R.style.setProperty('--material-vibrancy-size',cfg.wallpaperImage?'cover':'120% 120%');
+ probeWallpaper(cfg.wallpaperImage);
  document.body.classList.toggle('photo-wallpaper',!!cfg.wallpaperImage)}
-let appliedTapToClick=null;
+let appliedTapToClick=null,appliedNaturalScroll=null;
 /* Applied once at startup and again whenever the setting changes, so the touchpad always follows the saved choice. */
 function applyTrackpad(){
  if(window.silk?.platform!=='linux'||!silk.trackpad)return;
- const wanted=!!cfg.tapToClick;if(wanted===appliedTapToClick)return;appliedTapToClick=wanted;
- silk.trackpad.setTapToClick(wanted).then(result=>{if(!result?.available)appliedTapToClick=null}).catch(error=>{appliedTapToClick=null;console.error('Could not change tap to click:',error)})
+ const tap=!!cfg.tapToClick;
+ if(tap!==appliedTapToClick&&silk.trackpad.setTapToClick){
+  appliedTapToClick=tap;
+  silk.trackpad.setTapToClick(tap).then(result=>{if(!result?.available)appliedTapToClick=null}).catch(error=>{appliedTapToClick=null;console.error('Could not change tap to click:',error)})
+ }
+ /* Content follows the fingers the way macOS does: swipe down and the page moves down. */
+ const natural=!!cfg.naturalScroll;
+ if(natural!==appliedNaturalScroll&&silk.trackpad.setNaturalScroll){
+  appliedNaturalScroll=natural;
+  silk.trackpad.setNaturalScroll(natural).then(result=>{if(!result?.available)appliedNaturalScroll=null}).catch(error=>{appliedNaturalScroll=null;console.error('Could not change natural scrolling:',error)})
+ }
+}
+/* The main process zooms the whole shell, so every window, the Dock and the menu bar follow one value. */
+function applyDisplayScaleSetting(mode){
+ if(!window.silk?.display?.setScale)return Promise.resolve(null);
+ return Promise.resolve(silk.display.setScale(mode)).catch(error=>{console.error('Could not change the display scale:',error);return {ok:false,error:error.message}})
 }
 function applyCfg(){const R=document.documentElement,dark=cfg.theme==='dark'||(cfg.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme==='auto'?R.removeAttribute('data-theme'):R.setAttribute('data-theme',cfg.theme);R.style.setProperty('--accent',cfg.accent);updateCursorSize();
  const wall=$('#wall');wall.style.background=cfg.wallpaperImage?`center / cover no-repeat url("${cfg.wallpaperImage}")`:WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('static-wallpaper',!cfg.wallpaperMotion);document.body.classList.toggle('lite',!!cfg.lite);
@@ -1052,7 +1666,7 @@ function applyCfg(){const R=document.documentElement,dark=cfg.theme==='dark'||(c
  baseWanted=cfg.dock;measureDock();dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;syncCursorDim();applyTrackpad();clk()}
 document.addEventListener('mousemove',e=>{if(!cfg.hide)return;const w=$('#dockwrap'),edge=cfg.dockPosition==='bottom'?e.clientY>innerHeight-10:cfg.dockPosition==='left'?e.clientX<10:e.clientX>innerWidth-10,near=cfg.dockPosition==='bottom'?e.clientY>innerHeight-120:cfg.dockPosition==='left'?e.clientX<120:e.clientX>innerWidth-120;w.classList.toggle('show',edge||(w.classList.contains('show')&&near))});
 function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=document.createElement('div');h.className='rz '+d;el.appendChild(h);
- h.onpointerdown=ev=>{if(el.dataset.max||el.dataset.fullscreen)return;ev.preventDefault();ev.stopPropagation();h.setPointerCapture(ev.pointerId);
+ h.onpointerdown=ev=>{if(ev.button!==0||el.dataset.max||el.dataset.fullscreen)return;ev.preventDefault();ev.stopPropagation();h.setPointerCapture(ev.pointerId);
   const r={l:el.offsetLeft,t:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight,x:ev.clientX,y:ev.clientY};el.classList.add('rzing');
   const mv=m=>{const dx=m.clientX-r.x,dy=m.clientY-r.y;let L=r.l,T=r.t,W=r.w,H=r.h;
    const minW=Math.min(260,Math.max(160,innerWidth-16)),minH=Math.min(200,Math.max(100,innerHeight-36));
@@ -1067,10 +1681,35 @@ function constrainWindows(){Object.values(wins).forEach(el=>{
  Object.assign(el.style,{minWidth:minWidth+'px',width:width+'px',height:height+'px',left:Math.max(8,Math.min(innerWidth-width-8,parseFloat(el.style.left)))+'px',top:Math.max(28,Math.min(innerHeight-height-8,parseFloat(el.style.top)))+'px'})
 })}
 window.addEventListener('resize',()=>{constrainWindows();measureDock()});
-document.addEventListener('contextmenu',e=>{if(e.target.closest('.win,.dd,#dockwrap,#menubar'))return;e.preventDefault();closeDd(true);
- const open=p=>{launch('settings');setTimeout(()=>wins.settings&&wins.settings._go(p),60)};
-const el=listEl([['Change Wallpaper…',()=>open('app')],['Use '+(document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches)?'Light':'Dark')+' Mode',()=>{const dk=document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme=dk?'light':'dark';save();applyCfg()}],'-',['Open Browser',()=>launch('browser')],['Spotlight Search',()=>spot(true),'Ctrl+K'],['Settings…',()=>open('gen')]]);
- ddKey='ctx';dd=el;el.classList.add('dd');document.body.appendChild(el);fitPopup(el,e.clientX,e.clientY);requestAnimationFrame(()=>el.classList.add('on'))});
+/* Apps may install their own menus on the elements they own; anything that reaches the document is a
+   shell surface, so every right click opens something instead of the empty Chromium default. */
+document.addEventListener('contextmenu',e=>{
+ if(e.target.closest('.dd'))return;
+ e.preventDefault();
+ const x=e.clientX,y=e.clientY;
+ const dark=document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);
+ const icon=e.target.closest('#dockwrap .ic');
+ if(icon){showContextMenu(dockIconMenu(icon),x,y);return}
+ if(e.target.closest('#dockwrap')){showContextMenu(dockMenu(),x,y);return}
+ if(e.target.closest('#lp')){showContextMenu(launchpadMenu(e.target.closest('.lpa')),x,y);return}
+ const bar=e.target.closest('#menubar .mi');
+ if(bar&&!bar.disabled){
+  const k=bar.dataset.k;
+  if(k==='srch')spot(true);else if(ddKey===k)closeDd();else openK(bar);
+  return
+ }
+ if(e.target.closest('#menubar')){showContextMenu([['About SilkOS',()=>launch('settings')],'-',['Desktop & Dock Settings…',()=>openSettings('desk')]],x,y);return}
+ const win=e.target.closest('.win');
+ if(win){showContextMenu(windowMenu(win),x,y);return}
+ showContextMenu([
+  ['Change Wallpaper…',()=>openSettings('app')],
+  ['Use '+(dark?'Light':'Dark')+' Mode',()=>{cfg.theme=dark?'light':'dark';save();applyCfg()}],
+  '-',
+  ['Open Browser',()=>launch('browser')],
+  ['Spotlight Search',()=>spot(true),'Ctrl+K'],
+  ['Settings…',()=>openSettings('gen')]
+ ],x,y)
+});
 applyCfg();
 buildBar();
 syncFlatpaks();
