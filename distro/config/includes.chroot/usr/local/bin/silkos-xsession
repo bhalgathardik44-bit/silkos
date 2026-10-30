@@ -20,7 +20,20 @@ if [ ! -r "$OPENBOX_RC" ]; then
   echo "Openbox config is missing: $OPENBOX_RC" >>/tmp/openbox.log
   exit 1
 fi
-openbox --config-file "$OPENBOX_RC" >/tmp/openbox.log 2>&1 &
+# SilkOS paints its 28 CSS-pixel menu bar over the desktop, while Openbox reserves space in device
+# pixels, so the margin and the window corner radius both follow Xft.dpi the way the page does.
+XFT_DPI="$(xrdb -query 2>/dev/null | awk '$1 == "Xft.dpi:" && ($2 + 0) > 0 { print $2; exit }')"
+MENU_MARGIN="$(awk -v dpi="${XFT_DPI:-96}" 'BEGIN { printf "%d", 28 * dpi / 96 + 0.5 }')"
+CORNER_RADIUS="$(awk -v dpi="${XFT_DPI:-96}" 'BEGIN { printf "%d", 18 * dpi / 96 + 0.5 }')"
+RUN_RC=/tmp/silkos-openbox-rc.xml
+sed "/<margins>/,/<\/margins>/ s|<top>[0-9]*</top>|<top>$MENU_MARGIN</top>|" "$OPENBOX_RC" >"$RUN_RC"
+# Without a reserved strip, maximised native windows sit under the menu bar and hide the very menus
+# this session is meant to show, so keep the session readable rather than pretend it worked.
+if ! grep -q "<top>$MENU_MARGIN</top>" "$RUN_RC"; then
+  echo "Openbox config has no <margins> block; native windows can cover the SilkOS menu bar" >&2
+  RUN_RC="$OPENBOX_RC"
+fi
+openbox --config-file "$RUN_RC" >/tmp/openbox.log 2>&1 &
 OPENBOX_PID=$!
 tries=0
 until wmctrl -m >/dev/null 2>&1; do
@@ -36,22 +49,30 @@ wmctrl -n 4
 # needs to be started here. /etc/udev/rules.d/70-silkos-touchpad.rules lets this session read the
 # touchpad, and SilkOS falls back to sudo when it cannot.
 
-# X11 window managers draw frames but cannot round their corners. Match the
-# 18 CSS-pixel SilkOS window radius at the current Xft display scale.
-CORNER_RADIUS="$(xrdb -query 2>/dev/null | awk '
-  $1 == "Xft.dpi:" && ($2 + 0) > 0 {
-    printf "%d\n", (18 * $2 / 96) + 0.5
-    found = 1
-    exit
-  }
-  END { if (!found) print 18 }
-')"
-picom --config /dev/null --backend xrender --corner-radius "$CORNER_RADIUS" \
-  --shadow --shadow-radius 18 --shadow-opacity 0.28 \
-  --shadow-offset-x -8 --shadow-offset-y -8 --no-vsync \
-  >/tmp/picom.log 2>&1 &
+# X11 window managers draw frames but cannot round their corners, so picom matches the 18 CSS-pixel
+# SilkOS window radius at the display scale computed above.
+picom_plain() {
+  picom --config /dev/null --backend xrender --corner-radius "$CORNER_RADIUS" \
+    --shadow --shadow-radius 18 --shadow-opacity 0.28 \
+    --shadow-offset-x -8 --shadow-offset-y -8 --no-vsync \
+    >>/tmp/picom.log 2>&1 &
+}
+PICOM_CONF=/etc/silkos/picom.conf
+if [ -r "$PICOM_CONF" ]; then
+  picom --config "$PICOM_CONF" --corner-radius "$CORNER_RADIUS" >/tmp/picom.log 2>&1 &
+else
+  picom_plain
+fi
 PICOM_PID=$!
 sleep 0.5
+# Losing animations is recoverable; losing corners means every native window is square, so retry
+# with the flags that only ever asked for corners and a shadow.
+if ! kill -0 "$PICOM_PID" 2>/dev/null; then
+  echo "picom rejected $PICOM_CONF; app windows keep corners and shadows but lose animations" >>/tmp/picom.log
+  picom_plain
+  PICOM_PID=$!
+  sleep 0.5
+fi
 if ! kill -0 "$PICOM_PID" 2>/dev/null; then
   echo "Picom failed to start; rounded app windows are unavailable. See /tmp/picom.log" >&2
 fi

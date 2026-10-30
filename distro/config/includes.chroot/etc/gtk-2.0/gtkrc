@@ -1,0 +1,8 @@
+# GTK 2 has no settings.ini; a few older apps and Wine's winemouse still load this.
+gtk-theme-name = "WhiteSur-Light"
+gtk-icon-theme-name = "WhiteSur"
+gtk-cursor-theme-name = "WhiteSur-cursors"
+gtk-cursor-theme-size = 24
+gtk-font-name = "Inter 11"
+gtk-button-images = 0
+gtk-menu-images = 1

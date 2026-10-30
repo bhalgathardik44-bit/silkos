@@ -17,6 +17,9 @@ sed -i '/<theme>/,/<\/theme>/ {
   s|<titleLayout>[^<]*</titleLayout>|<titleLayout>CIML</titleLayout>|
 }' "$OPENBOX_RC"
 sed -i '/<desktops>/,/<\/desktops>/ s|<number>[^<]*</number>|<number>4</number>|' "$OPENBOX_RC"
+# silkos-xsession rewrites <margins><top> at the display scale to keep native windows out of the
+# SilkOS menu bar, so the block has to exist for that substitution to have anything to match.
+grep -q '<margins>' "$OPENBOX_RC"
 sed -i '/<keybind key="A-Tab">/,/<\/keybind>/d; /<keybind key="A-S-Tab">/,/<\/keybind>/d' "$OPENBOX_RC"
 # Openbox grabs Ctrl+Alt+Left/Right for its own desktop switch, which stops SilkOS registering them and
 # leaves the switch without its animation. Free them so SilkOS handles both.

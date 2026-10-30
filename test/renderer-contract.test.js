@@ -13,7 +13,7 @@ test('desktop styling preserves the extracted baseline outside fullscreen and ma
  const fullscreen = css.slice(css.indexOf('.win.fullscreen,'), css.indexOf('#dock{border-radius:28px}'));
  assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-menu-visible #menubar/);
  assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-dock-visible #dockwrap #dock/);
- assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), '88c8ce5e7bd885e119147b6608dfd09fe58f6e3604c463a32e908e44d5898ff1');
+ assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), '6885654fcebad288026842f5af36fb7902be7a9c5ffb2ace9ea8b9c998547636');
 });
 
 test('materials stay translucent in both schemes without per-window blur layers', () => {

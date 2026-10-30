@@ -4,6 +4,16 @@ contextBridge.exposeInMainWorld('silk', {
   suggest: q => ipcRenderer.invoke('suggest', q),
   onShortcut: cb => ipcRenderer.on('shortcut', (_, k) => cb(k)),
   onTouchpadGesture: cb => ipcRenderer.on('touchpad-gesture', (_, gesture) => cb(gesture)),
+  nativeMenu: {
+    onBar: cb => {
+      const listener = (_, bar) => cb(bar);
+      ipcRenderer.on('native-menu', listener);
+      return () => ipcRenderer.removeListener('native-menu', listener);
+    },
+    /* Submenus the app has not populated yet are filled in only when the pointer reaches them. */
+    open: id => ipcRenderer.invoke('native-menu:open', id),
+    activate: id => ipcRenderer.invoke('native-menu:activate', id)
+  },
   platform: process.platform,
   lock: {
     status: () => ipcRenderer.invoke('lock:status'),

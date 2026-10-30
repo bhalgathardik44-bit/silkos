@@ -16,12 +16,13 @@
 - `package-lock.json` resolves Electron 33.4.11 and electron-builder 25.1.8.
 - ISO CI uses Node 20 on Ubuntu 24.04; local Node is not pinned by package.json.
 - Tests use Node's built-in `node:test` runner.
-- Linux live image: Debian trixie, Openbox, Picom, and libinput touchpad gestures.
+- Linux live image: Debian trixie, Openbox, Picom, libinput touchpad gestures, WhiteSur theming for native windows, and canonical dbusmenu global menus for native GTK apps.
 
 ## Repository map and ownership
-- `main.js`: Electron lifecycle, BrowserWindow, IPC handlers, OS services, native app launch, Store backend, and gesture monitoring (libinput).
+- `main.js`: Electron lifecycle, BrowserWindow, IPC handlers, OS services, native app launch, Store backend, gesture monitoring (libinput), and the native menu helper subprocess.
 - `preload.js`: contextBridge API exposed as `window.silk`; renderer-to-main boundary.
 - `touchpad-gestures.js`: libinput `debug-events` parsing into shell gesture events; independently exercised by Node tests.
+- `native-menu.js`: com.canonical.dbusmenu property and JSON-frame conversion for native app menus; independently exercised by Node tests. The helper that owns the D-Bus conversation is `distro/config/includes.chroot/usr/local/bin/silkos-appmenu`.
 - `app/index.html`: minimal desktop DOM, startup overlay and scoped inline startup CSS, ordered script loading.
 - `app/desktop.css`: extracted desktop styles, motion tokens, layout, and app styling.
 - `app/startup.js`: temporary startup controller; not an app manager or network readiness tracker.
@@ -32,7 +33,7 @@
 - `app/apps/utilities.js`: calculator, resource monitor, and About initializers.
 - `app/apps/browser.js`: webview tabs, suggestions, bookmarks/history, find, and tab overview.
 - `app/apps/settings.js`: Settings UI; coordinates with shell configuration and bridge services.
-- `test/*.test.js`: files, lock, Store, workspaces, network controls, gesture parser and pipeline checks.
+- `test/*.test.js`: files, lock, Store, workspaces, network controls, gesture and native-menu parsers and pipelines, and native theming/animation source guards.
 - `test/startup.test.js`, `test/renderer-contract.test.js`: mocked startup controller and renderer source/bridge contract checks; not real-browser visual tests.
 - `linux/run.sh`, `run.bat`: source launchers with cached Electron runtimes.
 - `distro/`: live-build configuration, hooks, session scripts, persistence and desktop integration.
