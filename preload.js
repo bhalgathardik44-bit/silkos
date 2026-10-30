@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('silk', {
   media: action => ipcRenderer.invoke('sys:media', action),
   volume: v => ipcRenderer.invoke('sys:volume', v),
   brightness: v => ipcRenderer.invoke('sys:brightness', v),
+  trackpad: { setTapToClick: enabled => ipcRenderer.invoke('sys:trackpad:tap-to-click', enabled) },
   resources: () => ipcRenderer.invoke('sys:resources'),
   workspaces: {
     list: () => ipcRenderer.invoke('sys:workspaces'),

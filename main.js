@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { promisify } = require('util');
 const { execFile, spawn } = require('child_process');
 const { pathToFileURL } = require('url');
-const { createToucheggGestureParser } = require('./touchpad-gestures');
+const { createLibinputGestureParser, LIBINPUT_COMMANDS } = require('./touchpad-gestures');
 const IS_LINUX = process.platform === 'linux';
 const scrypt = promisify(crypto.scrypt);
 const run = (cmd, args, ms = 4000) => new Promise(res => execFile(cmd, args, { timeout: ms }, (e, out) => res(e ? null : String(out))));
@@ -268,6 +268,8 @@ ipcMain.handle('sys:wifi:connect', async (_, ssid, password = '') => {
 ipcMain.handle('sys:bluetooth', async (_, enabled) => {
   if (!IS_LINUX) return null;
   if (typeof enabled === 'boolean') {
+    // A soft-blocked radio (common after boot) refuses to power on; unblocking is harmless if it is not blocked.
+    if (enabled) await run('rfkill', ['unblock', 'bluetooth']);
     const power = await runDetailed('bluetoothctl', ['power', enabled ? 'on' : 'off'], 8000);
     if (!power.ok || btFailure(power.out)) return { available: false, error: 'BlueZ could not change Bluetooth power state.' };
   }
@@ -377,12 +379,48 @@ ipcMain.handle('sys:volume', async (_, v) => {
   const m = out && out.match(/([\d.]+)/);
   return m ? Math.round(parseFloat(m[1]) * 100) : null;
 });
+/* Screens with no controllable backlight (external monitors, many VMs) are dimmed through the display's
+   gamma ramp. Unlike an overlay inside the window, the ramp is applied to everything on screen, pointer included. */
+let gammaBrightness = null;
+const setGammaBrightness = async percent => {
+  const query = await run('xrandr', ['--query']);
+  const outputs = query ? [...query.matchAll(/^(\S+) connected/gm)].map(match => match[1]) : [];
+  if (!outputs.length) return false;
+  const level = Math.max(0.15, 1 - (100 - percent) / 100 * 0.85).toFixed(2);
+  let applied = false;
+  for (const output of outputs) {
+    if (await run('xrandr', ['--output', output, '--brightness', level]) !== null) applied = true;
+  }
+  if (applied) gammaBrightness = percent;
+  return applied;
+};
 ipcMain.handle('sys:brightness', async (_, v) => {
   if (!IS_LINUX) return null;
-  if (typeof v === 'number') return (await run('brightnessctl', ['set', Math.max(5, Math.min(100, Math.round(v))) + '%'])) !== null;
-  const out = await run('brightnessctl', ['-m']);
+  if (typeof v === 'number') {
+    const percent = Math.max(5, Math.min(100, Math.round(v)));
+    if (await run('brightnessctl', ['-c', 'backlight', 'set', percent + '%']) !== null) {
+      // The backlight now carries the dimming, so clear any gamma left from an earlier fallback.
+      if (gammaBrightness !== null && gammaBrightness < 100) await setGammaBrightness(100);
+      gammaBrightness = null;
+      return true;
+    }
+    return setGammaBrightness(percent);
+  }
+  const out = await run('brightnessctl', ['-c', 'backlight', '-m']);
   const m = out && out.match(/(\d+)%/);
-  return m ? +m[1] : null;
+  return m ? +m[1] : gammaBrightness;
+});
+ipcMain.handle('sys:trackpad:tap-to-click', async (_, enabled) => {
+  if (!IS_LINUX || typeof enabled !== 'boolean') return { available: false, error: 'Tap to click is only available on Linux.' };
+  const listing = await run('xinput', ['list', '--id-only']);
+  if (listing === null) return { available: false, error: 'xinput is not available.' };
+  let touchpads = 0;
+  for (const id of listing.split(/\s+/).filter(value => /^\d+$/.test(value))) {
+    const props = await run('xinput', ['list-props', id]);
+    if (!props || !/libinput Tapping Enabled \(\d+\)/.test(props)) continue;
+    if (await run('xinput', ['set-prop', id, 'libinput Tapping Enabled', enabled ? '1' : '0']) !== null) touchpads += 1;
+  }
+  return touchpads ? { available: true, enabled } : { available: false, error: 'No touchpad that supports tapping was found.' };
 });
 ipcMain.handle('sys:resources', async () => {
   let cpus;
@@ -672,49 +710,59 @@ ipcMain.handle('sys:workspace:set', async (_, index) => {
   const result = await run('wmctrl', ['-s', String(index)]);
   return result === null ? { ok: false, error: 'Could not switch desktop workspace.' } : { ok: true, index };
 });
-const GESTURE_MONITOR_ATTEMPTS = 10;
 const GESTURE_MONITOR_RETRY_MS = 2000;
+const GESTURE_MONITOR_HEALTHY_MS = 10000;
+const GESTURE_MONITOR_GIVE_UP = 8;
 const startTouchpadGestureMonitor = win => {
   if (!IS_LINUX) return;
-  let sawGesture = false;
-  let attempts = 0;
+  let strategyIndex = 0;
+  let failures = 0;
   const startMonitor = () => {
-    if (isQuitting) return;
-    attempts += 1;
-    // A fresh parser per attempt, so a half-read line from a dead monitor cannot blend into
-    // the next monitor's output and invent a gesture.
-    const parser = createToucheggGestureParser(gesture => {
-      sawGesture = true;
+    if (isQuitting || win.isDestroyed()) return;
+    const strategy = LIBINPUT_COMMANDS[strategyIndex];
+    // A fresh parser per attempt, so a half-read line from a dead process cannot blend into
+    // the next process's output and invent a gesture.
+    const parser = createLibinputGestureParser(gesture => {
       if (!win.isDestroyed()) win.webContents.send('touchpad-gesture', gesture);
     });
     let child;
     try {
-      child = spawn('dbus-monitor', [
-        '--address', 'unix:abstract=touchegg',
-        "type='signal',interface='io.github.joseexposito.Touchegg'"
-      ], { stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawn(strategy.command, strategy.args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, LC_ALL: 'C', LANG: 'C' }
+      });
     } catch (error) {
-      console.error('Could not start Touchégg gesture monitoring:', error);
+      console.error(`Could not start touchpad gesture monitoring (${strategy.name}):`, error);
       return;
     }
+    const startedAt = Date.now();
+    let sawDevices = false;
     let diagnostic = '';
     child.stdout.setEncoding('utf8');
-    child.stdout.on('data', data => parser.write(data));
+    child.stdout.on('data', data => {
+      if (!sawDevices && /DEVICE_ADDED/.test(data)) sawDevices = true;
+      parser.write(data);
+    });
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-2000); });
-    child.once('error', error => {
-      if (attempts >= GESTURE_MONITOR_ATTEMPTS) console.error('Could not monitor Touchégg gestures:', error);
-    });
-    // Touchégg's daemon owns the bus SilkOS listens on, so a monitor that dies before the first
-    // gesture usually means the daemon is still coming up. Retry quietly, then report once.
+    child.once('error', error => { diagnostic += String(error.message || error); });
     child.once('close', (code, signal) => {
+      parser.reset();
       touchpadGestureMonitor = null;
       if (isQuitting) return;
-      if (!sawGesture && attempts < GESTURE_MONITOR_ATTEMPTS) {
-        setTimeout(startMonitor, GESTURE_MONITOR_RETRY_MS);
-        return;
+      // libinput that listed input devices is working: restart it with the same command. One that
+      // died without ever seeing a device usually cannot read /dev/input, so try the next command.
+      if (sawDevices || Date.now() - startedAt >= GESTURE_MONITOR_HEALTHY_MS) {
+        failures = 0;
+      } else {
+        failures += 1;
+        strategyIndex = (strategyIndex + 1) % LIBINPUT_COMMANDS.length;
+        if (failures === GESTURE_MONITOR_GIVE_UP) {
+          console.error(`Touchpad gestures are unavailable (${signal || `exit ${code}`}): ${diagnostic.trim() || 'libinput printed no diagnostic output'}`);
+        }
+        if (failures >= GESTURE_MONITOR_GIVE_UP * 3) return;
       }
-      if (code !== 0) console.error(`Touchégg gesture monitor stopped (${signal || `exit ${code}`}): ${diagnostic.trim() || 'no diagnostic output'}`);
+      setTimeout(startMonitor, GESTURE_MONITOR_RETRY_MS);
     });
     touchpadGestureMonitor = child;
   };

@@ -36,6 +36,8 @@ wmctrl
 fdisk
 e2fsprogs
 brightnessctl
+libinput-tools
+xinput
 upower
 pipewire
 pipewire-pulse

@@ -18,7 +18,16 @@ sed -i '/<theme>/,/<\/theme>/ {
 }' "$OPENBOX_RC"
 sed -i '/<desktops>/,/<\/desktops>/ s|<number>[^<]*</number>|<number>4</number>|' "$OPENBOX_RC"
 sed -i '/<keybind key="A-Tab">/,/<\/keybind>/d; /<keybind key="A-S-Tab">/,/<\/keybind>/d' "$OPENBOX_RC"
+# Openbox grabs Ctrl+Alt+Left/Right for its own desktop switch, which stops SilkOS registering them and
+# leaves the switch without its animation. Free them so SilkOS handles both.
+sed -i '/<keybind key="C-A-Left">/,/<\/keybind>/d; /<keybind key="C-A-Right">/,/<\/keybind>/d' "$OPENBOX_RC"
 grep -q '<name>SilkOS</name>' "$OPENBOX_RC"
 grep -q '<titleLayout>CIML</titleLayout>' "$OPENBOX_RC"
 grep -q '<number>4</number>' "$OPENBOX_RC"
 ! grep -q '<keybind key="A-\(S-\)\?Tab">' "$OPENBOX_RC"
+! grep -q '<keybind key="C-A-\(Left\|Right\)">' "$OPENBOX_RC"
+# polkitd reads its rule files as an unprivileged user, so they must be world-readable.
+chmod 0644 /etc/polkit-1/rules.d/49-silkos-radio.rules || true
+chmod 0644 /etc/NetworkManager/conf.d/10-silkos-auth.conf || true
+chmod 0644 /etc/dbus-1/system.d/silkos-bluetooth.conf || true
+chmod 0644 /etc/udev/rules.d/70-silkos-touchpad.rules || true

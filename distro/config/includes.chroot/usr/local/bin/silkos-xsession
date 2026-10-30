@@ -32,20 +32,9 @@ until wmctrl -m >/dev/null 2>&1; do
   sleep 0.1
 done
 wmctrl -n 4
-if command -v touchegg >/dev/null 2>&1; then
-  GESTURE_CONFIG="$HOME/.config/touchegg/touchegg.conf"
-  if [ ! -f "$GESTURE_CONFIG" ] && [ -r /usr/share/silkos/touchegg.conf ]; then
-    mkdir -p "$(dirname "$GESTURE_CONFIG")"
-    cp /usr/share/silkos/touchegg.conf "$GESTURE_CONFIG"
-  fi
-  # Touchégg broadcasts gestures only from its daemon; bare "touchegg" starts the client, which
-  # just executes touchegg.conf actions. SilkOS animates gestures itself from the daemon stream.
-  # The daemon's abstract socket is the thing SilkOS needs, so look for it rather than a process.
-  if ! grep -q '@touchegg$' /proc/net/unix 2>/dev/null; then
-    echo "Touchégg daemon was not running; starting it from the session" >>/tmp/touchegg.log
-    touchegg --daemon >>/tmp/touchegg.log 2>&1 &
-  fi
-fi
+# Touchpad gestures are read by SilkOS itself from libinput (see touchpad-gestures.js); nothing
+# needs to be started here. /etc/udev/rules.d/70-silkos-touchpad.rules lets this session read the
+# touchpad, and SilkOS falls back to sudo when it cannot.
 
 # X11 window managers draw frames but cannot round their corners. Match the
 # 18 CSS-pixel SilkOS window radius at the current Xft display scale.

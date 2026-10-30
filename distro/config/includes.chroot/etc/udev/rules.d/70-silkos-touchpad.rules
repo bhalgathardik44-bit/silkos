@@ -1,0 +1,3 @@
+# SilkOS reads touchpad gestures from libinput as the logged-in user. Give the active session
+# (uaccess) and the input group read access to touchpad event nodes.
+KERNEL=="event*", SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHPAD}=="1", TAG+="uaccess", GROUP="input", MODE="0660"

@@ -46,7 +46,7 @@ function addIcon(id){const a=apps[id];
  d.draggable=false;d.innerHTML=`<i>${a.svg||a.i}</i><span class="tip">${a.n}</span>`;d.onclick=()=>launch(id);d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launch(id)}};dock.appendChild(d);icons.push(d);if(iconOrderReady){applySavedOrder(dock,'.ic','dockOrder');queueMicrotask(measureDock)}}
 Object.keys(apps).forEach(addIcon);
 const DEF={theme:'auto',accent:'#0a60ff',wall:0,wallpaperImage:'',lite:false,quietMode:false,wallpaperMotion:true,dock:56,mag:true,magAmt:1.7,hide:false,dockOrder:[],launchpadOrder:[],engine:'google',sugg:true,bri:100,
- clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false};
+ clock24:false,clockSeconds:false,showDate:true,dockPosition:'bottom',centerWindows:false,rememberWindows:false,windowScale:1,titlebarDoubleClick:true,confirmClose:false,reduceMotion:false,highContrast:false,cursorSize:1,showSwitcherIcons:true,switcherStyle:'grid',switcherOrder:'recent',includeMinimized:true,volume:50,lastAudibleVolume:50,muted:false,showHiddenFiles:false,hideFileExtensions:false,finderLocation:'home',finderSort:'folders',startBrowser:true,restoreWindows:false,tapToClick:false};
 const cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('silk.cfg'))||{}}catch(e){return{}}})());
 let activeSpace=0,spacesAvailable=false,workspaceNames=Array.from({length:4},(_,index)=>`Desktop ${index+1}`);
 function normalizedIconOrder(order,ids){const available=new Set(ids);return[...new Set((Array.isArray(order)?order:[]).filter(id=>typeof id==='string'&&available.has(id))),...ids.filter(id=>!Array.isArray(order)||!order.includes(id))]}
@@ -111,7 +111,7 @@ const LPSVG='<svg viewBox="0 0 100 100"><defs><linearGradient id="glp" x1="0" y1
 {const d=document.createElement('div');d.className='ic';d.dataset.id='launchpad';d.draggable=false;d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-label','Launchpad. Drag to reorder.');d.innerHTML=`<i>${LPSVG}</i><span class="tip">Launchpad</span>`;d.onclick=()=>launchpad();d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();launchpad()}};dock.prepend(d);icons.unshift(d);applySavedOrder(dock,'.ic','dockOrder')}
 setupIconReordering(dock,'.ic','dockOrder');
 function refreshDockIndicators(){icons.forEach(icon=>icon.classList.toggle('on',!!wins[icon.dataset.id]&&wins[icon.dataset.id].dataset.space===String(activeSpace)&&!wins[icon.dataset.id].classList.contains('min')))}
-let spaceGesture=null,spaceSettleTimer=null,spaceTransition=null;
+let spaceGesture=null,spaceSettleTimer=null,spaceTransition=null,spaceChangedAt=0;
 /* A gesture commits when the finger crosses half the screen, or sooner when it is clearly a flick. */
 const shouldCommit=state=>state.progress>=.5||state.progress>=.2&&state.speed>=.9;
 /* Only real finger movement counts: a paused finger lets the flick reading expire. */
@@ -171,7 +171,7 @@ function finishSpaceGesture(commit,immediate=false){
  const state=spaceGesture;if(!state)return;
  spaceGesture=null;
  const completed=commit&&shouldCommit(state);
- if(completed){activeSpace=state.to;updateSpaceButton();refreshDockIndicators();if(lpOn())launchpad(false)}
+ if(completed){activeSpace=state.to;spaceChangedAt=performance.now();updateSpaceButton();refreshDockIndicators();if(lpOn())launchpad(false)}
  if(immediate){clearSpaceGesture(state);return}
  const settle=Math.round(130+Math.abs((completed?1:0)-state.progress)*240);
  document.documentElement.style.setProperty('--space-settle',`${settle}ms`);
@@ -191,7 +191,7 @@ async function switchSpace(index,syncSystem=true,direction){
  if(spaceSettleTimer&&spaceTransition){clearTimeout(spaceSettleTimer);clearSpaceGesture(spaceTransition)}
  const previous=activeSpace;if(index===previous){updateSpaceButton();return}
  const travel=direction|| (index>previous?1:-1);
- activeSpace=index;
+ activeSpace=index;spaceChangedAt=performance.now();
  Object.entries(wins).forEach(([id,win])=>{
   win.style.setProperty('--space-exit-x',`${-travel*18}px`);win.style.setProperty('--space-enter-x',`${travel*18}px`);
   if(win.dataset.space===String(index)){
@@ -212,8 +212,11 @@ async function switchSpace(index,syncSystem=true,direction){
 async function syncSystemWorkspace(){
  if(window.silk?.platform!=='linux'||!silk.workspaces)return;
  try{
+  const askedAt=performance.now();
   const result=await silk.workspaces.list();spacesAvailable=!!result?.available;
   if(!result?.available)return;
+  /* A poll that started before a local switch, or lands while one is still reaching the window manager, holds the old desktop and would snap the shell back to it. */
+  if(spaceGesture||spaceSettleTimer||spaceChangedAt>askedAt||performance.now()-spaceChangedAt<1500)return;
   const names=Array.from({length:4},(_,index)=>result.workspaces[index]?.name||`Desktop ${index+1}`);
   if(names.some((name,index)=>name!==workspaceNames[index])){workspaceNames=names;updateSpaceButton()}
   if(Number.isInteger(result.current)&&result.current!==activeSpace)switchSpace(result.current,false)
@@ -402,7 +405,8 @@ const X="<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox=
 const CA_PATH=X+"<path d='M6 3.5v15.2l3.9-3.5 2.6 5.7 2.6-1.2-2.6-5.6 5.2-.1z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/></svg>";
 const CP_PATH=X+"<path d='M10 2.8c-.8 0-1.4.6-1.4 1.4v7.7L7.2 10.5c-.5-.5-1.3-.5-1.8 0s-.5 1.2-.1 1.700l3.600 5c1 1.500 2.600 2.400 4.400 2.400h1.600c2.800 0 4.700-2 4.700-4.700v-3.300c0-.8-.6-1.400-1.400-1.400-.3 0-.6.100-.8.300-.1-.7-.7-1.200-1.400-1.200-.4 0-.8.200-1 .5-.2-.6-.7-1-1.400-1-.3 0-.5.100-.7.200V4.200c0-.8-.6-1.400-1.400-1.400z' fill='white' stroke='black' stroke-width='1.2' stroke-linejoin='round'/></svg>";
 const CT_PATH=X+"<path d='M8.5 3.5h7M12 3.500v17M8.5 20.500h7' stroke='white' stroke-width='3.600' stroke-linecap='round' fill='none'/><path d='M8.5 3.500h7M12 3.500v17M8.5 20.500h7' stroke='black' stroke-width='1.500' stroke-linecap='round' fill='none'/></svg>";
-const cursor=(svg,x,y,style,size=24)=>mk(svg.replace("width='24' height='24'",`width='${size}' height='${size}'`),Math.round(x*size/24),Math.round(y*size/24),style);
+let cursorWhite='white';
+const cursor=(svg,x,y,style,size=24)=>mk(svg.replace("width='24' height='24'",`width='${size}' height='${size}'`).replace(/'white'/g,`'${cursorWhite}'`),Math.round(x*size/24),Math.round(y*size/24),style);
 const CA=cursor(CA_PATH,6,3,'default'),CP=cursor(CP_PATH,10,3,'pointer'),CT=cursor(CT_PATH,12,12,'text');
 const rs=document.documentElement.style;rs.setProperty('--cur',CA);rs.setProperty('--curp',CP);rs.setProperty('--curt',CT);
 let WEBCUR='';function updateCursorSize(){const size=Math.round(24*cfg.cursorSize);rs.setProperty('--cur',cursor(CA_PATH,6,3,'default',size));rs.setProperty('--curp',cursor(CP_PATH,10,3,'pointer',size));rs.setProperty('--curt',cursor(CT_PATH,12,12,'text',size));WEBCUR='html,html *{cursor:'+cursor(CA_PATH,6,3,'default',size)+'!important}html p,html h1,html h2,html h3,html h4,html li,html pre,html code,html span{cursor:'+cursor(CT_PATH,12,12,'text',size)+'!important}html a,html a *,html button,html button *,html [role=button],html summary,html select,html label,html input[type=submit],html input[type=button],html input[type=checkbox],html input[type=radio],html input[type=range]{cursor:'+cursor(CP_PATH,10,3,'pointer',size)+'!important}html input:not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]):not([type=range]),html textarea,html [contenteditable=true],html [contenteditable=true] *{cursor:'+cursor(CT_PATH,12,12,'text',size)+'!important}';Object.values(wins).forEach(w=>w._b&&w._b.updateCursor&&w._b.updateCursor())}
@@ -510,7 +514,7 @@ function menusFor(id){
 function updateSpaceButton(){
  const button=$('#spaces');if(!button)return;
  button.innerHTML=uiIcon('window')+`<span class="spaces-label">${esc(workspaceNames[activeSpace]||`Desktop ${activeSpace+1}`)}</span>`;
- button.title=`${workspaceNames[activeSpace]||`Desktop ${activeSpace+1}`} · swipe four fingers or press Ctrl+Alt+←/→`;
+ button.title=`${workspaceNames[activeSpace]||`Desktop ${activeSpace+1}`} · swipe three or four fingers or press Ctrl+Alt+←/→`;
  button.setAttribute('aria-label',`Current desktop: ${workspaceNames[activeSpace]||`Desktop ${activeSpace+1}`}`);
 }
 function buildBar(){
@@ -548,15 +552,20 @@ async function drainHardwareUpdate(key,job){
   else if(hardwareUpdates.get(key)===job)hardwareUpdates.delete(key);
  }
 }
+/* The pointer is drawn by the display server, so a dimming overlay cannot reach it. While dimming is software only, the pointer's white outline is darkened to match; real backlight or gamma dimming already covers it. */
+function syncCursorDim(){
+ const factor=hardwareBrightness?1:1-(100-bri)/100*.85,level=Math.round(factor*20)/20,v=Math.round(255*level),white=level>=1?'white':`rgb(${v},${v},${v})`;
+ if(white!==cursorWhite){cursorWhite=white;updateCursorSize()}
+}
 function setBrightness(value,immediate=false,statusEl=null){
  bri=cfg.bri=Math.max(5,Math.min(100,Math.round(Number(value))));
  if(window.silk&&silk.platform==='linux'&&silk.brightness){
   queueHardwareUpdate('brightness',bri,async next=>{
    const ok=await silk.brightness(next);hardwareBrightness=!!ok;
-   dim.style.opacity=ok?'0':(100-next)/100*.85;
+   dim.style.opacity=ok?'0':(100-next)/100*.85;syncCursorDim();
    if(statusEl?.isConnected)statusEl.textContent=ok?'':'Brightness control unavailable; using screen dimming.';
   },immediate);
- }else{hardwareBrightness=false;dim.style.opacity=(100-bri)/100*.85}
+ }else{hardwareBrightness=false;dim.style.opacity=(100-bri)/100*.85;syncCursorDim()}
  saveSettings(immediate);
 }
 function setVolume(value,immediate=false,statusEl=null){
@@ -637,7 +646,11 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
  volumeSlider.oninput=()=>updateVol(false);volumeSlider.onchange=()=>updateVol(true);
  muteButton.onclick=()=>{if(volumeSlider.disabled){setStatus('Volume control is unavailable.');return}const next=cfg.muted?(cfg.lastAudibleVolume||lastAudibleVolume||50):0;setVolume(next,true,status);volumeSlider.value=String(next);volumeValue.textContent=`${next}%`;paintFill(volumeSlider);muteButton.classList.toggle('on',cfg.muted);muteButton.setAttribute('aria-label',cfg.muted?'Unmute output':'Mute output')};
  paintFill(brightness);paintFill(volumeSlider);
- if(window.silk&&silk.platform==='linux'&&silk.brightness)silk.brightness().then(actual=>{if(!Number.isFinite(actual))return;hardwareBrightness=true;bri=cfg.bri=actual;brightness.value=String(actual);el.querySelector('.cc-bright-value').textContent=`${actual}%`;paintFill(brightness);dim.style.opacity='0';save()});
+ if(window.silk&&silk.platform==='linux'&&silk.brightness){
+  /* The user's saved level wins. If it is currently shown by screen dimming, re-apply it to the hardware instead of adopting the hardware value, which would snap the slider to 100% and remove the dimming. */
+  if(!hardwareBrightness&&bri<100)setBrightness(bri,true,status);
+  else silk.brightness().then(actual=>{if(!Number.isFinite(actual)||!el.isConnected)return;hardwareBrightness=true;bri=cfg.bri=actual;brightness.value=String(actual);el.querySelector('.cc-bright-value').textContent=`${actual}%`;paintFill(brightness);dim.style.opacity='0';save()});
+ }
  if(window.silk&&silk.platform==='linux'&&silk.volume)silk.volume().then(actual=>{if(!Number.isFinite(actual)){volumeSlider.disabled=true;el.querySelector('.cc-volume-value').textContent='Unavailable';status.textContent='Audio output control is unavailable.';return}volume=cfg.volume=actual;cfg.muted=actual===0;if(actual>0)lastAudibleVolume=cfg.lastAudibleVolume=actual;volumeSlider.value=String(actual);el.querySelector('.cc-volume-value').textContent=`${actual}%`;muteButton.classList.toggle('on',cfg.muted);paintFill(volumeSlider);save()});
  else{volumeSlider.disabled=true;el.querySelector('.cc-volume-value').textContent='Unavailable'}
  return el}
@@ -654,7 +667,7 @@ function fitPopup(el,x,y,alignRight=false){
 }
 function openK(b){const k=b.dataset.k,right=b.parentNode===mright;let el;
  if(k==='apple')el=listEl([['About SilkOS',()=>launch('settings')],'-',[(document.body.classList.contains('lite')?'✓ ':'    ')+'Lite Mode (no blur)',toggleLite],['Enter Full Screen',toggleFS,'F11'],'-',['Lock Screen',lockScreen],['Sleep',()=>power('sleep')],['Restart…',()=>power('restart')],['Shut Down…',()=>power('off')]]);
- else if(k==='spaces')el=listEl([...workspaceNames.map((name,index)=>[(index===activeSpace?'✓ ':'    ')+name,()=>switchSpace(index),index===activeSpace?'Current':'Ctrl+Alt+'+(index<activeSpace?'←':'→'),index===activeSpace]),'-',['Swipe with four fingers to switch desktops',null,'',true]]);
+ else if(k==='spaces')el=listEl([...workspaceNames.map((name,index)=>[(index===activeSpace?'✓ ':'    ')+name,()=>switchSpace(index),index===activeSpace?'Current':'Ctrl+Alt+'+(index<activeSpace?'←':'→'),index===activeSpace]),'-',['Swipe with three or four fingers to switch desktops',null,'',true]]);
  else if(k==='cc')el=ccEl();else if(k==='clock')el=calEl();
  else if(k==='wifi')el=listEl([[wfInfo?(wfInfo.connected?(wfInfo.type==='wifi'?'Wi-Fi: ':'Network: ')+(wfInfo.name||'Connected'):'Not connected'):'Wi-Fi: '+(navigator.onLine?'Connected':'Not connected'),null,'',true]]);
  else if(k==='bat')el=listEl([[batInfo?Math.round(batInfo.level*100)+'% · '+(batInfo.charging?'Charging':'On battery'):'Battery',null,'',true]]);
@@ -678,6 +691,8 @@ function statusPoll(interval,poll){
 if(window.silk&&silk.platform==='linux'&&silk.battery)statusPoll(30000,()=>silk.battery().then(r=>{if(!r){$('#bat').style.display='none';return}batInfo={level:r.level/100,charging:r.charging};$('#bat').style.display='';$('#bat').innerHTML=IC.bat+'<span>'+r.level+'%</span>'}));else if(navigator.getBattery)navigator.getBattery().then(b=>{batInfo=b;const u=()=>{$('#bat').innerHTML=IC.bat+'<span>'+Math.round(b.level*100)+'%</span>'};u();b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u)}).catch(()=>{});
 let wfInfo=null;const wf=mright.querySelector('[data-k=wifi]'),wfu=()=>wf.style.opacity=(wfInfo?wfInfo.connected:navigator.onLine)?1:.4;wfu();addEventListener('online',wfu);addEventListener('offline',wfu);
 if(window.silk&&silk.platform==='linux'&&silk.wifi)statusPoll(10000,()=>silk.wifi().then(r=>{wfInfo=r;wfu()}));
+/* Re-apply the saved brightness once at startup: screen dimming through gamma does not survive a restart of the display server. */
+if(window.silk?.platform==='linux'&&silk.brightness&&cfg.bri<100)setBrightness(cfg.bri,true);
 if(window.silk?.platform==='linux'&&silk.workspaces)statusPoll(900,async()=>{await syncSystemWorkspace()});
 /* spotlight */
 document.body.insertAdjacentHTML('beforeend','<div id="spot" class="glass"><input placeholder="Spotlight Search" spellcheck="false" autocomplete="off"><div class="srs"></div></div>');
@@ -931,12 +946,19 @@ function applyWindowVibrancy(wall){const painted=getComputedStyle(wall),R=docume
  R.style.setProperty('--material-base',/,\s*0\)$/.test(base)?'var(--win)':base);
  R.style.setProperty('--material-vibrancy-size',cfg.wallpaperImage?'cover':'120% 120%');
  document.body.classList.toggle('photo-wallpaper',!!cfg.wallpaperImage)}
+let appliedTapToClick=null;
+/* Applied once at startup and again whenever the setting changes, so the touchpad always follows the saved choice. */
+function applyTrackpad(){
+ if(window.silk?.platform!=='linux'||!silk.trackpad)return;
+ const wanted=!!cfg.tapToClick;if(wanted===appliedTapToClick)return;appliedTapToClick=wanted;
+ silk.trackpad.setTapToClick(wanted).then(result=>{if(!result?.available)appliedTapToClick=null}).catch(error=>{appliedTapToClick=null;console.error('Could not change tap to click:',error)})
+}
 function applyCfg(){const R=document.documentElement,dark=cfg.theme==='dark'||(cfg.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme==='auto'?R.removeAttribute('data-theme'):R.setAttribute('data-theme',cfg.theme);R.style.setProperty('--accent',cfg.accent);updateCursorSize();
  const wall=$('#wall');wall.style.background=cfg.wallpaperImage?`center / cover no-repeat url("${cfg.wallpaperImage}")`:WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('static-wallpaper',!cfg.wallpaperMotion);document.body.classList.toggle('lite',!!cfg.lite);
  applyWindowVibrancy(wall);
  document.body.classList.toggle('reduce-motion',!!cfg.reduceMotion);document.body.classList.toggle('high-contrast',!!cfg.highContrast);document.body.classList.toggle('high-contrast-dark',!!cfg.highContrast&&dark);
  const dockWrap=$('#dockwrap');dockWrap.classList.remove('pos-left','pos-right');if(cfg.dockPosition!=='bottom')dockWrap.classList.add('pos-'+cfg.dockPosition);
- baseWanted=cfg.dock;measureDock();dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;clk()}
+ baseWanted=cfg.dock;measureDock();dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;syncCursorDim();applyTrackpad();clk()}
 document.addEventListener('mousemove',e=>{if(!cfg.hide)return;const w=$('#dockwrap'),edge=cfg.dockPosition==='bottom'?e.clientY>innerHeight-10:cfg.dockPosition==='left'?e.clientX<10:e.clientX>innerWidth-10,near=cfg.dockPosition==='bottom'?e.clientY>innerHeight-120:cfg.dockPosition==='left'?e.clientX<120:e.clientX>innerWidth-120;w.classList.toggle('show',edge||(w.classList.contains('show')&&near))});
 function resizify(el){['n','s','e','w','ne','nw','se','sw'].forEach(d=>{const h=document.createElement('div');h.className='rz '+d;el.appendChild(h);
  h.onpointerdown=ev=>{if(el.dataset.max||el.dataset.fullscreen)return;ev.preventDefault();ev.stopPropagation();h.setPointerCapture(ev.pointerId);

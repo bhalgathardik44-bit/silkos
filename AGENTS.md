@@ -16,12 +16,12 @@
 - `package-lock.json` resolves Electron 33.4.11 and electron-builder 25.1.8.
 - ISO CI uses Node 20 on Ubuntu 24.04; local Node is not pinned by package.json.
 - Tests use Node's built-in `node:test` runner.
-- Linux live image: Debian trixie, Openbox, Picom, and Touchégg integration.
+- Linux live image: Debian trixie, Openbox, Picom, and libinput touchpad gestures.
 
 ## Repository map and ownership
-- `main.js`: Electron lifecycle, BrowserWindow, IPC handlers, OS services, native app launch, Store backend, and gesture monitoring.
+- `main.js`: Electron lifecycle, BrowserWindow, IPC handlers, OS services, native app launch, Store backend, and gesture monitoring (libinput).
 - `preload.js`: contextBridge API exposed as `window.silk`; renderer-to-main boundary.
-- `touchpad-gestures.js`: Touchégg message parsing; independently exercised by Node tests.
+- `touchpad-gestures.js`: libinput `debug-events` parsing into shell gesture events; independently exercised by Node tests.
 - `app/index.html`: minimal desktop DOM, startup overlay and scoped inline startup CSS, ordered script loading.
 - `app/desktop.css`: extracted desktop styles, motion tokens, layout, and app styling.
 - `app/startup.js`: temporary startup controller; not an app manager or network readiness tracker.

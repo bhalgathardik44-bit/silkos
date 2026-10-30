@@ -1,11 +1,12 @@
+// SilkOS is a single-user desktop. Let the signed-in user (or anyone on the local, active seat)
+// control networking and Bluetooth. Matching the user name as well as the session means this still
+// works when logind does not report the X session as active.
 polkit.addRule(function (action, subject) {
-  if (!subject.local || !subject.active) return;
-  if ([
-    'org.freedesktop.NetworkManager.enable-disable-wifi',
-    'org.freedesktop.NetworkManager.enable-disable-network',
-    'org.freedesktop.NetworkManager.network-control',
-    'org.freedesktop.NetworkManager.settings.modify.system',
-    'org.bluez.control',
-    'org.bluez.settings'
-  ].includes(action.id)) return polkit.Result.YES;
+  var id = action.id;
+  var networking = id.indexOf('org.freedesktop.NetworkManager.') === 0;
+  var bluetooth = id.indexOf('org.bluez.') === 0;
+  if (!networking && !bluetooth) return;
+  if (subject.user === 'silk' || subject.isInGroup('netdev') || (subject.local && subject.active)) {
+    return polkit.Result.YES;
+  }
 });
