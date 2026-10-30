@@ -2,12 +2,23 @@
 :root{--ease:cubic-bezier(.32,.72,0,1);--out:cubic-bezier(.45,0,.75,.25);--spring:cubic-bezier(.22,1.2,.36,1);--t-tap:.11s;--t-ui:.16s;--t-pop:.2s;--t-space:.28s;--t-win:.34s;--glass:rgba(255,255,255,.55);--text:#111;--bar:rgba(255,255,255,.45);--win:#fff;--line:rgba(0,0,0,.1)}
 @media (prefers-color-scheme:dark){:root{--glass:rgba(40,40,48,.6);--text:#eee;--bar:rgba(20,20,26,.45);--win:#2a2a32;--line:rgba(255,255,255,.12)}}
 *{box-sizing:border-box;margin:0}
+/* macOS overlay scrollbars: no trough, no buttons, a slim thumb floating inside a wider hit area and tinted from
+   --text so it stays light on dark panels and dark on light ones. Chromium paints these in every scroll area. */
+::-webkit-scrollbar{width:12px;height:12px;background:transparent}
+::-webkit-scrollbar-track{background:transparent}
+/* Only side borders, so a horizontal bar keeps its height and the 4px settings nav strip still paints. */
+::-webkit-scrollbar-thumb{min-height:44px;border-left:2px solid transparent;border-right:2px solid transparent;border-radius:8px;background-clip:padding-box;background-color:color-mix(in srgb,var(--text) 26%,transparent)}
+::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--text) 40%,transparent)}
+::-webkit-scrollbar-thumb:active{background-color:color-mix(in srgb,var(--text) 52%,transparent)}
+::-webkit-scrollbar-corner,::-webkit-scrollbar-button{background:transparent;display:none}
 html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--text);user-select:none}
 #wall{position:fixed;inset:-10%;background:radial-gradient(60% 60% at 20% 20%,#7aa7ff,transparent),radial-gradient(50% 50% at 80% 30%,#ff8fc7,transparent),radial-gradient(60% 60% at 60% 90%,#ffc27a,transparent),#3b3b8f;animation:drift 24s ease-in-out infinite alternate;will-change:transform}
 @keyframes drift{to{transform:translate3d(3%,2%,0) scale(1.08)}}
 .glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6)}
 body.lite .glass{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--win)}
-#menubar{position:fixed;top:0;left:0;right:0;height:28px;padding:env(safe-area-inset-top,0) 14px 0;display:flex;align-items:center;gap:16px;font-size:13px;z-index:9000;background:var(--bar);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+/* Above the Launchpad layer (9400) so the bar stays crisp and clickable while Launchpad is open, the way macOS
+   keeps it; dropdowns and the switcher (9800) still open over the bar. */
+#menubar{position:fixed;top:0;left:0;right:0;height:28px;padding:env(safe-area-inset-top,0) 14px 0;display:flex;align-items:center;gap:16px;font-size:13px;z-index:9600;background:var(--bar);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 body.lite #menubar{backdrop-filter:none;background:var(--win)}
 #menubar b{font-weight:700}#clock{margin-left:auto}
 .win{position:absolute;min-width:260px;border-radius:12px;background:var(--win);box-shadow:0 20px 50px rgba(0,0,0,.35),0 0 0 1px var(--line);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:scale(.94);transition:transform var(--t-win) var(--spring),opacity var(--t-ui) var(--ease),box-shadow var(--t-space) var(--ease);will-change:transform,opacity}
@@ -71,6 +82,8 @@ body.lite #menubar{backdrop-filter:none;background:var(--win)}
 .ov.open{opacity:1;pointer-events:auto;transform:none}
 .card{border-radius:12px;overflow:hidden;background:var(--win);box-shadow:0 6px 20px rgba(0,0,0,.2);transition:transform var(--t-ui) var(--spring)}.card:hover{transform:scale(1.04)}
 .thumb{height:130px;background:#8882 center/cover no-repeat;display:grid;place-items:center;font-size:12px;opacity:.9}
+.thumb img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.thumb .ov-fallback{max-width:100%;padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8}
 .ct{padding:8px 10px;font-size:12px;display:flex;justify-content:space-between;gap:8px}.ct span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ct b{font-weight:400;opacity:.5}
 /* Browser: site icons in the tab strip, arrows with nowhere to go, find bar and failed loads */
 .tf{display:flex;flex:none}.tf:empty{display:none}
@@ -111,7 +124,10 @@ textarea{width:100%;height:100%;border:0;outline:0;resize:none;padding:14px;font
 .win.space-hidden{display:none!important}
 .win.space-leaving{opacity:0;transform:translateX(var(--space-exit-x,-18px)) scale(.99);pointer-events:none;transition:opacity var(--t-ui) var(--out),transform var(--t-space) var(--out)}
 .win.space-entering{opacity:0;transform:translateX(var(--space-enter-x,18px)) scale(.99);transition:opacity var(--t-space) var(--ease),transform var(--t-space) var(--ease)}
-.win.space-swipe{transform:translate3d(var(--space-swipe-x),0,0);transition:none!important;pointer-events:none;will-change:transform}
+/* While desktops slide, a viewport-fixed wallpaper copy would repaint the glass of every window on
+   every frame and would also stay behind while its window moves. The wallpaper copy is re-anchored to
+   each window for the length of the swipe, so the window and its glass travel as one layer. */
+.win.space-swipe{transform:translate3d(var(--space-swipe-x),0,0);transition:none!important;pointer-events:none;will-change:transform;background-attachment:scroll!important;background-size:var(--vibe-w,120vw) var(--vibe-h,120vh)!important;background-position:var(--vibe-x,0px) var(--vibe-y,0px)!important;backface-visibility:hidden}
 .win.space-swipe-settling{transition:transform var(--space-settle,.32s) var(--ease)!important}
 .win.inactive{box-shadow:0 12px 36px rgba(0,0,0,.22),0 0 0 .5px rgba(0,0,0,.3)}
 .win.inactive .dot{background:#9998!important}
@@ -232,19 +248,31 @@ body.reduce-motion .sbn .it,body.reduce-motion .settings-content,body.reduce-mot
 .rw.pick{cursor:var(--curp)}.rw.pick .ck{color:var(--accent);font-weight:700}
 @property --lp-blur{syntax:"<length>";inherits:true;initial-value:0px}
 @property --lp-dim{syntax:"<number>";inherits:true;initial-value:0}
-#lp{position:fixed;inset:0;z-index:9400;display:flex;flex-direction:column;align-items:center;padding:56px 6vw 150px;background:transparent;opacity:0;pointer-events:none;--lp-blur:0px;--lp-dim:0;transition:opacity var(--t-space) var(--ease),--lp-blur var(--t-win) var(--ease),--lp-dim var(--t-win) var(--ease);will-change:opacity}
+#lp{position:fixed;inset:0;z-index:9400;display:flex;flex-direction:column;align-items:center;gap:52px;padding:56px 6vw 150px;background:transparent;opacity:0;pointer-events:none;--lp-blur:0px;--lp-dim:0;transition:opacity var(--t-space) var(--ease),--lp-blur var(--t-win) var(--ease),--lp-dim var(--t-win) var(--ease);will-change:opacity}
 #lp::before{content:"";position:absolute;inset:0;background:rgba(15,18,30,.78);-webkit-backdrop-filter:blur(var(--lp-blur)) saturate(calc(1.5 - .5*var(--lp-dim)));backdrop-filter:blur(var(--lp-blur)) saturate(calc(1.5 - .5*var(--lp-dim)));opacity:var(--lp-dim);pointer-events:none}
 #lp.on{opacity:1;pointer-events:auto;--lp-blur:44px;--lp-dim:.56}
 #lp.gesture-active{opacity:1;pointer-events:none;transition:none}
 #lp>*{position:relative;z-index:1}
 body.lite #lp::before{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(18,18,28,.92);opacity:calc(var(--lp-dim)*1.8)}
+/* Lite drops the live blur but keeps the card legible against the flat dim by leaning on the veil. */
+body.lite #lp .lpg{-webkit-backdrop-filter:none;backdrop-filter:none;background:linear-gradient(rgba(255,255,255,.15),rgba(255,255,255,.09))}
 body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
+/* macOS puts the Dock away in Launchpad; leaving it floating over the frosted desk was the giveaway. */
+body.launchpad-open #dockwrap{opacity:0;visibility:hidden;transition:opacity var(--t-space) var(--ease),visibility 0s var(--t-space)}
 #lp input{width:240px;height:30px;border:0;outline:0;border-radius:9px;padding:0 12px;font-size:14px;text-align:center;color:#fff;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3);user-select:text;opacity:0;transform:translateY(-8px);transition:opacity var(--t-ui) var(--ease),transform var(--t-space) var(--ease),box-shadow var(--t-ui)}
 #lp.on input{opacity:1;transform:none}
 #lp input::placeholder{color:rgba(255,255,255,.6)}#lp input:focus{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3),0 0 0 3px rgba(255,255,255,.22)}
-.lpg{flex:1;width:100%;max-width:1080px;margin-top:52px;display:grid;grid-template-columns:repeat(auto-fit,130px);justify-content:center;gap:44px 28px;align-content:start;overflow:auto;opacity:0;transform:scale(.98);transition:opacity var(--t-ui) var(--ease),transform var(--t-space) var(--ease)}
+/* The grid doubles as the frosted card: sizing it to its rows rather than the viewport keeps the panel hugging
+   the icons, auto margins hold it centred under the search field so filtering grows and shrinks it around its
+   middle, the three-column floor stops a lone result collapsing it into a sliver, and owning .lpg's existing
+   fade means it arrives with the tiles on the click path and follows the fingers on the pinch path. */
+.lpg{flex:0 1 auto;min-height:0;max-height:100%;margin:auto 0;width:fit-content;min-width:min(506px,100%);max-width:min(1080px,100%);padding:34px 30px 38px;border:.5px solid rgba(255,255,255,.16);border-radius:30px;background:linear-gradient(rgba(255,255,255,.09),rgba(255,255,255,.045));box-shadow:0 26px 64px rgba(6,8,14,.45),inset 0 1px 0 rgba(255,255,255,.10);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);display:grid;grid-template-columns:repeat(auto-fit,130px);justify-content:center;gap:44px 28px;align-content:start;overflow:auto;opacity:0;transform:scale(.98);transition:opacity var(--t-ui) var(--ease),transform var(--t-space) var(--ease)}
 #lp.on .lpg{opacity:1;transform:none}
-#lp.gesture-active .lpg{opacity:1;transform:translateY(var(--lp-grid-y,12px)) scale(var(--lp-grid-scale,.94));transition:none}
+/* The card leads the pinch by a little (opacity clamps itself) so the icons, which still fade at exactly
+   --lp-progress on top of it, keep tracking the fingers instead of dimming twice over. */
+#lp.gesture-active .lpg{opacity:calc(var(--lp-progress,0)*1.6);transform:translateY(var(--lp-grid-y,12px)) scale(var(--lp-grid-scale,.94));transition:none}
+/* Still scrolls when the rows do not fit, but without a rail: a bar down a frosted card reads as a seam. */
+#lp .lpg{scrollbar-width:none}#lp .lpg::-webkit-scrollbar{display:none}
 .lpa{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:0;transform:translateY(12px) scale(.9);transform-origin:center center;transition:opacity var(--t-ui) var(--ease),transform var(--t-space) var(--ease);transition-delay:var(--lp-out-delay,0ms);cursor:grab;touch-action:none}
 #lp.on .lpa{opacity:1;transform:none;transition-delay:var(--lp-delay,0ms)}
 #lp.gesture-active .lpa{opacity:var(--lp-progress,0);transform:translateY(var(--lp-icon-y,12px)) scale(var(--lp-icon-scale,.9));transition:none!important;transition-delay:0ms!important}
@@ -256,7 +284,8 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .lpa b svg{width:100%;height:100%;display:block}
 .lpa:hover b{transform:scale(1.06)}.lpa:active b{transform:scale(.92);filter:brightness(.75)}
 .lpa.sel b{box-shadow:0 0 0 3px rgba(255,255,255,.85),0 8px 22px rgba(0,0,0,.35)}
-.lpe{grid-column:1/-1;text-align:center;color:rgba(255,255,255,.7);font-size:15px;margin-top:40px}
+/* Kept out of the span so an empty search leaves a small card around the message instead of a full-width one. */
+.lpe{text-align:center;color:rgba(255,255,255,.7);font-size:15px}
 .sto{display:flex;min-height:0;height:100%}
 .stb{border:0;border-radius:14px;padding:5px 16px;font-size:13px;font-weight:600;background:var(--sfield);color:var(--accent);flex:none;transition:transform var(--t-tap) var(--ease),filter var(--t-tap) var(--ease)}.stb:hover{filter:brightness(.94)}.stb:active{transform:scale(.96)}.stb:disabled{opacity:.6}
 .stm{text-align:center;opacity:.6;font-size:14px;margin-top:70px;padding:0 20px}
@@ -332,6 +361,7 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 @keyframes skShine{to{transform:translateX(100%)}}
 .store-skeleton{pointer-events:none}
 .store-status{min-height:18px;padding:9px 18px;border-top:1px solid var(--line);font-size:11px;opacity:.7;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-status.bad{color:#ff453a;opacity:1;font-weight:600}
 @media(max-width:660px){.store-side{display:none}.store-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}.store-search{width:150px}.store-app-head{flex-wrap:wrap}.store-shots img{height:168px}}
 .notes-app{height:100%;min-height:0;display:grid;grid-template-columns:172px 255px minmax(0,1fr);background:var(--win);color:var(--text);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .notes-folders,.notes-list{min-width:0;min-height:0;display:flex;flex-direction:column;background:color-mix(in srgb,var(--sbar) 72%,var(--win))}
@@ -406,7 +436,13 @@ body.launchpad-open #dock .tip{opacity:0!important;transform:translateY(6px)}
 .cc-main{min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:var(--cc-gap);transition:transform var(--t-space) var(--ease),opacity var(--t-ui) var(--ease)}
 .cc-detail{position:absolute;inset:var(--cc-pad);display:grid;grid-template-rows:minmax(0,1fr);transform:translateX(100%);visibility:hidden;transition:transform var(--t-space) var(--ease),visibility 0s var(--t-space)}
 .cc.detail-open .cc-detail{transform:none;visibility:visible;transition-delay:0s}
-.cc.detail-open .cc-main{transform:translateX(-100%);opacity:0;pointer-events:none}
+.cc.detail-open .cc-main{transform:translateX(-100%);opacity:0;pointer-events:none;position:absolute;inset:var(--cc-pad)}
+/* The tiles leave the flow while a pane is open, so the popover takes the pane's height rather than the
+   full grid's. ccEl measures the pane and animates between the two heights. */
+.cc.dd{transition:transform var(--t-pop) var(--ease),opacity var(--t-ui) var(--ease),height var(--t-space) var(--ease)}
+.cc.measuring .cc-main{position:absolute;inset:var(--cc-pad);visibility:hidden}
+.cc.measuring .cc-detail{position:static;transform:none;visibility:visible}
+.cc.measuring,.cc.measuring *{transition:none!important}
 .cc-tile{min-width:0;border:1px solid var(--cc-tile-line);border-radius:15px;background:var(--cc-tile);color:inherit;font:inherit;text-align:left}
 .cc-radio{grid-column:1;grid-row:1/span 2;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:6px}
 .cc-service{position:relative;display:flex;align-items:center;min-width:0;border-radius:10px;transition:background .18s}
@@ -638,3 +674,162 @@ body.photo-wallpaper{--material-window:rgba(255,255,255,.58)}
 body.lite,body.high-contrast{--material-window:var(--win);--material-chrome:var(--sbar);--material-sidebar:var(--sbar);--material-content:transparent;--material-container:var(--win);--material-card:var(--win);--material-group:var(--sfield);--material-overlay:var(--sbar);--material-blur:none;--material-panel-blur:none;--material-vibrancy:none;--material-base:var(--win);--material-calc-screen:var(--sbar);--material-calc-text:var(--text);--material-switcher:var(--win);--material-switcher-text:var(--text);--material-switcher-muted:var(--text);--material-switcher-selection:var(--sfield);--material-switcher-line:var(--text)}
 body.lite .win .tb,body.high-contrast .win .tb{background:var(--sbar)}
 body.lite :is(#menubar,#dock,.ic .tip,.switcher),body.high-contrast :is(#menubar,#dock,.glass,.dd,#spot,.sug,.fin,.ic .tip,.switcher){background:var(--win);-webkit-backdrop-filter:none;backdrop-filter:none}
+/* ---- Notification banners ---- */
+#toasts{position:fixed;top:calc(34px + env(safe-area-inset-top,0px));right:10px;z-index:9750;display:flex;flex-direction:column;align-items:flex-end;gap:8px;width:min(334px,calc(100vw - 20px));pointer-events:none}
+.ntoast{pointer-events:auto;position:relative;display:grid;grid-template-columns:27px minmax(0,1fr);gap:0 9px;width:100%;padding:10px 30px 11px 10px;border-radius:15px;color:var(--text);box-shadow:0 12px 34px rgba(0,0,0,.32),0 0 0 .5px var(--line);cursor:var(--curp);animation:toastIn .26s var(--spring) both;transition:opacity .28s var(--ease),transform .28s var(--ease),height .28s var(--ease),margin .28s var(--ease),padding .28s var(--ease)}
+@keyframes toastIn{from{opacity:0;transform:translateX(26px) scale(.96)}}
+.ntoast.leaving{opacity:0;transform:translateX(14%) scale(.97);pointer-events:none}
+.ntoast-src{display:block;width:27px;padding-top:1px}
+.ntoast-icon{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;background:color-mix(in srgb,var(--accent) 18%,transparent);font-size:14px;line-height:1}
+.ntoast-icon svg{width:15px;height:15px;display:block}
+.ntoast-copy{min-width:0}
+.ntoast-app{display:block;overflow:hidden;font-style:normal;font-size:9.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;opacity:.48;text-overflow:ellipsis;white-space:nowrap}
+.ntoast-copy strong{display:block;margin-top:1px;font-size:12.5px;line-height:1.25;letter-spacing:-.01em}
+.ntoast-copy p{margin-top:2px;font-size:11px;line-height:1.35;opacity:.68;overflow-wrap:anywhere}
+.ntoast-copy p[hidden]{display:none}
+.ntoast-thumb{grid-column:1/-1;display:block;width:100%;max-height:118px;margin-top:8px;border-radius:8px;object-fit:cover}
+.ntoast-x{position:absolute;top:5px;right:5px;width:18px;height:18px;display:grid;place-items:center;border:0;border-radius:50%;background:color-mix(in srgb,var(--text) 9%,transparent);color:inherit;opacity:0;transition:opacity .16s var(--ease),background .16s}
+.ntoast-x svg{width:8px;height:8px;display:block}
+.ntoast:hover .ntoast-x,.ntoast-x:focus-visible{opacity:.8}
+.ntoast-x:hover{opacity:1;background:color-mix(in srgb,var(--text) 16%,transparent)}
+.clock-badge{display:inline-block;width:5px;height:5px;margin-left:5px;border-radius:50%;background:var(--accent);vertical-align:middle}
+.clock-badge[hidden]{display:none}
+.clock-badge.quiet{width:11px;height:11px;background:none;opacity:.65}
+.clock-badge.quiet svg{width:11px;height:11px;display:block}
+/* ---- Notification centre ---- */
+.nc{display:flex;flex-direction:column;width:min(344px,calc(100vw - 16px));padding:4px 6px 5px;font-size:13px}
+.nc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 5px 7px}
+.nc-head strong{font-size:13.5px;font-weight:650;letter-spacing:-.01em}
+.nc-clear{flex:none;border:0;border-radius:8px;padding:3px 8px;background:transparent;color:inherit;font:inherit;font-size:10.5px;opacity:.6;cursor:var(--curp);transition:background var(--t-tap),opacity var(--t-tap)}
+.nc-clear:hover{background:var(--cc-hover);opacity:1}
+.nc-quiet{display:flex;align-items:center;gap:8px;margin:0 3px 8px;padding:8px 9px;border-radius:10px;background:color-mix(in srgb,var(--accent) 15%,transparent);font-size:10.5px;line-height:1.3}
+.nc-quiet-icon{flex:none;display:grid;place-items:center;opacity:.75}
+.nc-quiet-icon svg{width:14px;height:14px}
+.nc-quiet span:nth-child(2){flex:1}
+.nc-act{flex:none;border:0;border-radius:7px;padding:3px 8px;background:var(--cc-track);color:inherit;font:inherit;font-size:10px;font-weight:600;cursor:var(--curp);transition:background .15s var(--ease)}
+.nc-act:hover{background:var(--cc-hover)}
+.nc .nc-cal{padding:2px 4px 10px;border-bottom:1px solid var(--line)}
+.nc-cal h5{margin:0 0 6px 2px;font-size:11px}
+.nc-list{min-height:0;max-height:min(46vh,340px);margin:0;padding:0 2px;overflow:auto;overscroll-behavior:contain}
+.nc-date{margin:9px 4px 3px;font-size:9.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;opacity:.42}
+.nc-item{display:flex;align-items:flex-start;gap:9px;padding:7px 5px 8px;border-radius:9px}
+.nc-item:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}
+.nc-item .ntoast-icon{width:25px;height:25px;flex:none;margin-top:1px}
+.nc-copy{min-width:0;flex:1}
+.nc-meta{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:9.5px;opacity:.5}
+.nc-app{overflow:hidden;font-weight:650;letter-spacing:.04em;text-transform:uppercase;text-overflow:ellipsis;white-space:nowrap}
+.nc-copy>strong{display:block;margin-top:1px;font-size:12px;line-height:1.3}
+.nc-copy p{margin-top:1px;font-size:10.5px;line-height:1.35;opacity:.66;overflow-wrap:anywhere}
+.nc-img{display:block;width:100%;max-height:120px;margin-top:6px;border-radius:7px;object-fit:cover}
+.nc-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.nc-empty{display:flex;flex-direction:column;align-items:center;gap:5px;padding:26px 10px 30px;text-align:center;opacity:.55}
+.nc-empty svg{width:22px;height:22px;margin-bottom:2px}
+.nc-empty span{font-size:12px;font-weight:600}
+.nc-empty small{font-size:10.5px;opacity:.8}
+/* ---- Screenshot overlay ---- */
+#shot{position:fixed;inset:0;z-index:9950;overflow:hidden;background:#000;opacity:0;pointer-events:none;cursor:crosshair;transition:opacity .16s var(--ease)}
+#shot.on{opacity:1;pointer-events:auto}
+#shot.closing{opacity:0;pointer-events:none}
+#shot[hidden]{display:none}
+.shot-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.shot-shade{position:absolute;inset:0;background:rgba(0,0,0,.22);pointer-events:none}
+.shot-box{position:absolute;left:0;top:0;width:0;height:0;border:1px solid rgba(255,255,255,.92);border-radius:2px;box-shadow:0 0 0 100vmax rgba(0,0,0,.52),0 0 0 .5px rgba(0,0,0,.5);opacity:0;pointer-events:none}
+.shot-box.on{opacity:1}
+.shot-size{position:absolute;left:5px;top:5px;padding:2px 6px;border-radius:6px;background:rgba(10,10,14,.72);color:#fff;font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.shot-hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%) translateY(4px);display:flex;align-items:center;gap:10px;padding:7px 14px;border-radius:999px;background:rgba(16,16,20,.72);color:#fff;font-size:12px;box-shadow:0 8px 26px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease);backdrop-filter:blur(16px)}
+.shot-hint span{font-size:10.5px;opacity:.6}
+#shot:not(.selecting):not(.has-selection) .shot-hint{opacity:1;transform:translateX(-50%)}
+.shot-bar{position:absolute;left:0;top:0;display:flex;align-items:center;gap:6px;padding:6px;border-radius:13px;background:rgba(18,18,23,.86);color:#fff;box-shadow:0 14px 40px rgba(0,0,0,.45),0 0 0 .5px rgba(255,255,255,.18);opacity:0;transform:translateY(6px) scale(.98);pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--spring);backdrop-filter:blur(20px)}
+.shot-bar.on{opacity:1;transform:none;pointer-events:auto}
+.shot-save,.shot-cancel{height:27px;padding:0 13px;border:0;border-radius:8px;font:inherit;font-size:11.5px;font-weight:600;cursor:var(--curp);transition:transform var(--t-tap) var(--spring),filter .15s,background .15s}
+.shot-save{background:var(--accent);color:#fff}
+.shot-cancel{background:rgba(255,255,255,.16);color:#fff}
+.shot-save:hover{filter:brightness(1.08)}
+.shot-cancel:hover{background:rgba(255,255,255,.24)}
+.shot-save:active,.shot-cancel:active{transform:scale(.94)}
+.shot-bar small{padding-right:4px;font-size:9.5px;opacity:.55;white-space:nowrap}
+/* ---- Control Center additions ---- */
+.cc-portal{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:7px 8px;border-radius:9px;background:color-mix(in srgb,var(--accent) 14%,transparent);font-size:10px;line-height:1.3}
+.cc-portal[hidden]{display:none}
+.cc-portal span{flex:1;min-width:0}
+.cc-portal .cc-chip{flex:none;background:var(--accent);color:#fff}
+.cc-net-other{margin-top:3px;padding:5px 6px;border:1px dashed color-mix(in srgb,var(--text) 18%,transparent);background:transparent;opacity:.85}
+.cc-net-other:hover{background:var(--cc-hover);opacity:1}
+.cc-net-other .cc-net-mark{color:inherit;opacity:.6}
+.cc-net-other .cc-net-mark svg{width:12px;height:12px}
+.cc-join{flex-wrap:wrap}
+.cc-join strong[hidden]{display:none}
+.cc-join input[name="ssid"]{flex:1 0 100%;width:100%}
+.cc-hidden{flex:1 0 100%;display:flex;align-items:center;gap:6px;font-size:10px;opacity:.75}
+.cc-hidden[hidden]{display:none}
+.cc-hidden input{width:12px!important;height:12px!important;min-width:0;padding:0;margin:0;accent-color:var(--accent)}
+.cc-empty-row{padding:9px 6px;font-size:10.5px;opacity:.5}
+.cc-audio.busy{opacity:.55;pointer-events:none}
+.cc-out-more svg{width:12px;height:12px;opacity:.7}
+/* ---- Finder ---- */
+.fnd{display:flex;height:100%;container-type:inline-size;container-name:finder}
+.fnd>.fsb{width:168px;flex:none;padding:6px;overflow:auto;border-right:1px solid var(--line);font-size:12.5px;user-select:none}
+.fsb-head{padding:10px 9px 3px;border-radius:0;font-size:9.5px;font-weight:650;letter-spacing:.055em;text-transform:uppercase;opacity:.42}
+.fnd .fsb div[data-p]{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:7px;cursor:default;transition:background var(--t-tap) var(--ease),box-shadow var(--t-ui) var(--ease)}
+.fsb div[data-p]:hover{background:color-mix(in srgb,var(--text) 5%,transparent)}
+.fsb div[data-p].on{background:color-mix(in srgb,var(--accent) 17%,transparent);font-weight:600}
+.fsb div[data-p].drop{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.fsb-ico{width:17px;flex:none;text-align:center;font-size:13px}
+.fsb-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fsb-empty{padding:8px 9px;font-size:11px;opacity:.5}
+.fmn{position:relative;flex:1;display:flex;flex-direction:column;min-width:0;container-type:inline-size;container-name:finder-main}
+.fnd .ftb{gap:8px;padding:7px 11px}
+.fnav{display:flex;gap:2px;flex:none}
+.fnd .fup{width:26px;height:24px;display:grid;place-items:center;border:0;border-radius:7px;background:var(--sfield);color:inherit;font-size:15px;line-height:1;cursor:var(--curp);transition:background var(--t-ui),transform var(--t-tap) var(--spring),opacity var(--t-ui)}
+.fnd .fup:hover:not(:disabled){background:color-mix(in srgb,var(--text) 12%,transparent)}
+.fnd .fup:active:not(:disabled){transform:scale(.9)}
+.fnd .fup:disabled{opacity:.3;cursor:default}
+.fnd .fpt{flex:1;min-width:0;overflow:hidden;font-size:12px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.fsearch{display:flex;align-items:center;gap:5px;flex:0 1 170px;min-width:74px;height:25px;padding:0 8px;border-radius:7px;background:var(--sfield);transition:box-shadow var(--t-ui) var(--ease)}
+.fsearch:focus-within{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 65%,transparent)}
+.fsearch>span{flex:none;font-size:12px;opacity:.5}
+.fsearch input{flex:1;min-width:0;height:100%;padding:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:11.5px;user-select:text}
+.fsearch input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+.fnew,.fsort{width:26px;height:24px;flex:none;display:grid;place-items:center;border:0;border-radius:7px;background:var(--sfield);color:inherit;font:inherit;font-size:14px;cursor:var(--curp);transition:background var(--t-ui),transform var(--t-tap) var(--spring)}
+.fnew:hover,.fsort:hover{background:color-mix(in srgb,var(--text) 12%,transparent)}
+.fnew:active,.fsort:active{transform:scale(.9)}
+.fnd .fhead{display:grid;grid-template-columns:20px minmax(0,1fr) 76px 132px;gap:8px;align-items:center;padding:5px 24px 5px 12px;border-bottom:1px solid var(--line);color:color-mix(in srgb,var(--text) 52%,transparent);font-size:9.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;user-select:none}
+.fh{display:flex;align-items:center;gap:3px;min-width:0;padding:1px 3px;margin:-1px -3px;border-radius:4px;cursor:var(--curp);transition:background var(--t-tap),color var(--t-tap)}
+.fh:hover{background:color-mix(in srgb,var(--text) 6%,transparent);color:inherit}
+.fh.on{color:inherit}
+.fcar{width:8px;flex:none;font-size:8px;font-style:normal;opacity:.8}
+.fh[data-sort="size"],.fh[data-sort="date"]{justify-content:flex-end}
+.fnd .fls{flex:1;min-height:0;padding:5px 6px 7px;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain;outline:0}
+.fnd .fls:focus-visible{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 55%,transparent)}
+.fnd .fit{display:grid;grid-template-columns:20px minmax(0,1fr) 76px 132px;gap:8px;align-items:center;padding:5px 6px;border-radius:7px;font-size:12.5px;white-space:nowrap;cursor:default;user-select:none;animation:frowIn .2s var(--ease) both;animation-delay:calc(var(--row,0)*9ms);transition:background var(--t-tap) var(--ease)}
+@keyframes frowIn{from{opacity:0;transform:translateY(4px)}}
+.fnd .fit:hover:not(.sel){background:color-mix(in srgb,var(--text) 5%,transparent)}
+.fnd .fit.sel{background:var(--accent);color:#fff}
+.fnd .fit.drop{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.fnd .fit>span{margin-right:0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ficon{flex:none;text-align:center;font-size:13px;line-height:1}
+.fname{display:flex;align-items:center}
+.fsize{font-size:11px;text-align:right;font-variant-numeric:tabular-nums;opacity:.6}
+.fdate{font-size:11px;opacity:.6}
+.fit.sel .fsize,.fit.sel .fdate{opacity:.85}
+.fit mark{padding:0 1px;border-radius:3px;background:color-mix(in srgb,var(--accent) 38%,transparent);color:inherit}
+.fit.sel mark{background:rgba(255,255,255,.32)}
+.fedit{width:100%;min-width:0;height:20px;padding:0 4px;border:1px solid var(--accent);border-radius:5px;outline:0;background:var(--win);color:var(--text);font:inherit;font-size:12px;user-select:text}
+.fit.editing{background:color-mix(in srgb,var(--text) 4%,transparent)}
+.fls.dragging .fit.sel{opacity:.5}
+.fempty{margin-top:56px}
+.fstatus{display:flex;align-items:center;gap:8px;min-height:25px;padding:4px 12px;border-top:1px solid var(--line);font-size:10.5px;opacity:.62}
+.fcount{flex:none}
+.fmsg{flex:1;min-width:0;overflow:hidden;text-align:center;text-overflow:ellipsis;white-space:nowrap}
+.fmsg.bad{color:#ff453a;opacity:1;font-weight:600}
+.fsel{flex:none;margin-left:auto;font-variant-numeric:tabular-nums}
+@container finder-main (max-width:540px){.fnd .fhead{grid-template-columns:20px minmax(0,1fr);padding-right:18px}.fnd .fit{grid-template-columns:20px minmax(0,1fr)}.fsize,.fdate{display:none}}
+@container finder (max-width:470px){.fnd>.fsb{display:none}}
+/* A hand-typed network needs wide fields and a switch on their own rows, so the form switches to a grid. */
+.cc-join.manual{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center}
+.cc-join.manual input[name="ssid"],.cc-join.manual input[name="password"],.cc-join.manual .cc-hidden{grid-column:1/-1;width:auto}
+.cc-join.manual button[type="submit"]{grid-column:2;justify-self:end}
+.cc-join.manual button[data-wifi-cancel]{grid-column:3}
+.cc-join .cc-chip[type="submit"]{background:var(--accent);color:#fff}
+.cc-join .cc-chip[type="submit"]:hover{filter:brightness(1.08)}
+.cc-join.manual[hidden]{display:none}

@@ -44,7 +44,7 @@ function storeInit(el){
  const summaryOf=id=>(info.get(id)||{}).summary||baseOf(id).summary||id;
  const listApps=()=>active==='featured'?apps:apps.filter(item=>item.category===active);
  const heroId=()=>{const items=listApps();return items.length?items[new Date().getDate()%items.length].id:''};
- const say=text=>{status.textContent=text;clearTimeout(noteTimer);noteTimer=setTimeout(()=>{status.textContent=defaultNote},6000)};
+ const say=(text,{sticky=false,bad=false}={})=>{status.textContent=text;status.classList.toggle('bad',bad);clearTimeout(noteTimer);if(!sticky)noteTimer=setTimeout(()=>{status.textContent=defaultNote;status.classList.remove('bad')},6000)};
  status.textContent=defaultNote;
  /* Flathub returns AppStream HTML, so rebuild the text from a small tag whitelist and let no attribute through. */
  function safeHtml(source){
@@ -215,13 +215,18 @@ function storeInit(el){
  async function activate(button){
   const id=button.dataset.id,act=button.dataset.act||'install';
   if(!id||jobs.has(id))return;
-  if(!S){say('Install apps when SilkOS runs on Linux.');return}
+  if(!S){say('Install apps when SilkOS runs on Linux.',{sticky:true,bad:true});return}
   if(act==='uninstall'&&!confirm(`Uninstall ${nameOf(id)} from this computer?`))return;
   /* flatpak keeps a lock on the user repo, so two installs or updates at once would fail for the user. */
-  if(act!=='run'&&[...jobs.values()].some(job=>job.act!=='run')){say('The Store is already busy with another download.');return}
-  jobs.set(id,{label:'',percent:null,act});
+  if(act!=='run'&&[...jobs.values()].some(job=>job.act!=='run')){say('The Store is already busy with another download.',{sticky:true,bad:true});return}
+  const starting=act==='install'?'Preparing':act==='uninstall'?'Removing':act==='run'?'Opening':'Updating';
+  jobs.set(id,{label:`${starting}…`,percent:null,act});
   button.disabled=true;
   paintJob(id);
+  /* Every action names the app it is working on and stays on screen until it finishes, so a slow
+     Flathub handshake or a failure cannot look like a button that did nothing. */
+  say(`${starting} ${nameOf(id)}…`,{sticky:true});
+  let ended='',failed=false;
   try{
    let reply;
    if(act==='run')reply=await S.run(id);
@@ -230,15 +235,26 @@ function storeInit(el){
    else if(act==='update-all')reply=await S.updateAll();
    else reply=await S.install(id);
    if(reply&&reply.error)throw new Error(reply.error);
-   if(act==='run')say(`${nameOf(id)} is opening.`);
-   else if(act==='install'){installed.set(id,{id,name:nameOf(id)});syncFlatpaks();say(`${nameOf(id)} is installed and added to your dock.`)}
-   else if(act==='uninstall'){installed.delete(id);say(`${nameOf(id)} was uninstalled.`)}
-   else say('Your apps are up to date.');
-  }catch(error){console.error('Store action failed:',error);say(error.message||'The Store could not finish that action.')}
+   if(act==='run'){ended=`${nameOf(id)} is opening.`}
+   else if(act==='install'){installed.set(id,{id,name:nameOf(id)});syncFlatpaks();ended=`${nameOf(id)} is installed and added to your dock.`}
+   else if(act==='uninstall'){installed.delete(id);ended=`${nameOf(id)} was uninstalled.`}
+   else ended='Your apps are up to date.';
+  }catch(error){console.error('Store action failed:',error);failed=true;ended=error.message||'The Store could not finish that action.';say(ended,{sticky:true,bad:true})}
   finally{
    jobs.delete(id);
    await loadInstalled();
    renderNav();render();
+   if(!failed)say(ended);
+   /* The Store keeps running in the background after its window closes, so a finished download has to
+      announce itself where the desktop will still see it. */
+   const bark=window.silkNotify;
+   if(typeof bark==='function'){
+    if(failed)bark({app:'App Store',title:'Store Action Failed',body:ended,icon:'🛍️'});
+    else if(act==='install')bark({app:'App Store',title:`${nameOf(id)} Installed`,body:'It is ready in your dock.',icon:'🛍️'});
+    else if(act==='uninstall')bark({app:'App Store',title:`${nameOf(id)} Uninstalled`,body:'The app was removed from this computer.',icon:'🛍️'});
+    else if(act==='update')bark({app:'App Store',title:`${nameOf(id)} Updated`,body:'The latest version is installed.',icon:'🛍️'});
+    else if(act==='update-all')bark({app:'App Store',title:'Updates Installed',body:'Your apps are up to date.',icon:'🛍️'});
+   }
    /* The update check can spend minutes fetching the Flathub catalog, so it finishes in the background
       instead of holding the repaint after an install. */
    loadUpdates().then(()=>{renderNav();render()});

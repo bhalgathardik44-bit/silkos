@@ -1,0 +1,44 @@
+#!/bin/sh
+# Applies one SilkOS interface scale to the X session: the text DPI that native toolkits read, the
+# Openbox menu-bar margin, and the saved scale the desktop shell restores on its next start.
+# Usage: silkos-display-scale [auto|1|1.25|1.5|2]
+set -eu
+mode="${1:-auto}"
+if [ "$mode" = auto ]; then
+  # Physical PPI of the first connected output. Xft.dpi is a text convention, so the scale that makes
+  # a 226 PPI laptop panel readable has to come from the panel's millimetre size, not its resolution.
+  scale="$(xrandr --query 2>/dev/null | awk '
+    / connected / {
+      w=0; mmw=0;
+      for (i=1;i<=NF;i++) {
+        if ($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) { split($i,a,"x"); w=a[1]+0 }
+        if ($i ~ /^[0-9]+mm$/ && $(i+1)=="x" && $(i+2) ~ /^[0-9]+mm$/) { mmw=$i+0; gsub(/mm/,"",mmw) }
+      }
+      if (w > 0 && mmw > 0) {
+        ppi = w * 25.4 / mmw;
+        if (ppi >= 200) print 2;
+        else if (ppi >= 170) print 1.5;
+        else if (ppi >= 125) print 1.25;
+        else print 1;
+        exit
+      }
+    }')"
+  [ -n "$scale" ] || scale=1
+else
+  scale="$mode"
+fi
+# An unknown value from an older configuration falls back to 100% rather than leaving the session unreadable.
+case "$scale" in 1|1.25|1.5|2) ;; *) scale=1 ;; esac
+dpi="$(awk -v s="$scale" 'BEGIN { printf "%d", 96 * s + 0.5 }')"
+margin="$(awk -v s="$scale" 'BEGIN { printf "%d", 28 * s + 0.5 }')"
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/silkos"
+mkdir -p "$conf"
+printf '%s\n' "$scale" >"$conf/display-scale"
+printf 'Xft.dpi:\t%s\n' "$dpi" | xrdb -merge >/dev/null 2>&1 || true
+# The running session keeps its Openbox config in /tmp, so rewriting that copy and reconfiguring keeps
+# native windows aligned with the menu bar without restarting the window manager.
+RUN_RC=/tmp/silkos-openbox-rc.xml
+if [ -w "$RUN_RC" ]; then
+  sed -i "/<margins>/,/<\/margins>/ s|<top>[0-9]*</top>|<top>$margin</top>|" "$RUN_RC" 2>/dev/null || true
+  openbox --reconfigure >/dev/null 2>&1 || true
+fi

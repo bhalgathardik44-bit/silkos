@@ -41,3 +41,5 @@ chmod 0644 /etc/polkit-1/rules.d/49-silkos-radio.rules || true
 chmod 0644 /etc/NetworkManager/conf.d/10-silkos-auth.conf || true
 chmod 0644 /etc/dbus-1/system.d/silkos-bluetooth.conf || true
 chmod 0644 /etc/udev/rules.d/70-silkos-touchpad.rules || true
+# The session scripts are copied from a checkout that may not carry executable bits.
+chmod 0755 /usr/local/bin/silkos-xsession /usr/local/bin/silkos-display-scale || true

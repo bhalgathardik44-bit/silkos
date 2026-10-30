@@ -28,12 +28,12 @@
 - `app/startup.js`: temporary startup controller; not an app manager or network readiness tracker.
 - `app/shell.js`: app registry, shared state/helpers, windows, dock, menus, settings application, gestures, startup scheduling.
 - `app/apps/notes.js`: Notes editor, folders, search, local persistence, and save scheduling.
-- `app/apps/finder.js`: Finder UI using the files bridge.
-- `app/apps/store.js`: catalog/install UI and progress subscription ownership.
+- `app/apps/finder.js`: Finder file manager: sidebar places, list toolbar, inline rename and folder creation, move by drop, Trash, search, sortable columns, hidden files, and lazy stat hydration; all writes go through the files bridge.
+- `app/apps/store.js`: catalog/install UI and progress subscription ownership; finished actions also post through `window.silkNotify`.
 - `app/apps/utilities.js`: calculator, resource monitor, and About initializers.
 - `app/apps/browser.js`: webview tabs, suggestions, bookmarks/history, find, and tab overview.
 - `app/apps/settings.js`: Settings UI; coordinates with shell configuration and bridge services.
-- `test/*.test.js`: files, lock, Store, workspaces, network controls, gesture and native-menu parsers and pipelines, and native theming/animation source guards.
+- `test/*.test.js`: files, lock, Store, workspaces, network controls, audio/captive-portal/Finder operations, gesture and native-menu parsers and pipelines, and native theming/animation source guards.
 - `test/startup.test.js`, `test/renderer-contract.test.js`: mocked startup controller and renderer source/bridge contract checks; not real-browser visual tests.
 - `linux/run.sh`, `run.bat`: source launchers with cached Electron runtimes.
 - `distro/`: live-build configuration, hooks, session scripts, persistence and desktop integration.
@@ -61,9 +61,34 @@
 - Browser startup maximize remains 700ms plus its startup-list index * 100ms.
 - These scheduled animations are not prerequisites for dismissing the startup overlay.
 - Preserve Lite Mode, reduced-motion handling, gesture tracking/settling, dock magnification, and existing close/minimize/maximize transitions.
-- The Control Center is one fixed-size box holding two layers: `.cc-main` (tiles) and `.cc-detail` (radio panes) that swap with a slide. A radio list must never grow the popover, which is what made the old expanded tile look detached from the switch that opened it.
+- The Control Center is one box with two layers: `.cc-main` (tiles) and `.cc-detail` (radio panes) that swap with a slide. While a pane is open the popover animates its height to that pane (measured in a `.measuring` state with the tiles out of flow), so a two-network list does not leave a tall empty sheet; closing animates back to the tile grid.
+- `.lpg` is both the Launchpad grid and its frosted card: it hugs its rows (`width:fit-content`, three-column floor), centres itself with `margin:auto 0` so filtering grows it around its middle, and fades with `--lp-progress` a little ahead of the tiles, so the card and the icons paint the same filtered gesture value.
+- Gesture travel is filtered by `smoothGesture`: a 60ms exponential rAF filter over the painted progress. `state.progress`, speed and the commit decision keep the raw libinput travel, settle transitions start from the last painted frame via `cancelGestureSmoothing`, and reduce motion paints unfiltered.
+- During a desktop swipe every window paints its glass as a scroll-attached wallpaper copy (`prepareSwipeVibrancy`, `--vibe-w/h/x/y`), because `background-attachment:fixed` repaints once per window per frame and phases against the moving window. The variables are removed when the swipe clears.
+- The menu bar sits at z-index 9600, above the Launchpad layer (9400), so it stays crisp and clickable while Launchpad is open; dropdowns and the switcher (9800) and the lock screen (11000) still paint over it. Launchpad hides the Dock (`body.launchpad-open #dockwrap`) rather than leaving it floating on the frosted desk.
 - Any element whose class rule sets `display` needs an explicit `[hidden]{display:none}` partner, or the author rule outvotes the browser default and a "hidden" pane or form keeps painting.
+- Scrollbars are themed once, globally, with `::-webkit-scrollbar`: a 12px rail, an 8px thumb tinted from `--text` (so light on dark panels, dark on light), a transparent track, no buttons. Give the thumb side borders only — a top border erases horizontal bars, and `.setting-nav` keeps its own 4px strip. The Launchpad card opts out (`#lp .lpg{scrollbar-width:none}`) because a rail there reads as a seam down the frosted panel.
 - Byte/source checks establish structure, not fully verified animation equivalence or a speed improvement.
+
+## Context menus
+- Every right-click goes through `showContextMenu`, which reuses `listEl`, `fitPopup` and the dropdown's outside-click close, so context menus fit the screen and look like the menu bar. The document handler covers the desktop, menu bar, Dock, Launchpad and window title bars; Browser and Finder install their own handlers for the surfaces they own.
+- A right-click must not start a window drag or resize; `dragify` and `resizify` ignore non-primary buttons and interactive elements.
+
+## Notifications, screenshots, audio and network extras
+- Every in-shell alert goes through `notify({app, title, body, icon, image, actions})` in `shell.js`, exposed as `window.silkNotify` so the Store can post after its window closes. One `notices` list (cap 60) feeds both banners and the clock's notification centre; dismissing a banner never removes the notice.
+- Do Not Disturb is `cfg.quietMode`: while on, notices are recorded without banners, the clock badge shows a moon, and the centre offers Turn Off. `updateQuietControls` keeps the tile and the centre in sync, and `setQuietMode` saves the setting.
+- The clock badge is a dot for unread notices (cleared when the centre opens) and a moon for DND; `syncNoticeBadge` paints both states.
+- Battery and Wi-Fi polls call `noticeBattery`/`noticeWifi`; a 60s poll calls `checkPortal`. Low-battery alerts fire once per threshold (10%, 20%) and re-arm when charging or above 25%. Wi-Fi notices fire only on an actual change, not the first reading.
+- Screenshots are `Super+Shift+3` (full screen) and `Super+Shift+4` (region), plus Apple-menu entries. `main.js` freezes the capture before raising the shell, writes a PNG to `~/Pictures/Screenshots`, copies it to the clipboard and emits `screenshot:saved`; the region overlay (`#shot`) lives inside the shell, sends fractions of the frozen image to `screenshot:complete`, and handles Escape/Enter in capture phase. `screenLocked` suppresses both shortcuts.
+- Audio routing lists `pactl -f json list sinks|sources` and reads defaults from `pactl info`; `.monitor` sources are hidden. Switching a default also moves the streams that were on the old default (`move-sink-input`/`move-source-output`) and leaves streams pinned elsewhere alone. Device names are validated against the fresh list before any command runs.
+- Captive portals use NetworkManager's own probe (`nmcli -t -f CONNECTIVITY general`, then `nmcli networking connectivity check` when a state is not yet a verdict); the gateway from `ip -4 route` becomes the sign-in URL. The shell only displays the verdict and offers the sign-in action.
+- Hidden Wi-Fi joins keep SSID and password as separate `nmcli` arguments and append `hidden yes` only when the hidden box was checked.
+- Finder keeps every write inside the home folder (`fs:mkdir`, `fs:rename`, `fs:trash`, `fs:move` enforce `inHome`); reads such as Computer remain open. Trash follows the freedesktop layout under `~/.local/share/Trash`. `fs:stat` hydrates sizes and dates after first paint in 80-item batches (500 cap), and date/size sorts re-paint once the batch arrives.
+
+## Platform settings and hardware
+- Display scale is one page zoom: `main.js` calls `setZoomFactor`, forces `force-device-scale-factor=1` so Xft.dpi cannot scale twice, writes `~/.config/silkos/display-scale(.mode)`, and runs `silkos-display-scale` to update Xft.dpi, the Openbox margin and picom's radius. `auto` derives the scale from panel PPI.
+- Trackpad settings are libinput device properties written with `xinput set-prop` to every device that advertises them; natural scrolling defaults on. They stay behind the preload bridge.
+- Firmware and microcode packages must be listed explicitly in `distro/config/package-lists/silkos.list.chroot` because `--apt-recommends` is off; `non-free-firmware` is already in `distro/auto/config`. `firmware-iwlwifi` also carries Intel Bluetooth firmware.
 
 ## Startup contract and errors
 - `index.html` presents a local overlay with a live status, busy state, and hidden reload/retry button.
@@ -115,9 +140,11 @@
 - Edit Notes and immediately close/reload; verify the final pending edit survives.
 - Compare dock, menus, window transitions, Launchpad, gestures, themes, settings, and persistence against the baseline.
 - Test Linux power, radios, audio/brightness, native apps, persistence, and multitouch on suitable Linux hardware/VMs separately.
+- Manual checks for the desktop extras: post a notice from the Store and from a Wi-Fi change, toggle DND, open the clock centre, take full and region screenshots (files, clipboard, Finder action), switch output/input in the Sound pane, join a hidden network, and run a hide/rename/move/Trash cycle in Finder. `desktopCapturer`, nmcli and pactl cannot be exercised from the Windows preview.
 - Openbox matches WM_CLASS with GLib patterns that fold no case, and silently ignores `wmctrl -b add,sticky`; `<desktop>all</desktop>` inside an application rule is the only stickiness Openbox 3.6 honours, so the session passes Electron an explicit `--class` and the hook pins both spellings.
 - `app/index.html` opens from a `file://` URL with a stubbed `window.silk`, which is the practical way to check Control Center geometry, grouping and overflow on Windows. It says nothing about nmcli, BlueZ or real radios.
-- A hidden browser tab freezes the CSS transition clock: a computed transform can still read its start value seconds after the class changed. Re-measure after the page paints before concluding a slide rule is broken.
+- A hidden browser tab freezes the CSS transition clock: a computed transform can still read its start value seconds after the class changed. Re-measure after the page paints, or settle with `document.getAnimations().forEach(a => a.finish())` first, before concluding a slide rule is broken.
+- `#lp` and `#dock .ic[data-id=launchpad]` can be driven the same way, and `beginLaunchpadGesture(false, p)` reads back one pinch frame without a touchpad.
 - Linux hardware remains untested in this Windows documentation task; VMs may not pass through multitouch.
 - PRs should state scope, preserved contracts, commands actually run, observed results, manual coverage, and untested platforms.
 - Distinguish planned validation from completed validation; do not assert speed gains or full animation equivalence without evidence.
