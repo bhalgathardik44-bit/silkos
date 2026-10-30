@@ -1,0 +1,7 @@
+# GSettings-backed apps (libadwaita, some GTK 4 apps, Chromium's own dark-mode detection) read
+# these instead of settings.ini. Keep the names in step with etc/gtk-3.0/settings.ini.
+[org/gnome/desktop/interface]
+gtk-theme='WhiteSur-Light'
+icon-theme='WhiteSur'
+cursor-theme='WhiteSur-cursors'
+font-name='Inter 11'

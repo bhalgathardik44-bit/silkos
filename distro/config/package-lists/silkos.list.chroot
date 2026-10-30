@@ -51,6 +51,17 @@ fonts-noto-core
 fonts-noto-color-emoji
 fonts-liberation
 fonts-dejavu-core
+# --- native app theming: Flatpak, Wine and terminal windows are not drawn by the SilkOS page ---
+adwaita-qt
+dconf-cli
+dconf-gsettings-backend
+gsettings-desktop-schemas
+# --- native app menus: GTK exports its menu bar over D-Bus so SilkOS can draw it ---
+appmenu-registrar
+appmenu-gtk3-module
+python3
+python3-gi
+x11-utils
 # --- Electron runtime libraries (Debian 13 / trixie names) ---
 libgtk-3-0t64
 libnss3

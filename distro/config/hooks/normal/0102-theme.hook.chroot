@@ -1,0 +1,69 @@
+#!/bin/sh
+set -e
+
+# Native Flatpak, terminal and Wine windows are drawn by GTK and Qt outside the SilkOS page, so
+# matching them means shipping theme data on disk. Debian trixie packages no macOS-like theme
+# (no whitesur, yaru, graphite or capitaine), so WhiteSur is fetched at a pinned ref and verified
+# against a checksum, the same way 0101-touchegg.hook.chroot installs its release .deb.
+# Upstream builds the GTK themes for release, so release/*.tar.xz installs without a Sass toolchain.
+# Licences: the GTK theme is MIT, the icon and cursor sets are GPL-3.0; each COPYING installs
+# beside the theme it covers.
+GTK_REF=2026-09-10
+ICONS_REF=2026-09-10
+CURSORS_REF=e190baf618ed95ee217d2fd45589bd309b37672b
+GTK_SHA256=65516c8f45da45c602471e31b4de0b6e9aed6eb3fc3820df16161d077245a1a2
+ICONS_SHA256=406c9cd59705583f1754b0eaca96cc48bafda042b88ef143f16d8ae1820ecd95
+CURSORS_SHA256=35c817c2c26bc4d2c06801cfe6c924a068ad771d3846c5203b04d1c893dd5664
+WORK=/tmp/silkos-theme
+
+apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils
+
+fetch() {
+  name=$1
+  url=$2
+  want=$3
+  curl --fail --location --silent --show-error --retry 3 "$url" --output "$WORK/$name"
+  printf '%s  %s\n' "$want" "$WORK/$name" | sha256sum --check -
+}
+
+rm -rf "$WORK"
+mkdir -p "$WORK"
+fetch gtk.tar.gz "https://github.com/vinceliuice/WhiteSur-gtk-theme/archive/refs/tags/$GTK_REF.tar.gz" "$GTK_SHA256"
+fetch icons.tar.gz "https://github.com/vinceliuice/WhiteSur-icon-theme/archive/refs/tags/$ICONS_REF.tar.gz" "$ICONS_SHA256"
+fetch cursors.tar.gz "https://github.com/vinceliuice/WhiteSur-cursors/archive/$CURSORS_REF.tar.gz" "$CURSORS_SHA256"
+tar xzf "$WORK/gtk.tar.gz" -C "$WORK"
+tar xzf "$WORK/icons.tar.gz" -C "$WORK"
+tar xzf "$WORK/cursors.tar.gz" -C "$WORK"
+
+# Translucent variants for the composited session, solid variants for Lite Mode where nothing blurs.
+for variant in WhiteSur-Light WhiteSur-Dark WhiteSur-Light-solid WhiteSur-Dark-solid; do
+  tar xJf "$WORK/WhiteSur-gtk-theme-$GTK_REF/release/$variant.tar.xz" -C /usr/share/themes
+done
+cp "$WORK/WhiteSur-gtk-theme-$GTK_REF/COPYING" /usr/share/themes/
+
+# The icon set is used as-is from src/, which is what upstream's installer copies for the default
+# variant. Doing it here avoids depending on that script's gtk-update-icon-cache call.
+install -d -m 0755 /usr/share/icons/WhiteSur
+cp -a "$WORK/WhiteSur-icon-theme-$ICONS_REF/src/." /usr/share/icons/WhiteSur
+cp "$WORK/WhiteSur-icon-theme-$ICONS_REF/COPYING" /usr/share/icons/WhiteSur/
+
+# dist/ is itself the cursor theme: index.theme plus cursors/ and cursors_scalable/.
+install -d -m 0755 /usr/share/icons/WhiteSur-cursors
+cp -a "$WORK/WhiteSur-cursors-$CURSORS_REF/dist/." /usr/share/icons/WhiteSur-cursors
+cp "$WORK/WhiteSur-cursors-$CURSORS_REF/LICENSE" /usr/share/icons/WhiteSur-cursors/
+
+# Fail the build on a half-installed theme instead of shipping an image whose apps look wrong.
+test -f /usr/share/themes/WhiteSur-Light/gtk-3.0/gtk.css
+test -f /usr/share/themes/WhiteSur-Light/gtk-4.0/gtk.css
+test -f /usr/share/themes/WhiteSur-Dark/gtk-3.0/gtk.css
+test -f /usr/share/icons/WhiteSur/index.theme
+test -f /usr/share/icons/WhiteSur-cursors/index.theme
+test -n "$(ls -A /usr/share/icons/WhiteSur-cursors/cursors)"
+
+# settings.ini covers plain GTK; GSettings-backed and libadwaita apps need the compiled database.
+chmod 0644 /etc/dconf/db/local.d/00-silkos-theme /etc/dconf/profile/user \
+  /etc/gtk-3.0/settings.ini /etc/gtk-4.0/settings.ini /etc/gtk-2.0/gtkrc /etc/profile.d/silkos-look.sh
+dconf update
+command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t -f /usr/share/icons/WhiteSur || true
+
+rm -rf "$WORK"

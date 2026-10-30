@@ -1,0 +1,310 @@
+#!/usr/bin/python3
+"""Feed the focused native window's menu to SilkOS.
+
+GTK applications do not draw their own menu bar when appmenu-gtk-module is loaded; they export the
+menu tree over D-Bus instead (com.canonical.dbusmenu) and register it against their X11 window id
+with com.canonical.AppMenu.Registrar. SilkOS owns the visible menu bar, so this helper is the
+D-Bus half: it finds the menu for the active window, converts the layout to JSON lines for the app,
+and turns the item the user picked back into a dbusmenu Event.
+
+Protocol, one JSON object per line on stdout:
+  {"type":"ready"}
+  {"type":"menu","xid":123,"app":"gimp","menus":[node]}
+  {"type":"submenu","xid":123,"id":42,"node":node}
+  {"type":"clear","reason":"no-menu"}
+and on stdin:
+  {"cmd":"watch"} follow the active window again
+  {"cmd":"hold"} keep the current menu on screen and stop following the active window
+  {"cmd":"open","id":42} {"cmd":"activate","id":42} {"cmd":"quit"}
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+
+import gi
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio, GLib
+
+REGISTRAR_NAME = "com.canonical.AppMenu.Registrar"
+REGISTRAR_PATH = "/com/canonical/AppMenu/Registrar"
+REGISTRAR_IFACE = "com.canonical.AppMenu.Registrar"
+DBUSMENU_IFACE = "com.canonical.dbusmenu"
+CALL_TIMEOUT_MS = 2000
+# The active window is polled rather than subscribed to: tracking PropertyNotify on the root window
+# needs a second dependency (python3-xlib) for a lookup that only runs while a native window has
+# focus, which is when SilkOS itself is idle.
+POLL_INTERVAL_MS = 250
+KEEP_PROPS = (
+    "label",
+    "enabled",
+    "visible",
+    "type",
+    "toggle-type",
+    "toggle-state",
+    "children-display",
+    "accel",
+    "shortcut",
+)
+ACTIVE_WINDOW = re.compile(r"0x([0-9a-fA-F]+)")
+WM_CLASS = re.compile(r'WM_CLASS\(STRING\) = (.*)')
+
+
+def emit(payload):
+    sys.stdout.write(json.dumps(payload, separators=(",", ":")) + "\n")
+    sys.stdout.flush()
+
+
+def xprop(*args):
+    try:
+        out = subprocess.run(
+            ("xprop",) + args, capture_output=True, text=True, timeout=2, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout if out.returncode == 0 else ""
+
+
+def active_window_id():
+    match = ACTIVE_WINDOW.search(xprop("-root", "_NET_ACTIVE_WINDOW"))
+    return int(match.group(1), 16) if match else None
+
+
+def window_class(xid):
+    text = xprop("-id", "0x%x" % xid, "WM_CLASS")
+    match = WM_CLASS.search(text)
+    if not match:
+        return ""
+    parts = re.findall(r'"((?:[^"\\]|\\.)*)"', match.group(1))
+    return parts[-1] if parts else ""
+
+
+def unwrap(value):
+    return value.get_child_value(0) if value.get_type_string() == "v" else value
+
+
+def read_props(container):
+    props = {}
+    for name in KEEP_PROPS:
+        if not container.contains(name):
+            continue
+        value = container.get_child_value(name)
+        try:
+            props[name] = value.unpack()
+        except NotImplementedError:
+            props[name] = value.get_string()[0] if value.get_type_string() == "s" else None
+    return props
+
+
+def read_node(variant):
+    """Convert one dbusmenu (ia{sv}av) layout entry into a plain dict."""
+    entry = unwrap(variant)
+    children = entry.get_child_value(2)
+    return {
+        "id": entry.get_child_value(0).unpack(),
+        "props": read_props(entry.get_child_value(1)),
+        "children": [read_node(children.get_child_value(i)) for i in range(children.n_children())],
+    }
+
+
+class AppMenu:
+    def __init__(self):
+        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        self.registrar = Gio.DBusProxy.new_for_bus_sync(
+            self.bus,
+            Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES,
+            None,
+            REGISTRAR_NAME,
+            REGISTRAR_PATH,
+            REGISTRAR_IFACE,
+            None,
+        )
+        self.proxy = None
+        self.signal_id = None
+        self.xid = None
+        # Track from the start: SilkOS sends "hold" as soon as its own window is confirmed focused,
+        # and a menu bar that appeared only after the first alt-tab would be one window behind.
+        self.watching = True
+        self.buffer = ""
+        self.stdin_fd = sys.stdin.fileno()
+
+    def detach(self):
+        if self.signal_id is not None:
+            self.proxy.disconnect(self.signal_id)
+            self.signal_id = None
+        self.proxy = None
+        self.xid = None
+
+    def menu_for(self, parent_id):
+        if not self.proxy:
+            return None
+        result = self.proxy.call_sync(
+            "GetLayout",
+            GLib.Variant("(iias)", (parent_id, -1, [])),
+            None,
+            Gio.DBusCallFlags.NO_AUTO_START,
+            CALL_TIMEOUT_MS,
+            None,
+        )
+        return read_node(result.get_child_value(1))
+
+    def attach(self, xid):
+        reply = self.registrar.call_sync(
+            "GetMenuForWindow",
+            GLib.Variant("(u)", (xid,)),
+            None,
+            Gio.DBusCallFlags.NONE,
+            CALL_TIMEOUT_MS,
+            None,
+        )
+        service, path = reply.unpack()
+        self.proxy = Gio.DBusProxy.new_for_bus_sync(
+            self.bus,
+            Gio.DBusProxyFlags.DO_NOT_LOAD_PROPERTIES,
+            None,
+            service,
+            path,
+            DBUSMENU_IFACE,
+            None,
+        )
+        self.signal_id = self.proxy.connect("g-signal", self.on_signal)
+        self.xid = xid
+
+    def publish(self):
+        root = self.menu_for(0)
+        emit(
+            {
+                "type": "menu",
+                "xid": self.xid,
+                "app": window_class(self.xid),
+                "menus": root["children"],
+            }
+        )
+
+    def on_signal(self, _proxy, _sender, signal, params):
+        if signal not in ("LayoutUpdated", "ItemsPropertiesUpdated"):
+            return
+        # Menu trees are small and apps update them sparingly, so re-reading the whole layout beats
+        # tracking per-item patches here.
+        if self.proxy:
+            try:
+                self.publish()
+            except GLib.GError as error:
+                emit({"type": "clear", "reason": "stale: %s" % error.message})
+                self.detach()
+
+    def poll(self):
+        if not self.watching:
+            return True
+        xid = active_window_id()
+        if xid == self.xid:
+            return True
+        self.detach()
+        if not xid:
+            return True
+        # Remember the id before querying, so a window that owns no menu is only reported once
+        # instead of on every poll.
+        self.xid = xid
+        try:
+            self.attach(xid)
+            self.publish()
+        except GLib.GError as error:
+            # No registration is the normal case: SilkOS's own window, or an app with no menu.
+            emit({"type": "clear", "reason": error.message.split(":")[-1].strip() or "no-menu"})
+        return True
+
+    def command(self, payload):
+        cmd = payload.get("cmd")
+        if cmd == "quit":
+            return False
+        if cmd == "hold":
+            # SilkOS draws these items, so it owns the focus while they are on screen and the active
+            # window must not be tracked. The connection stays attached: the item under the pointer
+            # still has to answer AboutToShow and Activate.
+            self.watching = False
+            return True
+        if cmd == "watch":
+            self.watching = True
+            self.xid = None
+            return True
+        if not self.proxy:
+            return True
+        try:
+            if cmd == "open":
+                if self.proxy.call_sync(
+                    "AboutToShow",
+                    GLib.Variant("(i)", (int(payload["id"]),)),
+                    None,
+                    Gio.DBusCallFlags.NO_AUTO_START,
+                    CALL_TIMEOUT_MS,
+                    None,
+                ).unpack()[0]:
+                    emit(
+                        {
+                            "type": "submenu",
+                            "xid": self.xid,
+                            "id": int(payload["id"]),
+                            "node": self.menu_for(int(payload["id"])),
+                        }
+                    )
+            elif cmd == "activate":
+                self.proxy.call_sync(
+                    "Event",
+                    GLib.Variant(
+                        "(isvu)",
+                        (int(payload["id"]), "clicked", GLib.Variant("i", 0), 0),
+                    ),
+                    None,
+                    Gio.DBusCallFlags.NONE,
+                    CALL_TIMEOUT_MS,
+                    None,
+                )
+        except (GLib.GError, KeyError, TypeError, ValueError) as error:
+            emit({"type": "error", "message": str(error)})
+            # A dropped bus name means the app that owned this menu is gone, so the items the user
+            # just clicked can never answer again. Forget them instead of leaving a dead bar up.
+            if isinstance(error, GLib.GError):
+                self.detach()
+                emit({"type": "clear", "reason": "command-failed"})
+        return True
+
+    def on_stdin(self, source, condition):
+        if condition & (GLib.IO_HUP | GLib.IO_ERR | GLib.IO_NVAL):
+            return False
+        data = os.read(self.stdin_fd, 65536)
+        if not data:
+            return False
+        self.buffer += data.decode("utf-8", "replace")
+        while "\n" in self.buffer:
+            line, self.buffer = self.buffer.split("\n", 1)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                keep = self.command(json.loads(line))
+            except ValueError as error:
+                emit({"type": "error", "message": "bad command: %s" % error})
+                continue
+            if not keep:
+                loop.quit()
+                return False
+        return True
+
+
+loop = GLib.MainLoop()
+try:
+    service = AppMenu()
+except GLib.GError as error:
+    emit({"type": "error", "message": "registrar unavailable: %s" % error.message})
+    sys.exit(1)
+
+GLib.io_add_watch(sys.stdin.fileno(), GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, service.on_stdin)
+GLib.timeout_add(POLL_INTERVAL_MS, service.poll)
+emit({"type": "ready"})
+try:
+    loop.run()
+except KeyboardInterrupt:
+    pass

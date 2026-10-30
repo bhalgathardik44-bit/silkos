@@ -433,7 +433,7 @@ const IC={
  srch:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round"><circle cx="6" cy="6" r="4.600"/><path d="m9.500 9.500 3.300 3.300"/></svg>',
  chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 4 8 8-8 8"/></svg>',
  mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="m16 10 5 5m0-5-5 5"/></svg>'};
-let curApp=null,dd=null,ddKey=null,curMenus={},bri=100,volume=50,lastAudibleVolume=50,hardwareBrightness=false,batInfo=null;
+let curApp=null,dd=null,ddKey=null,curMenus={},bri=100,volume=50,lastAudibleVolume=50,hardwareBrightness=false,batInfo=null,nativeBar=null,nativeChild=[],nativeClearPending=false;
 const mleft=$('#mleft'),mright=$('#mright');
 const toggleLite=()=>{cfg.lite=document.body.classList.toggle('lite');save()};
 const toggleFS=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
@@ -519,7 +519,10 @@ function updateSpaceButton(){
 }
 function buildBar(){
  const id=curApp&&wins[curApp]?curApp:null;curMenus=menusFor(id);
+ /* A SilkOS app owns the bar again, so the menus belonging to the last native window go with it. */
+ nativeBar=null;nativeClearPending=false;closeNativeChild();
  mleft.innerHTML='<button class="mi" data-k="apple">'+IC.logo+'</button>'+Object.keys(curMenus).map((k,i)=>`<button class="mi${i?'':' bold'}" data-k="${esc(k)}">${esc(k)}</button>`).join('');
+ mleft.classList.remove('native');
  wire(mleft)}
 function wire(box){box.querySelectorAll('.mi').forEach(b=>{const k=b.dataset.k;
  b.onclick=e=>{e.stopPropagation();if(k==='srch'){spot(true);return}ddKey===k?closeDd():openK(b)};
@@ -528,6 +531,64 @@ function listEl(items){const el=document.createElement('div');items.forEach(it=>
  if(it==='-'){el.insertAdjacentHTML('beforeend','<div class="sep"></div>');return}
  const[l,f,sc,dis]=it,d=document.createElement('div');d.className='di'+(dis?' dis':'');d.innerHTML='<span>'+esc(l)+'</span><em>'+(sc||'')+'</em>';
  if(!dis&&f)d.onclick=()=>{closeDd();setTimeout(f,70)};el.appendChild(d)});return el}
+/* Native GTK menus arrive from the desktop bus as a tree of items belonging to whichever X window is
+ * frontmost. They are painted after SilkOS's own menus and last only until a SilkOS app takes the bar
+ * or the helper reports the window lost its menu. */
+const NATIVE_KEY='native:';
+function nativeNode(id){
+ const walk=nodes=>{for(const node of nodes||[]){if(node.id===id)return node;const deeper=walk(node.children);if(deeper)return deeper}return null};
+ return nativeBar?walk(nativeBar.entries):null}
+function paintNativeBar(){
+ mleft.querySelectorAll('.mi[data-k^="native:"]').forEach(button=>button.remove());
+ const entries=nativeBar?nativeBar.entries.filter(entry=>!entry.separator):[];
+ /* A native window covers SilkOS, so its own menus are unreachable and only confuse the bar. */
+ mleft.classList.toggle('native',!!entries.length);
+ if(!entries.length)return;
+ /* WM_CLASS is often a reverse-DNS id for Flatpaks, so the last segment is the name a person chose. */
+ const title=(nativeBar.app||'').split('.').pop().replace(/^./,character=>character.toUpperCase());
+ if(title)mleft.insertAdjacentHTML('beforeend',`<button class="mi bold native-title" data-k="native:title" disabled>${esc(title)}</button>`);
+ entries.forEach(entry=>{mleft.insertAdjacentHTML('beforeend',`<button class="mi" data-k="${esc(NATIVE_KEY+entry.id)}">${esc(entry.label||'Menu')}</button>`)});
+ wire(mleft)}
+function dropNativeBar(){nativeBar=null;nativeClearPending=false;paintNativeBar()}
+function closeNativeChild(){const open=nativeChild;nativeChild=[];open.forEach(({el})=>{el.classList.remove('on');setTimeout(()=>el.remove(),220)})}
+function renderNativeMenu(el,id){el.replaceChildren();const node=nativeNode(id);nativeMenuItems(el,node?node.children:[])}
+function nativeMenuItems(el,nodes){
+ nodes.forEach(node=>{
+  if(node.separator){el.insertAdjacentHTML('beforeend','<div class="sep"></div>');return}
+  const item=document.createElement('div');item.className='di'+(node.disabled?' dis':'');
+  const mark=node.togglable?(node.checked?'✓ ':'    '):'';
+  item.innerHTML='<span>'+esc(mark+(node.label||'—'))+'</span>'+(node.submenu?'<em class="sub">'+IC.chevron+'</em>':'<em>'+esc(node.shortcut||'')+'</em>');
+  if(!node.disabled){
+   if(node.submenu){item.onclick=()=>openNativeChild(node,item);item.onpointerenter=()=>openNativeChild(node,item)}
+   else{item.onpointerenter=closeNativeChild;item.onclick=()=>{closeDd();if(window.silk?.nativeMenu)silk.nativeMenu.activate(node.id)}}
+  }
+  el.appendChild(item)});
+ if(!el.childNodes.length)el.insertAdjacentHTML('beforeend','<div class="di dis"><span>No items</span></div>')}
+function openNativeChild(node,item){
+ /* Re-entering the item whose submenu is already showing must not close, re-ask and reopen it. */
+ if(nativeChild.length&&nativeChild[nativeChild.length-1].id===node.id)return;
+ closeNativeChild();
+ /* An app that exports a placeholder fills the subtree only once it is asked for, so the request
+  * goes out now and the popup refreshes in place when the items arrive. */
+ if(node.lazy||!node.children.length){node.lazy=false;if(window.silk?.nativeMenu)silk.nativeMenu.open(node.id)}
+ const el=document.createElement('div');el.className='dd native';nativeMenuItems(el,node.children);
+ document.body.appendChild(el);
+ const r=item.getBoundingClientRect();fitPopup(el,r.right-4,r.top-6);
+ requestAnimationFrame(()=>el.classList.add('on'));
+ nativeChild=nativeChild.concat([{el,id:node.id}])}
+function applyNativeBar(frame){
+ if(frame.type==='clear'){
+  /* Tearing the items down while the pointer is inside them would strand the open dropdown, so a
+     pending clear waits for the menu to close. */
+  if(ddKey&&ddKey.startsWith(NATIVE_KEY)){nativeClearPending=true;return}
+  dropNativeBar();return}
+ nativeBar=frame;nativeClearPending=false;paintNativeBar();
+ if(dd&&ddKey&&ddKey.startsWith(NATIVE_KEY)){
+  /* Repainting rebuilds the buttons, so the one whose menu is open has to pick its highlight back up. */
+  const active=mleft.querySelector(`.mi[data-k="${esc(ddKey)}"]`);
+  if(active)active.classList.add('on');
+  renderNativeMenu(dd,Number(ddKey.slice(NATIVE_KEY.length)));
+  nativeChild.forEach(child=>renderNativeMenu(child.el,child.id))}}
 const hardwareUpdates=new Map();
 function queueHardwareUpdate(key,value,writer,immediate=false){
  let job=hardwareUpdates.get(key);
@@ -671,11 +732,17 @@ function openK(b){const k=b.dataset.k,right=b.parentNode===mright;let el;
  else if(k==='cc')el=ccEl();else if(k==='clock')el=calEl();
  else if(k==='wifi')el=listEl([[wfInfo?(wfInfo.connected?(wfInfo.type==='wifi'?'Wi-Fi: ':'Network: ')+(wfInfo.name||'Connected'):'Not connected'):'Wi-Fi: '+(navigator.onLine?'Connected':'Not connected'),null,'',true]]);
  else if(k==='bat')el=listEl([[batInfo?Math.round(batInfo.level*100)+'% · '+(batInfo.charging?'Charging':'On battery'):'Battery',null,'',true]]);
+ else if(k.startsWith(NATIVE_KEY)){el=document.createElement('div');const node=nativeNode(Number(k.slice(NATIVE_KEY.length)));nativeMenuItems(el,node?node.children:[])}
  else el=listEl(curMenus[k]||[]);
- closeDd(true);ddKey=k;b.classList.add('on');dd=el;el.classList.add('dd');document.body.appendChild(el);
+ closeDd(true,true);ddKey=k;b.classList.add('on');dd=el;el.classList.add('dd');document.body.appendChild(el);
  const r=b.getBoundingClientRect();fitPopup(el,right?r.right:r.left,r.bottom+4,right);
  requestAnimationFrame(()=>el.classList.add('on'))}
-function closeDd(now){if(!dd)return;const d=dd;dd=null;ddKey=null;document.querySelectorAll('.mi.on').forEach(x=>x.classList.remove('on'));d.classList.remove('on');setTimeout(()=>d.remove(),now?0:220)}
+function closeDd(now,keepNative){
+ closeNativeChild();
+ const wasNative=!!ddKey&&ddKey.startsWith(NATIVE_KEY);
+ if(!dd)return;
+ const d=dd;dd=null;ddKey=null;document.querySelectorAll('.mi.on').forEach(x=>x.classList.remove('on'));d.classList.remove('on');setTimeout(()=>d.remove(),now?0:220);
+ if(!keepNative&&wasNative&&nativeClearPending)dropNativeBar()}
 mright.innerHTML='<button class="mi" id="spaces" data-k="spaces" aria-label="Desktop spaces"></button><button class="mi" id="bat" data-k="bat"></button><button class="mi" data-k="wifi">'+IC.wifi+'</button><button class="mi" data-k="srch">'+IC.srch+'</button><button class="mi" data-k="cc">'+IC.cc+'</button><button class="mi" id="clock" data-k="clock"></button>';
 wire(mright);
 updateSpaceButton();
@@ -845,6 +912,8 @@ function handleTouchpadGesture(gesture){
  if(gesture.phase==='end'){touchpadGesture=null;launchpad(progress>=.5)}
 }
 if(window.silk?.onTouchpadGesture)silk.onTouchpadGesture(handleTouchpadGesture);
+/* Native menu frames only arrive while an X window other than SilkOS is frontmost. */
+if(window.silk?.nativeMenu?.onBar)silk.nativeMenu.onBar(applyNativeBar);
 function touchCenter(touches){const points=[...touches];return points.reduce((point,touch)=>({x:point.x+touch.clientX/points.length,y:point.y+touch.clientY/points.length}),{x:0,y:0})}
 function touchSpread(touches,center){const points=[...touches];return points.reduce((total,touch)=>total+Math.hypot(touch.clientX-center.x,touch.clientY-center.y),0)/points.length}
 document.addEventListener('touchstart',event=>{

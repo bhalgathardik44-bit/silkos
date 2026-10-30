@@ -7,6 +7,7 @@ const { promisify } = require('util');
 const { execFile, spawn } = require('child_process');
 const { pathToFileURL } = require('url');
 const { createLibinputGestureParser, LIBINPUT_COMMANDS } = require('./touchpad-gestures');
+const { createAppMenuStream, menuBar, mergeSubmenu } = require('./native-menu');
 const IS_LINUX = process.platform === 'linux';
 const scrypt = promisify(crypto.scrypt);
 const run = (cmd, args, ms = 4000) => new Promise(res => execFile(cmd, args, { timeout: ms }, (e, out) => res(e ? null : String(out))));
@@ -710,8 +711,96 @@ ipcMain.handle('sys:workspace:set', async (_, index) => {
   const result = await run('wmctrl', ['-s', String(index)]);
   return result === null ? { ok: false, error: 'Could not switch desktop workspace.' } : { ok: true, index };
 });
-const GESTURE_MONITOR_RETRY_MS = 2000;
-const GESTURE_MONITOR_HEALTHY_MS = 10000;
+/* ---- Native app menus ----
+ * GTK windows draw their menus over the desktop bus rather than on screen, so the tree is read from
+ * `silkos-appmenu` and converted here, where node:test can cover it. The renderer only paints what
+ * this section hands it. */
+const APPMENU_RETRY_MS = 2000;
+const APPMENU_HEALTHY_MS = 5000;
+const APPMENU_GIVE_UP = 5;
+let appMenuChild = null;
+let appMenuBar = [];
+let appMenuApp = '';
+let appMenuFailures = 0;
+let appMenuUnusable = false;
+
+const sendAppMenuFrame = win => frame => {
+  if (win.isDestroyed()) return;
+  if (frame.type === 'menu') {
+    appMenuBar = menuBar(frame.menus);
+    appMenuApp = frame.app || '';
+    win.webContents.send('native-menu', { type: 'bar', app: appMenuApp, entries: appMenuBar });
+  } else if (frame.type === 'submenu') {
+    /* The app name travels with the window, not with the item, so the bar keeps its title. */
+    if (mergeSubmenu(appMenuBar, frame)) win.webContents.send('native-menu', { type: 'bar', app: appMenuApp, entries: appMenuBar });
+  } else if (frame.type === 'clear') {
+    appMenuBar = [];
+    appMenuApp = '';
+    win.webContents.send('native-menu', { type: 'clear', reason: frame.reason || '' });
+  } else if (frame.type === 'error') {
+    console.error('Native menu helper:', frame.message);
+  }
+};
+
+const appMenuCommand = payload => {
+  if (!appMenuChild || appMenuChild.killed) return false;
+  try {
+    appMenuChild.stdin.write(`${JSON.stringify(payload)}\n`);
+    return true;
+  } catch (error) {
+    console.error('Could not reach the native menu helper:', error);
+    return false;
+  }
+};
+
+const startAppMenu = win => {
+  if (!IS_LINUX || appMenuUnusable || appMenuChild || isQuitting || win.isDestroyed()) return;
+  let child;
+  try {
+    child = spawn('silkos-appmenu', [], { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, PYTHONUNBUFFERED: '1' } });
+  } catch (error) {
+    console.error('Could not start the native menu helper:', error);
+    appMenuUnusable = true;
+    return;
+  }
+  const startedAt = Date.now();
+  const stream = createAppMenuStream(sendAppMenuFrame(win));
+  let diagnostic = '';
+  child.stdout.setEncoding('utf8');
+  child.stdout.on('data', data => stream.write(data));
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-2000); });
+  child.once('error', error => {
+    /* No helper means a SilkOS build outside the live image, which is not worth retrying. */
+    if (error.code === 'ENOENT') {
+      appMenuUnusable = true;
+      console.error('silkos-appmenu is not installed; native app menus are unavailable.');
+    }
+  });
+  child.once('close', (code, signal) => {
+    stream.reset();
+    appMenuChild = null;
+    appMenuBar = [];
+    appMenuApp = '';
+    if (isQuitting || win.isDestroyed() || appMenuUnusable) return;
+    if (!win.isDestroyed()) win.webContents.send('native-menu', { type: 'clear', reason: 'helper-exited' });
+    appMenuFailures = Date.now() - startedAt >= APPMENU_HEALTHY_MS ? 0 : appMenuFailures + 1;
+    if (appMenuFailures >= APPMENU_GIVE_UP) {
+      appMenuUnusable = true;
+      console.error(`Native app menus are unavailable (${signal || `exit ${code}`}): ${diagnostic.trim() || 'the helper printed no diagnostic output'}`);
+      return;
+    }
+    setTimeout(() => startAppMenu(win), APPMENU_RETRY_MS);
+  });
+  appMenuChild = child;
+  /* The helper follows the active window from the start, so tell it when SilkOS already owns it. */
+  if (win.isFocused()) appMenuCommand({ cmd: 'hold' });
+};
+
+ipcMain.handle('native-menu:open', (_, id) => Number.isInteger(id) && appMenuCommand({ cmd: 'open', id }));
+ipcMain.handle('native-menu:activate', (_, id) => Number.isInteger(id) && appMenuCommand({ cmd: 'activate', id }));
+
+const GESTURE_MONITOR_RETRY_MS = 2000;const GESTURE_MONITOR_HEALTHY_MS = 10000;
 const GESTURE_MONITOR_GIVE_UP = 8;
 const startTouchpadGestureMonitor = win => {
   if (!IS_LINUX) return;
@@ -771,6 +860,7 @@ const startTouchpadGestureMonitor = win => {
 app.on('will-quit', () => {
   isQuitting = true;
   if (touchpadGestureMonitor && !touchpadGestureMonitor.killed) touchpadGestureMonitor.kill();
+  if (appMenuChild && !appMenuChild.killed) appMenuChild.kill();
 });
 if (IS_LINUX) {
   app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
@@ -790,6 +880,7 @@ app.whenReady().then(() => {
     win.show();
     if (IS_LINUX) {
       startTouchpadGestureMonitor(win);
+      startAppMenu(win);
       const keepShellVisible = async (attempt = 0) => {
         const result = await run('wmctrl', ['-r', 'SilkOS', '-b', 'add,sticky']);
         if (result === null && attempt < 8 && !win.isDestroyed()) setTimeout(() => keepShellVisible(attempt + 1), 250);
@@ -844,6 +935,12 @@ app.whenReady().then(() => {
       windowSwitchTimer = null;
       if (!screenLocked) win.webContents.send('shortcut', 'alt-release');
     });
+  }
+  if (IS_LINUX) {
+    /* The helper only follows the active window while a native app is focused, and these tell it
+       when the shell takes focus back, so it is not polling xprop while nothing else is running. */
+    win.on('blur', () => appMenuCommand({ cmd: 'watch' }));
+    win.on('focus', () => appMenuCommand({ cmd: 'hold' }));
   }
   win.webContents.on('before-input-event', (e, i) => {
     const accelerator = i.shift ? 'Alt+Shift+Tab' : 'Alt+Tab';

@@ -137,10 +137,15 @@ body.app-fullscreen.fullscreen-dock-visible #dockwrap #dock{transform:none;point
 #menubar{padding:0 8px;gap:0}#mleft,#mright{display:flex;align-items:center}#mright{margin-left:auto}#clock{margin-left:0}
 .mi{border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:0 10px;height:22px;border-radius:7px;display:flex;align-items:center;gap:6px;transition:background .12s}
 .mi:empty{display:none}.mi.bold{font-weight:700}.mi:hover,.mi.on{background:rgba(128,128,128,.28)}
+/* A native window sits above SilkOS, so its menus own the bar while its own are unreachable. */
+#mleft.native .mi:not([data-k="apple"]):not([data-k^="native:"]){display:none}
+#mleft .native-title{opacity:.75;cursor:var(--cur)}#mleft .native-title:hover{background:transparent}
 .spaces-label{font-size:11px;opacity:.82;white-space:nowrap}
 .dd{position:fixed;z-index:9800;min-width:230px;padding:6px;border-radius:14px;background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 14px 44px rgba(0,0,0,.35),0 0 0 .5px var(--line);transform-origin:top left;transform:scale(.97) translateY(-4px);opacity:0;transition:transform var(--t-pop) var(--ease),opacity var(--t-ui) var(--ease);font-size:13px}
 .dd.on{transform:none;opacity:1}body.lite .dd,body.lite #spot{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--win)}
 .di{display:flex;justify-content:space-between;gap:30px;padding:5px 11px;border-radius:7px}.di:hover:not(.dis){background:var(--accent);color:#fff}.di em{font-style:normal;opacity:.55}.dis{opacity:.4;cursor:var(--cur)}
+.di em.sub{display:flex;align-items:center;opacity:.6}.di em.sub svg{width:9px;height:9px;flex:none}
+.dd.native{min-width:180px}.dd.native .di{gap:18px}
 .sep{height:1px;background:var(--line);margin:5px 8px}
 .cc{width:370px;padding:14px}.calw{padding:14px}.cc h5,.calw h5{font-size:12px;opacity:.55;margin:0 0 10px 4px;font-weight:600}
 .row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--sfield);margin-bottom:8px;font-size:13px}.row.col{flex-direction:column;align-items:stretch;gap:8px}
