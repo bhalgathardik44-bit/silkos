@@ -12,7 +12,6 @@ const VLC = {
 let replies = [
   { command: 'remote-add', stderr: '' },
   { command: 'update', stderr: 'Temporary network failure' },
-  { command: 'remote-add', stderr: '' },
   { command: 'update', stderr: '' },
   { command: 'search', stderr: 'Search service unavailable' },
   { command: 'list', stderr: 'Permission denied' }
@@ -88,22 +87,28 @@ try {
 const invoke = (name, ...args) => handlers.get(name)({}, ...args);
 const invokeFrom = (event, name, ...args) => handlers.get(name)(event, ...args);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+/* Search normally answers over HTTPS. These tests force it offline to prove the Flatpak fallback,
+   so no Store test ever reaches Flathub. */
+const offline = async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('offline'); };
+  try { return await invoke('store:search', 'Spotify'); } finally { globalThis.fetch = original; }
+};
 
-test('Store surfaces Flatpak failures and retries a failed app-catalog setup', async () => {
-  assert.deepEqual(await invoke('store:search', 'Spotify'), {
-    error: 'Could not load the Flathub app catalog: Temporary network failure'
+test('Store falls back to Flatpak and retries a failed app-catalog setup', async () => {
+  assert.deepEqual(await offline(), {
+    error: 'Could not reach Flathub. Could not load the Flathub app catalog: Temporary network failure'
   });
   assert.deepEqual(await invoke('store:install', '../invalid'), {
     ok: false,
     error: 'Invalid app ID.'
   });
-  assert.deepEqual(await invoke('store:search', 'Spotify'), {
-    error: 'Could not search Flathub: Search service unavailable'
-  });
+  assert.deepEqual(await offline(), { error: 'Could not search Flathub: Search service unavailable' });
   assert.deepEqual(await invoke('store:installed'), {
     error: 'Could not list installed apps: Permission denied'
   });
-  assert.deepEqual(calls, ['remote-add', 'update', 'remote-add', 'update', 'search', 'list']);
+  /* The flathub remote is added once: the retry only re-fetches the catalog that failed. */
+  assert.deepEqual(calls, ['remote-add', 'update', 'update', 'search', 'list']);
   assert.equal(replies.length, 0);
 
   assert.deepEqual(await invoke('persist:status'), {
@@ -113,6 +118,37 @@ test('Store surfaces Flatpak failures and retries a failed app-catalog setup', a
   });
   lsblkFails = true;
   assert.deepEqual(await invoke('persist:status'), { error: 'Could not inspect storage devices.' });
+});
+
+test('Store searches Flathub over HTTPS without asking Flatpak', async () => {
+  const originalFetch = globalThis.fetch;
+  let asked = null, sent = 0;
+  globalThis.fetch = async (url, init) => {
+    sent++;
+    asked = { url, body: JSON.parse(init.body) };
+    return {
+      ok: true,
+      json: async () => ({ hits: [
+        { app_id: 'com.spotify.Client', name: 'Spotify', summary: 'Online music streaming service', icon: 'https://dl.flathub.org/media/com.spotify.Client.png', developer_name: 'Spotify', verification_verified: false },
+        { app_id: '../etc/passwd', name: 'Borrowed app', summary: 'Rejected', icon: '', developer_name: '', verification_verified: false }
+      ] })
+    };
+  };
+  try {
+    const before = calls.length;
+    assert.deepEqual(await invoke('store:search', '  spotify  '), { apps: [
+      { id: 'com.spotify.Client', name: 'Spotify', desc: 'Online music streaming service', summary: 'Online music streaming service', icon: 'https://dl.flathub.org/media/com.spotify.Client.png', developer: 'Spotify', verified: false }
+    ] });
+    assert.equal(calls.length, before, 'a search must not start flatpak, which waits on the app catalog');
+    assert.equal(asked.url, 'https://flathub.org/api/v2/search');
+    assert.deepEqual(asked.body, { query: 'spotify', page: 1, per_page: 40 });
+
+    sent = 0;
+    assert.deepEqual(await invoke('store:search', '   '), { apps: [] });
+    assert.equal(sent, 0, 'an empty box must not query Flathub');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('Store loads Flathub app details once and caches them', async () => {
@@ -153,6 +189,13 @@ test('Store compares installed apps against the Flathub catalog', async () => {
 
   replies = [{ command: 'list', out: 'org.videolan.VLC\tVLC\t3.0.21\n' }, { command: 'remote-info', stderr: 'No such ref' }];
   assert.deepEqual(await invoke('store:updates'), { error: 'Could not compare with the Flathub catalog.' });
+});
+
+test('Store skips the Flathub catalog when nothing needs comparing', async () => {
+  calls = [];
+  replies = [{ command: 'list', out: '' }];
+  assert.deepEqual(await invoke('store:updates'), { updates: [] });
+  assert.deepEqual(calls, ['list'], 'an empty library never fetches the app catalog');
 });
 
 test('Store streams Flatpak install progress and reports how each job ended', async () => {
