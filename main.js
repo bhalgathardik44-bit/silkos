@@ -378,15 +378,25 @@ ipcMain.handle('sys:keyboard-brightness', async (_, value) => {
   } catch { return null; }
 });
 ipcMain.handle('sys:media', async (_, action) => {
-  if (!IS_LINUX || !['play-pause', 'previous', 'next'].includes(action)) return null;
-  if (action && await run('playerctl', [action]) === null) return null;
-  const [status, metadata] = await Promise.all([
-    run('playerctl', ['status']),
-    run('playerctl', ['metadata', '--format', '{{title}}\t{{artist}}'])
-  ]);
-  if (!status || !metadata) return { available: false };
-  const [title, artist] = metadata.trim().split('\t');
-  return { available: true, playing: status.trim() === 'Playing', title: title || 'Unknown track', artist: artist || '' };
+  if (!IS_LINUX) return null;
+  /* An absent action means "just read what is playing", which is what the Control Center polls; the
+     first version of this handler allowed only the three commands and so answered the read with null. */
+  const command = ['play-pause', 'previous', 'next'].includes(action) ? action : '';
+  if (command && await run('playerctl', [command]) === null) return null;
+  const statuses = await run('playerctl', ['-a', 'status']);
+  if (!statuses) return { available: false };
+  const rows = statuses.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  /* With several players registered playerctl picks the first by name, not the one making noise, so the
+     active player is chosen here and asked for its own metadata. */
+  const line = rows.find(row => /playing$/i.test(row)) || rows.find(row => /paused$/i.test(row));
+  if (!line) return { available: false };
+  const player = line.includes(':') ? line.split(':')[0].trim() : '';
+  const args = player ? ['-p', player, 'metadata', '--format', '{{title}}\t{{artist}}']
+                      : ['metadata', '--format', '{{title}}\t{{artist}}'];
+  const metadata = await run('playerctl', args);
+  const [title, artist] = (metadata || '').trim().split('\t');
+  if (!title && !player) return { available: false };
+  return { available: true, player, playing: /playing$/i.test(line), title: title || 'Unknown track', artist: artist || '' };
 });
 ipcMain.handle('sys:volume', async (_, v) => {
   if (!IS_LINUX) return null;

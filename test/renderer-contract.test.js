@@ -106,7 +106,7 @@ test('the Control Center slides a radio pane over the tiles and fits the popover
  assert.match(body, /const toggleRadio=async\(name,read,write,next\)=>\{const box=radioSwitch\(name\)/);
  assert.match(body, /async function loadWifiNetworks\(rescan=true\)/);
  // Every scan and every join re-measures, so two networks keep a short window instead of an empty sheet.
- assert.match(shell, /finally\{fitPaneHeight\(\)\}/);
+ assert.match(shell, /finally\{[^{}]*fitPaneHeight\(\)\}/);
  // The switch is the only writer now, so it passes the state the user asked for and rescans either way.
  assert.match(shell, /await toggleRadio\(name,name==='wifi'\?refreshWifi:refreshBluetooth[^;]*,box\.checked\);if\(name==='wifi'\)loadWifiNetworks\(true\)/);
  assert.doesNotMatch(shell, /serviceMain/);

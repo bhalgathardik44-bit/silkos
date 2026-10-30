@@ -41,6 +41,16 @@ if ! grep -q "<top>$MENU_MARGIN</top>" "$RUN_RC"; then
   echo "Openbox config has no <margins> block; native windows can cover the SilkOS menu bar" >&2
   RUN_RC="$OPENBOX_RC"
 fi
+# Openbox's own "show desktop" keybind iconifies every window in the session, and the SilkOS shell is
+# one of them — it is the window that paints the wallpaper — so Super+D left a black screen. The stock
+# keybind is dropped here and SilkOS handles the key itself, with the windows coming straight back.
+for SHOW_DESKTOP_KEY in W-d C-A-d; do
+  sed "/<keybind key=\"$SHOW_DESKTOP_KEY\">/,/<\/keybind>/d" "$RUN_RC" >"$RUN_RC.stripped" &&
+    mv "$RUN_RC.stripped" "$RUN_RC"
+done
+if grep -Eq '<keybind key="(W-d|C-A-d)"' "$RUN_RC"; then
+  echo "Openbox still holds a show-desktop keybind; Super+D can hide the desktop shell" >&2
+fi
 openbox --config-file "$RUN_RC" >/tmp/openbox.log 2>&1 &
 OPENBOX_PID=$!
 tries=0

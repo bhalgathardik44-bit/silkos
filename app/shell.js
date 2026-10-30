@@ -11,10 +11,27 @@ const apps={
  monitor:{n:'System Monitor',i:'📊',c:'linear-gradient(#34c759,#168c43)',w:900,h:600,html:()=>'<div></div>',init:resourcesInit},
  settings:{n:'Settings',i:'⚙️',c:'#888',w:780,h:540,html:()=>'<div></div>',init:settingsInit}
 };
+/* playerctl only reports native Linux MPRIS players, so playback inside the Silk browser publishes itself
+   here and the Control Center media tile falls back to it. Entries carry their own control callback,
+   which keeps the guest script in the browser app and the bridge unchanged. */
+const nowPlaying=new Map();
+window.silkNowPlaying={
+ publish(id,info){if(!info||!info.title)nowPlaying.delete(id);else nowPlaying.set(id,info);refreshMediaTiles()},
+ forget(id){if(nowPlaying.delete(id))refreshMediaTiles()},
+ best(){const items=[...nowPlaying.values()];return items.find(item=>item.playing)||items[0]||null}
+};
+/* The Control Center is rebuilt every time it opens, so the poller keeps the tiles that are still on screen. */
+const mediaTiles=[];
+function refreshMediaTiles(){
+ for(let i=mediaTiles.length-1;i>=0;i--){
+  if(!mediaTiles[i].el.isConnected){mediaTiles.splice(i,1);continue}
+  mediaTiles[i].load()
+ }
+}
 const SVG={
 browser:`<svg viewBox="0 0 100 100"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ad0ff"/><stop offset="1" stop-color="#0a5cff"/></linearGradient><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d6e6ff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g1)"/><circle cx="50" cy="50" r="35" fill="url(#g2)"/><circle cx="50" cy="50" r="31" fill="none" stroke="#9db9e6" stroke-width="1.2" stroke-dasharray="1 4.4" stroke-linecap="round"/><g stroke="#8aa6d6" stroke-width="2.2" stroke-linecap="round"><path d="M50 19.500v5M50 75.500v5M19.500 50h5M75.500 50h5"/></g><g transform="rotate(45 50 50)"><path d="M50 24 58.500 50H41.500Z" fill="#ff453a"/><path d="M50 76 41.500 50H58.500Z" fill="#a9b6cc"/></g><circle cx="50" cy="50" r="2.600" fill="#fff"/></svg>`,
 notes:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#fffdf6"/><rect width="100" height="29" fill="#ffd60a"/><rect y="29" width="100" height="2" fill="#000" opacity=".08"/><g stroke="#e4dfcf" stroke-width="2.400" stroke-linecap="round"><path d="M15 46h70M15 59h70M15 72h70M15 85h40"/></g><path d="M15 46h28" stroke="#c9c2ab" stroke-width="2.400" stroke-linecap="round"/></svg>`,
-calc:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1c1c1e"/><rect x="9" y="9" width="82" height="24" rx="8" fill="#2c2c2e"/><text x="84" y="28" text-anchor="end" font-family="-apple-system,Segoe UI,sans-serif" font-size="17" font-weight="300" fill="#fff">42</text><g fill="#a5a5a5"><circle cx="22" cy="48" r="8.500"/><circle cx="41" cy="48" r="8.500"/><circle cx="60" cy="48" r="8.500"/></g><g fill="#3a3a3c"><circle cx="22" cy="67" r="8.500"/><circle cx="41" cy="67" r="8.500"/><circle cx="60" cy="67" r="8.500"/><circle cx="22" cy="86" r="8.500"/><circle cx="41" cy="86" r="8.500"/><circle cx="60" cy="86" r="8.500"/></g><g fill="#ff9f0a"><circle cx="79" cy="48" r="8.500"/><circle cx="79" cy="67" r="8.500"/><circle cx="79" cy="86" r="8.500"/></g></svg>`,
+calc:`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#1c1c1e"/><rect x="9" y="9" width="82" height="24" rx="8" fill="#2c2c2e"/><path d="M80 17.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2Z" fill="none" stroke="#8e8e93" stroke-width="2.2"/><g fill="#a5a5a5"><circle cx="22" cy="48" r="8.500"/><circle cx="41" cy="48" r="8.500"/><circle cx="60" cy="48" r="8.500"/></g><g fill="#3a3a3c"><circle cx="22" cy="67" r="8.500"/><circle cx="41" cy="67" r="8.500"/><circle cx="60" cy="67" r="8.500"/><circle cx="22" cy="86" r="8.500"/><circle cx="41" cy="86" r="8.500"/><circle cx="60" cy="86" r="8.500"/></g><g fill="#ff9f0a"><circle cx="79" cy="48" r="8.500"/><circle cx="79" cy="67" r="8.500"/><circle cx="79" cy="86" r="8.500"/></g></svg>`,
 about:`<svg viewBox="0 0 100 100"><defs><linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a8cff"/><stop offset="1" stop-color="#5b2bff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g3)"/><path d="M50 16c3 20 14 31 34 34-20 3-31 14-34 34-3-20-14-31-34-34 20-3 31-14 34-34z" fill="#fff"/><path d="M78 14c1 6 4 9 10 10-6 1-9 4-10 10-1-6-4-9-10-10 6-1 9-4 10-10z" fill="#fff" opacity=".8"/></svg>`};
 SVG.settings=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5aab3"/><stop offset="1" stop-color="#5d626b"/></linearGradient></defs><rect width="100" height="100" fill="url(#g4)"/><g fill="#eceef1"><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(0 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(45 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(90 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(135 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(180 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(225 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(270 50 50)"/><rect x="44" y="16" width="12" height="17" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="27"/></g><circle cx="50" cy="50" r="12" fill="#6a6f78"/></svg>`;SVG.finder=`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8fd8ff"/><path d="M0 0h56q-10 25-6 52h-6q-2 22 6 48H0z" fill="#1a7cff"/><rect x="30" y="30" width="6" height="14" rx="3" fill="#123"/><rect x="64" y="30" width="6" height="14" rx="3" fill="#123"/><path d="M26 66q24 16 48 0" fill="none" stroke="#123" stroke-width="5" stroke-linecap="round"/></svg>`;SVG.terminal=`<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#222"/><path d="M24 34l16 14-16 14" stroke="#e6e6e6" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M46 66h28" stroke="#e6e6e6" stroke-width="6" stroke-linecap="round"/></svg>`;SVG.store=`<svg viewBox="0 0 100 100"><defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fc5ff"/><stop offset="1" stop-color="#1a5cff"/></linearGradient></defs><rect width="100" height="100" fill="url(#g5)"/><path d="M39 38v-5a11 11 0 0 1 22 0v5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><rect x="25" y="37" width="50" height="42" rx="9" fill="#fff"/><path d="M50 47v19M42 59l8 8 8-8" fill="none" stroke="#1a5cff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;Object.keys(SVG).forEach(k=>apps[k]&&(apps[k].svg=SVG[k]));
 apps.monitor.svg='<svg viewBox="0 0 100 100"><defs><linearGradient id="gm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34c759"/><stop offset="1" stop-color="#168c43"/></linearGradient></defs><rect width="100" height="100" fill="url(#gm)"/><rect x="17" y="20" width="66" height="58" rx="8" fill="#fff" opacity=".95"/><path d="M25 67h9V51h-9zm15 0h9V39h-9zm15 0h9V47h-9zm15 0h9V31h-9z" fill="#34c759"/></svg>';
@@ -34,7 +51,27 @@ const UI_ICON={
  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
  search:'<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/>',
  bookmark:'<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4V4.5Z"/>',
- history:'<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/>'
+ history:'<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/>',
+ notes:'<rect x="4.5" y="3" width="15" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',
+ compose:'<rect x="3" y="3" width="18" height="18" rx="4.5"/><path d="M15.5 8.4a2 2 0 0 1 2.8 2.8l-5.7 5.7-3.6.8.8-3.6 5.7-5.7Z"/>',
+ folderPlus:'<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M12 10.6v5.2M9.4 13.2h5.2"/>',
+ trash:'<path d="M4 6.8h16M9.4 6.8V5.1A1.2 1.2 0 0 1 10.6 4h2.8a1.2 1.2 0 0 1 1.2 1.1v1.7"/><path d="m6.6 6.8.8 12.1a1.6 1.6 0 0 0 1.6 1.5h6a1.6 1.6 0 0 0 1.6-1.5l.8-12.1"/><path d="M10 10.4v6m4-6v6"/>',
+ pin:'<path d="M9.2 4h5.6l-.7 5.3 2.4 2.7H7.5l2.4-2.7L9.2 4Z"/><path d="M12 12v8"/>',
+ list:'<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.9" cy="6.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.9" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.9" cy="17.5" r="1.1" fill="currentColor" stroke="none"/>',
+ checklist:'<path d="M11.6 6.5h9.2M11.6 17.5h9.2"/><path d="m3 6.3 1.9 1.9 3.1-3.4"/><path d="m3 17.3 1.9 1.9 3.1-3.4"/>',
+ link:'<path d="M10.2 13.8a3.6 3.6 0 0 0 5.1 0l2.6-2.6a3.6 3.6 0 0 0-5.1-5.1l-1 1"/><path d="M13.8 10.2a3.6 3.6 0 0 0-5.1 0l-2.6 2.6a3.6 3.6 0 0 0 5.1 5.1l1-1"/>',
+ share:'<path d="M12 15.4V3.6"/><path d="m8.4 7.2 3.6-3.6 3.6 3.6"/><path d="M6.4 12H4.6A1.6 1.6 0 0 0 3 13.6v5.8A1.6 1.6 0 0 0 4.6 21h14.8A1.6 1.6 0 0 0 21 19.4v-5.8A1.6 1.6 0 0 0 19.4 12H18"/>',
+ chevron:'<path d="m7 10 5 5 5-5"/>',
+ chevronLeft:'<path d="m14.2 5.4-6.6 6.6 6.6 6.6"/>',
+ chevronRight:'<path d="m9.8 5.4 6.6 6.6-6.6 6.6"/>',
+ plus:'<path d="M12 5.2v13.6M5.2 12h13.6"/>',
+ sort:'<path d="M8 4.8v14.4m0 0-3.4-3.5M8 19.2l3.4-3.5"/><path d="M16 19.2V4.8m0 0-3.4 3.5M16 4.8l3.4 3.5"/>',
+ refresh:'<path d="M19.6 12a7.6 7.6 0 1 1-2.2-5.4"/><path d="M19.8 4.4v4.8h-4.8"/>',
+ home:'<path d="M3.6 10.4 12 3.6l8.4 6.8"/><path d="M5.9 9.1v10.9h12.2V9.1"/><path d="M10 20v-5.2h4V20"/>',
+ picture:'<rect x="3" y="4.6" width="18" height="14.8" rx="2.4"/><circle cx="8.4" cy="9.7" r="1.5"/><path d="m4.8 17.2 4.6-4.5 3.3 3.2 2.2-2.1 4.3 4.1"/>',
+ download:'<path d="M12 3.8v10.4m0 0 4-4m-4 4-4-4"/><path d="M4.2 19.6h15.6"/>',
+ drive:'<rect x="3" y="4.8" width="18" height="14.4" rx="2.4"/><path d="M3 14.6h18"/><circle cx="7.2" cy="17" r=".9" fill="currentColor" stroke="none"/>',
+ check:'<path d="m5 12.6 4.4 4.4L19 7.4"/>'
 };
 const uiIcon=(name)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI_ICON[name]||UI_ICON.globe}</svg>`;
 apps.browser.svg=`<svg viewBox="0 0 100 100"><defs><linearGradient id="brass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8fbff"/><stop offset="1" stop-color="#b9d5ff"/></linearGradient><linearGradient id="needle" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ff735f"/><stop offset="1" stop-color="#cc274d"/></linearGradient></defs><rect width="100" height="100" rx="24" fill="url(#g1)"/><circle cx="50" cy="50" r="36" fill="#101c40" opacity=".18"/><circle cx="50" cy="48" r="33" fill="url(#brass)"/><circle cx="50" cy="48" r="28" fill="#f3f7ff" stroke="#7186a8" stroke-width="1.5"/><circle cx="50" cy="48" r="23" fill="none" stroke="#8195b4" stroke-width="1" stroke-dasharray="1 5" stroke-linecap="round"/><path d="m50 23 8 26-8-4-8 4 8-26Z" fill="url(#needle)"/><path d="m50 73-8-25 8 4 8-4-8 25Z" fill="#60738f"/><circle cx="50" cy="48" r="3.3" fill="#fff" stroke="#60738f" stroke-width="1.4"/></svg>`;
@@ -718,6 +755,14 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
     back from the tile, which would be one step behind. */
  const toggleRadio=async(name,read,write,next)=>{const box=radioSwitch(name),label=el.querySelector(`[data-service="${name}"] small`);box.disabled=true;label.textContent='Updating…';try{const result=await write(next);if(!result?.available){setStatus(result?.error||`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`);await read();return}await read();setStatus('')}catch(error){console.error(`Could not change ${name} state:`,error);box.checked=!next;box.disabled=false;label.textContent='Could not change';setStatus(`${name==='wifi'?'Wi-Fi':'Bluetooth'} could not be changed.`)}};
  const CC_PANE_MS=320;
+ /* Measuring works by switching the popover into a layout mode that turns transitions off, so a measure
+    taken while a slide is in flight would cancel that slide. The scans and the join form all resize the
+    pane asynchronously, so anything that fires during the opening animation is deferred to its end. */
+ let paneSettled=true,paneRefit=false;
+ const settlePane=()=>{
+  paneSettled=true;
+  if(paneRefit){paneRefit=false;fitPaneHeight()}
+ };
  /* A pane replaces the tiles, so the popover should only be as tall as what it shows. The pane is laid
     out by itself once, its natural height is capped to the room below the menu bar, and the difference
     is animated. Any scan or form that changes the pane's content measures again. */
@@ -735,6 +780,7 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
  };
  const fitPaneHeight=()=>{
   if(!el.classList.contains('detail-open'))return;
+  if(!paneSettled){paneRefit=true;return}
   const pane=[...el.querySelectorAll('.cc-pane')].find(item=>!item.hidden);
   if(!pane)return;
   const room=Math.max(180,innerHeight-el.getBoundingClientRect().top-12);
@@ -743,14 +789,21 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
  /* The radio list is a pane that slides over the tiles, not another tile appended under them, which is
     what made the old popover grow mid-screen and look detached from the switch that opened it. */
  const openRadioPane=name=>{
-  const from=el.offsetHeight;
+  /* Measure first: paneHeight forces a synchronous layout with transitions switched off, so doing it
+     after the class flip would freeze the slide. Then paint the closed height, commit it, and let the
+     pane and the popover height animate from that one start state. */
   el.querySelectorAll('.cc-pane').forEach(pane=>pane.hidden=pane.dataset.radioPane!==name);
-  el.style.height=`${from}px`;el.classList.add('detail-open');
+  const room=Math.max(180,innerHeight-el.getBoundingClientRect().top-12);
+  const target=Math.min(paneHeight(name),room);
+  paneSettled=false;paneRefit=false;
+  el.style.height=`${el.offsetHeight}px`;void el.offsetHeight;
+  el.classList.add('detail-open');
+  el.style.height=`${target}px`;
   el.querySelectorAll('[data-radio-open]').forEach(button=>button.setAttribute('aria-expanded',String(button.dataset.radioOpen===name)));
+  setTimeout(settlePane,CC_PANE_MS);
   if(name==='wifi'){paintPortalBanner();loadWifiNetworks(!wifiList.childElementCount)}
   else if(name==='bluetooth')loadBluetoothDevices();
-  else loadAudioDevices();
-  fitPaneHeight()
+  else loadAudioDevices()
  };
  const closeRadioPane=()=>{
   if(!el.classList.contains('detail-open'))return;
@@ -770,17 +823,36 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
  const wifiSsid=wifiForm.querySelector('input[name="ssid"]'),wifiHiddenLabel=wifiForm.querySelector('.cc-hidden'),wifiHidden=wifiHiddenLabel.querySelector('input'),wifiJoinTitle=wifiForm.querySelector('strong');
  /* Four bars lit by signal strength, the way macOS draws the list. */
  const signalLevel=signal=>Math.max(1,Math.min(4,Math.ceil(Math.max(0,Number(signal)||0)/25)));
- function netRow(network){
+ function netRow(network,index=0){
   const item=document.createElement('button');item.type='button';item.className='cc-net'+(network.active?' on':'');
+  item.style.setProperty('--cc-i',String(index));
   item.title=`${network.ssid} · ${network.signal}% · ${network.security||'Open'}`;
   item.innerHTML=`<span class="cc-net-mark">${network.active?IC.wifi:''}</span><span class="cc-net-name"></span><span class="cc-net-side">${network.security?`<span class="cc-net-lock">${IC.lock}</span>`:''}<span class="cc-bars" data-level="${signalLevel(network.signal)}"><i></i><i></i><i></i><i></i></span>${network.active?'<span class="cc-net-check">✓</span>':''}</span>`;
   item.querySelector('.cc-net-name').textContent=network.ssid;
-  item.onclick=()=>network.security?openJoinForm(network.ssid,true):connectToWifi(network.ssid);
+  item.onclick=async()=>{
+   if(network.security){openJoinForm(network.ssid,true);return}
+   item.classList.add('busy');item.disabled=true;
+   await connectToWifi(network.ssid);
+   item.classList.remove('busy');item.disabled=false
+  };
   return item;
+ }
+ let joinTimer;
+ /* Hiding the form in the same frame that the pane resizes made both jump at once. Fading it out first
+    lets the popover close the gap as a second step, the way the pane itself opens and closes. */
+ function closeJoinForm(){
+  if(wifiForm.hasAttribute('hidden')&&!wifiForm.classList.contains('closing'))return;
+  clearTimeout(joinTimer);wifiForm.classList.add('closing');
+  joinTimer=setTimeout(()=>{
+   if(!wifiForm.classList.contains('closing'))return;
+   wifiForm.classList.remove('closing');wifiForm.setAttribute('hidden','');
+   wifiPassword.value='';wifiSsid.value='';fitPaneHeight()
+  },160)
  }
  /* One form serves a scanned network and a hand-typed one; only the hand-typed path shows the name
     field and the hidden-network switch. */
  function openJoinForm(ssid,security,manual=false){
+  clearTimeout(joinTimer);wifiForm.classList.remove('closing');
   wifiForm.classList.toggle('manual',manual);
   wifiJoinTitle.textContent=manual?'Join Other Network':ssid;
   wifiJoinTitle.hidden=manual;
@@ -794,27 +866,33 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
   setTimeout(()=>{(manual?wifiSsid:wifiPassword.hidden?wifiForm.querySelector('button[type="submit"]'):wifiPassword).focus()},30)
  }
  async function connectToWifi(ssid,password='',hidden=false){
+  const joinButton=wifiForm.querySelector('button[type="submit"]');
   wifiInfo.textContent=`Connecting to ${ssid}…`;
-  try{const result=await silk.connectWifi(ssid,password,hidden);if(!result?.ok)throw new Error(result?.error||'Could not connect to this network.');wifiForm.setAttribute('hidden','');wifiPassword.value='';wifiSsid.value='';await refreshWifi();void checkPortal();const message=`Connected to ${ssid}.`;await loadWifiNetworks(true);wifiInfo.textContent=message}
+  joinButton.classList.add('busy');joinButton.disabled=true;
+  try{const result=await silk.connectWifi(ssid,password,hidden);if(!result?.ok)throw new Error(result?.error||'Could not connect to this network.');closeJoinForm();await refreshWifi();void checkPortal();const message=`Connected to ${ssid}.`;await loadWifiNetworks(true);wifiInfo.textContent=message}
   catch(error){console.error('Could not connect to Wi-Fi:',error);wifiInfo.textContent=error.message||'Could not connect to this network.'}
-  fitPaneHeight()
+  finally{joinButton.classList.remove('busy');joinButton.disabled=false;fitPaneHeight()}
  }
  /* nmcli can hold a rescan for seconds, so opening the pane reuses the last list when it has one and only
     the Scan chip - or an empty list - asks for a fresh one. */
  async function loadWifiNetworks(rescan=true){
-  wifiInfo.textContent=rescan?'Scanning for Wi-Fi networks…':'Checking for new networks…';wifiForm.setAttribute('hidden','');wifiGroup.hidden=!wifiKeep.childElementCount;wifiOther.hidden=!wifiList.childElementCount;
+  const scanChip=el.querySelector('[data-radio-refresh="wifi"]');
+  wifiInfo.textContent=rescan?'Scanning for Wi-Fi networks…':'Checking for new networks…';closeJoinForm();wifiGroup.hidden=!wifiKeep.childElementCount;wifiOther.hidden=!wifiList.childElementCount;
   if(!window.silk||silk.platform!=='linux'||!silk.wifiNetworks){wifiGroup.hidden=true;wifiOther.hidden=true;wifiList.replaceChildren();wifiKeep.replaceChildren();wifiInfo.textContent='Wi-Fi scanning requires the Linux desktop app.';fitPaneHeight();return}
+  scanChip.classList.add('busy');
   try{
    const result=await silk.wifiNetworks();if(!result?.available)throw new Error(result?.error||'Wi-Fi is unavailable.');
    wifiList.replaceChildren();wifiKeep.replaceChildren();wifiGroup.hidden=wifiOther.hidden=true;
    if(!result.enabled){wifiInfo.textContent='Turn Wi-Fi on to scan for networks.';return}
    const networks=result.networks||[],joined=networks.filter(network=>network.active),others=networks.filter(network=>!network.active);
    if(!networks.length){wifiInfo.textContent='No Wi-Fi networks found. Try scanning again.';return}
-   joined.forEach(network=>wifiKeep.appendChild(netRow(network)));wifiGroup.hidden=!joined.length;
+   /* The Join Other Network row follows the list, so its stagger index comes after the last network. */
+   el.querySelector('[data-wifi-other]').style.setProperty('--cc-i',String(others.length));
+   joined.forEach((network,index)=>wifiKeep.appendChild(netRow(network,index)));wifiGroup.hidden=!joined.length;
    wifiInfo.textContent=others.length?'Select a network to connect.':(joined.length?`Connected to ${joined[0].ssid}.`:'No Wi-Fi networks found. Try scanning again.');
-   others.forEach(network=>wifiList.appendChild(netRow(network)));wifiOther.hidden=!others.length
+   others.forEach((network,index)=>wifiList.appendChild(netRow(network,index)));wifiOther.hidden=!others.length
   }catch(error){console.error('Could not scan for Wi-Fi networks:',error);wifiInfo.textContent=error.message||'Could not scan for Wi-Fi networks.'}
-  finally{fitPaneHeight()}
+  finally{scanChip.classList.remove('busy');fitPaneHeight()}
  }
  wifiForm.onsubmit=event=>{
   event.preventDefault();
@@ -826,20 +904,22 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
   }
   connectToWifi(wifiJoinTitle.textContent,wifiPassword.value)
  };
- wifiForm.querySelector('[data-wifi-cancel]').onclick=()=>{wifiForm.setAttribute('hidden','');wifiPassword.value='';wifiSsid.value='';fitPaneHeight()};
+ wifiForm.querySelector('[data-wifi-cancel]').onclick=closeJoinForm;
  el.querySelector('[data-wifi-other]').onclick=()=>openJoinForm('',false,true);
  el.querySelector('[data-portal-open]').onclick=openPortal;
  const bluetoothList=el.querySelector('[data-radio-list="bluetooth"]'),bluetoothInfo=el.querySelector('[data-radio-info="bluetooth"]');
  async function loadBluetoothDevices(){
+  const scanChip=el.querySelector('[data-radio-refresh="bluetooth"]');
   bluetoothInfo.textContent='Scanning for Bluetooth devices…';bluetoothList.replaceChildren();
   if(!window.silk||silk.platform!=='linux'||!silk.bluetoothDevices){bluetoothInfo.textContent='Bluetooth scanning requires the Linux desktop app.';fitPaneHeight();return}
+  scanChip.classList.add('busy');
   try{
    const result=await silk.bluetoothDevices();if(!result?.available)throw new Error(result?.error||'Bluetooth scanning is unavailable.');
    if(!result.devices?.length){bluetoothInfo.textContent='No nearby devices found. Put your device in pairing mode and scan again.';return}
    bluetoothInfo.textContent='Select a device to pair or connect.';
-   result.devices.forEach(device=>{const item=document.createElement('button');item.type='button';item.className='cc-net';item.innerHTML='<span class="cc-net-name"></span><small>Connect</small>';item.querySelector('.cc-net-name').textContent=device.name;item.onclick=async()=>{item.disabled=true;bluetoothInfo.textContent=`Connecting to ${device.name}…`;try{const connected=await silk.connectBluetooth(device.address);if(!connected?.ok)throw new Error(connected?.error||'Could not connect to the Bluetooth device.');bluetoothInfo.textContent=`Connected to ${device.name}.`}catch(error){console.error('Could not connect Bluetooth device:',error);bluetoothInfo.textContent=error.message||'Could not connect to the Bluetooth device.'}finally{item.disabled=false}};bluetoothList.appendChild(item)})
+   result.devices.forEach((device,index)=>{const item=document.createElement('button');item.type='button';item.className='cc-net';item.style.setProperty('--cc-i',String(index));item.innerHTML=`<span class="cc-net-name"></span><span class="cc-net-side"><small>Connect</small></span>`;item.querySelector('.cc-net-name').textContent=device.name;item.onclick=async()=>{item.disabled=true;item.classList.add('busy');bluetoothInfo.textContent=`Connecting to ${device.name}…`;try{const connected=await silk.connectBluetooth(device.address);if(!connected?.ok)throw new Error(connected?.error||'Could not connect to the Bluetooth device.');bluetoothInfo.textContent=`Connected to ${device.name}.`}catch(error){console.error('Could not connect Bluetooth device:',error);bluetoothInfo.textContent=error.message||'Could not connect to the Bluetooth device.'}finally{item.disabled=false;item.classList.remove('busy')}};bluetoothList.appendChild(item)})
   }catch(error){console.error('Could not scan for Bluetooth devices:',error);bluetoothInfo.textContent=error.message||'Could not scan for Bluetooth devices.'}
-  finally{fitPaneHeight()}
+  finally{scanChip.classList.remove('busy');fitPaneHeight()}
  }
  const audioInfo=el.querySelector('[data-audio-info]');
  /* Switching the default sink does not carry its volume into the Sound slider, which reads the default
@@ -860,17 +940,20 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
   }catch(error){console.error('Could not read the new audio output volume:',error)}
  };
  async function loadAudioDevices(){
+  const refreshChip=el.querySelector('[data-audio-refresh]');
   audioInfo.textContent='Looking for audio devices…';
   ['output','input'].forEach(kind=>el.querySelector(`[data-audio-list="${kind}"]`)?.replaceChildren());
   if(!window.silk||silk.platform!=='linux'||!silk.audio){audioInfo.textContent='Audio routing requires the Linux desktop app.';fitPaneHeight();return}
+  refreshChip.classList.add('busy');
   try{
    const result=await silk.audio.devices();
    if(!result?.available)throw new Error(result?.error||'Audio routing is unavailable.');
    const add=(kind,devices)=>{
     const list=el.querySelector(`[data-audio-list="${kind}"]`);
     if(!devices.length){list.innerHTML='<div class="cc-empty-row">No devices found.</div>';return}
-    devices.forEach(device=>{
+    devices.forEach((device,index)=>{
      const row=document.createElement('button');row.type='button';row.className='cc-net cc-audio'+(device.active?' on':'');
+     row.style.setProperty('--cc-i',String(index));
      row.innerHTML=`<span class="cc-net-mark">${device.active?(kind==='output'?IC.speaker:IC.mic):''}</span><span class="cc-net-name"></span><span class="cc-net-side">${device.active?'<span class="cc-net-check">✓</span>':''}</span>`;
      row.querySelector('.cc-net-name').textContent=device.description||device.name;
      row.title=`${device.description||device.name}\n${device.name} · ${device.volume}%${device.muted?' · Muted':''}`;
@@ -896,7 +979,7 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
    add('input',result.inputs||[]);
    audioInfo.textContent='Choose where sound plays and records.'
   }catch(error){console.error('Could not list audio devices:',error);audioInfo.textContent=error.message||'Could not list audio devices.'}
-  finally{fitPaneHeight()}
+  finally{refreshChip.classList.remove('busy');fitPaneHeight()}
  }
  el.querySelector('[data-audio-refresh]').onclick=()=>loadAudioDevices();
  el.querySelectorAll('[data-radio-open]').forEach(button=>button.onclick=()=>openRadioPane(button.dataset.radioOpen));
@@ -913,8 +996,39 @@ function ccEl(){const el=document.createElement('div');el.className='cc';el.setA
  else{kbdValue.textContent='Unavailable'}
  const updateKbd=immediate=>{showKbd(kbd.value);queueHardwareUpdate('keyboardBrightness',Number(kbd.value),async next=>{const result=await silk.keyboardBrightness(next);if(!result?.available){kbdValue.textContent='Unavailable';setStatus('Keyboard brightness control is unavailable.');return}showKbd(result.value)},immediate)};
  kbd.oninput=()=>updateKbd(false);kbd.onchange=()=>updateKbd(true);
- const loadMedia=async()=>{const buttons=el.querySelectorAll('[data-media]');if(!window.silk||silk.platform!=='linux'||!silk.media){buttons.forEach(button=>button.disabled=true);return}try{const result=await silk.media();if(!el.isConnected)return;buttons.forEach(button=>button.disabled=!result?.available);el.querySelector('.cc-track').textContent=result?.available?result.title:'No media playing';el.querySelector('.cc-artist').textContent=result?.available?result.artist:'Open a player to see controls';if(result?.available){const play=el.querySelector('[data-media="play-pause"]');play.innerHTML=result.playing?IC.pause:IC.play;play.setAttribute('aria-label',result.playing?'Pause':'Play')}}catch(error){console.error('Could not read media status:',error);buttons.forEach(button=>button.disabled=true)}};
- el.querySelectorAll('[data-media]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{const result=await silk.media(button.dataset.media);if(!result?.available)setStatus('Media controls are unavailable.');await loadMedia()}catch(error){console.error('Could not control media playback:',error);setStatus('Could not control media playback.')}});
+ /* One row for whatever is actually making noise: a native player wins, and a video playing in the Silk
+    browser is reported when there is no MPRIS player to show. */
+ const trackEl=el.querySelector('.cc-track'),artistEl=el.querySelector('.cc-artist'),playButton=el.querySelector('[data-media="play-pause"]'),mediaTile=el.querySelector('.cc-media');
+ let mediaItem=null,mediaSeq=0;
+ const loadMedia=async()=>{
+  const seq=++mediaSeq,buttons=el.querySelectorAll('[data-media]');
+  const native=window.silk&&silk.platform==='linux'&&silk.media?await silk.media().catch(error=>{console.error('Could not read media status:',error);return null}):null;
+  const local=window.silkNowPlaying.best();
+  if(seq!==mediaSeq||!el.isConnected)return;
+  mediaItem=native?.available?{via:'native',title:native.title,subtitle:native.artist,playing:native.playing}
+   :local?{via:'browser',title:local.title,subtitle:local.subtitle,playing:local.playing,control:local.control}:null;
+  const item=mediaItem;
+  trackEl.textContent=item?item.title:'No media playing';
+  artistEl.textContent=item?(item.subtitle||(item.via==='browser'?'Silk Browser':'')):'Play something in the browser to see it here';
+  mediaTile.dataset.via=item?item.via:'';
+  mediaTile.classList.toggle('playing',!!item&&item.playing);
+  buttons.forEach(button=>{
+   button.disabled=!item||(item.via==='browser'&&button.dataset.media!=='play-pause');
+   if(button!==playButton||!item)return;
+   button.innerHTML=item.playing?IC.pause:IC.play;
+   button.setAttribute('aria-label',item.playing?'Pause':'Play')
+  })
+ };
+ mediaTiles.push({el,load:loadMedia});
+ el.querySelectorAll('[data-media]').forEach(button=>button.onclick=async()=>{
+  const item=mediaItem,action=button.dataset.media;
+  button.disabled=true;
+  try{
+   if(item?.via==='browser'){if(await item.control(action)!==true)setStatus('The page did not accept that control.')}
+   else{const result=await silk.media(action);if(!result?.available)setStatus('Media controls are unavailable.')}
+   await loadMedia()
+  }catch(error){console.error('Could not control media playback:',error);setStatus('Could not control media playback.')}
+ });
  refreshWifi();refreshBluetooth();loadMedia();paintPortalBanner();updateQuietControls();
  const brightValue=el.querySelector('.cc-bright-value'),volumeValue=el.querySelector('.cc-volume-value'),muteButton=el.querySelector('[data-a="mute"]');
  const updateBri=immediate=>{brightValue.textContent=`${brightness.value}%`;paintFill(brightness);setBrightness(brightness.value,immediate,status)};
@@ -1366,6 +1480,8 @@ if(window.silk&&silk.platform==='linux'&&silk.battery)statusPoll(30000,()=>silk.
 let wfInfo=null;const wf=mright.querySelector('[data-k=wifi]'),wfu=()=>wf.style.opacity=(wfInfo?wfInfo.connected:navigator.onLine)?1:.4;wfu();addEventListener('online',wfu);addEventListener('offline',wfu);
 if(window.silk&&silk.platform==='linux'&&silk.wifi)statusPoll(10000,()=>silk.wifi().then(r=>{wfInfo=r;wfu();noticeWifi(r)}));
 if(window.silk?.platform==='linux'&&silk.portal)statusPoll(60000,checkPortal);
+/* The media tile only exists while the Control Center is open, so the poll is free the rest of the time. */
+statusPoll(5000,()=>{if(mediaTiles.length)refreshMediaTiles()});
 /* Re-apply the saved brightness once at startup: screen dimming through gamma does not survive a restart of the display server. */
 if(window.silk?.platform==='linux'&&silk.brightness&&cfg.bri<100)setBrightness(cfg.bri,true);
 if(window.silk?.platform==='linux'&&silk.workspaces)statusPoll(900,async()=>{await syncSystemWorkspace()});
@@ -1374,9 +1490,9 @@ document.body.insertAdjacentHTML('beforeend','<div id="spot" class="glass"><inpu
 const sp=$('#spot'),spi=sp.querySelector('input'),srs=sp.querySelector('.srs');let sres=[],si=0;
 function spot(on){sp.classList.toggle('on',on);if(on){closeDd(true);spi.value='';sfind();setTimeout(()=>spi.focus(),30)}else spi.blur()}
 function sfind(){const raw=spi.value.trim(),v=raw.toLowerCase();sres=[];
- const all=Object.entries(apps).filter(([k,a])=>!v||a.n.toLowerCase().includes(v)).map(([k,a])=>({i:a.i,t:a.n,s:'Application',f:()=>launch(k)}));
- if(v&&/^[\d\s+\-*/().%]+$/.test(v)&&/\d/.test(v)){try{const r=Function('"use strict";return ('+v+')')();if(isFinite(r))sres.push({i:'🧮',t:String(+r.toPrecision(12)),s:'Calculator',f:()=>launch('calc')})}catch(e){}}
- sres=sres.concat(all);if(v)sres.push({i:'🔍',t:'Search the web for “'+raw+'”',s:'Browser',f:()=>openUrl(raw)});
+ const all=Object.entries(apps).filter(([k,a])=>!v||a.n.toLowerCase().includes(v)).map(([k,a])=>({i:a.svg,t:a.n,s:'Application',f:()=>launch(k)}));
+ if(v&&/^[\d\s+\-*/().%]+$/.test(v)&&/\d/.test(v)){try{const r=Function('"use strict";return ('+v+')')();if(isFinite(r))sres.push({i:SVG.calc,t:String(+r.toPrecision(12)),s:'Calculator',f:()=>launch('calc')})}catch(e){}}
+ sres=sres.concat(all);if(v)sres.push({i:uiIcon('search'),t:'Search the web for “'+raw+'”',s:'Browser',f:()=>openUrl(raw)});
  si=0;spaint()}
 function spaint(){srs.innerHTML=sres.map((r,i)=>`<div class="sr${i===si?' on':''}" data-i="${i}"><i>${r.i}</i><span>${esc(r.t)}</span><em>${r.s}</em></div>`).join('');
  srs.querySelectorAll('.sr').forEach(n=>n.onclick=()=>{const r=sres[+n.dataset.i];spot(false);r.f()})}
@@ -1388,10 +1504,17 @@ const lp=$('#lp'),lpi=lp.querySelector('input'),lpg=lp.querySelector('.lpg');
 const lpOn=()=>lp.classList.contains('on');
 function lpList(){const v=lpi.value.trim().toLowerCase();return Object.keys(apps).filter(k=>!v||apps[k].n.toLowerCase().includes(v))}
 function lpDraw(){const l=lpList(),q=!!lpi.value.trim();
+ /* Rebuilding the grid re-creates every tile and re-decodes its icon, which on a software-rendered Linux
+    session reads as the desktop reloading. The same apps in the same order only need the stagger again. */
+ const ordered=orderedIconIds(l,'launchpadOrder');
+ /* The signature carries the artwork too: a Store app that downloaded its icon keeps the same id but needs
+    a new tile. */
+ const sig=(q?'q:':'a:')+ordered.map(k=>k+(apps[k].photo?'p':'')+(apps[k].svg?'s':'')).join('|');
+ if(sig===lpg.dataset.sig)return;
+ lpg.dataset.sig=sig;
  /* An app that brought back real artwork fills its tile by itself, so the synthetic gradient would
     only show as a coloured square behind the logo. */
  const tile=k=>{const a=apps[k];return `<b${a.photo?' class="photo"':''}${a.c?` style="background:${a.c}"`:''}>${a.svg||a.i}</b>`};
- const ordered=orderedIconIds(l,'launchpadOrder');
  lpg.innerHTML=ordered.length?ordered.map((k,i)=>`<div class="lpa${q&&!i?' sel':''}" data-id="${esc(k)}" role="button" tabindex="0" aria-label="Launch ${esc(apps[k].n)}. Drag to reorder." style="--lp-delay:${Math.min(i,16)*12}ms;--lp-out-delay:${Math.max(0,Math.min(16,ordered.length-i-1))*10}ms">${tile(k)}<span>${esc(apps[k].n)}</span></div>`).join(''):'<div class="lpe">No Results</div>'}
 const LP_VARS=['--lp-progress','--lp-blur','--lp-dim','--lp-grid-y','--lp-grid-scale','--lp-icon-y','--lp-icon-scale'];
 const LP_BLUR=44,LP_DIM=.56;
@@ -1446,6 +1569,9 @@ function setDesktopExposeProgress(progress){
 }
 function settleDesktopExpose(open,progress){
  clearTimeout(deskSettleTimer);desktopExposed=open;
+ /* The gesture path adds the class as the swipe begins; a shortcut settles straight to one end, so the
+    class that actually moves the windows has to be put on here too or the shortcut has nothing to change. */
+ if(open)document.body.classList.add('desk-expose');
  const settle=Math.round(150+Math.abs((open?1:0)-(progress==null?1:progress))*200);
  document.documentElement.style.setProperty('--desk-settle',`${settle}ms`);
  document.body.classList.add('desk-expose-settling');setDesktopExposeProgress(open?1:0);syncFullscreenChrome();
@@ -1457,6 +1583,13 @@ function beginDesktopExpose(){
  return {kind:'desktop',progress:0,speed:0,lastMove:0}
 }
 function restoreDesktop(){if(desktopExposed)settleDesktopExpose(false)}
+/* Openbox has its own Super+D, but it iconifies every window — including the shell window that paints
+   the wallpaper — so the keybind is stripped from the session config and the shortcut is handled here,
+   where it reveals the desktop and puts the windows straight back. */
+function showDesktop(){
+ if(desktopExposed){restoreDesktop();return}
+ if(exposedWindows().length)settleDesktopExpose(true)
+}
 function beginSwitcherGesture(){
  if(desktopExposed){restoreDesktop();return null}
  const ids=switcherIds();if(!ids.length)return null;
@@ -1618,7 +1751,7 @@ function finishWindowSwitch(commit){
 function shortcut(k){if(k==='space-left')return switchSpace((activeSpace+3)%4,true,-1);if(k==='space-right')return switchSpace((activeSpace+1)%4,true,1);if(k==='alt-tab'||k==='alt-tab-reverse')return cycleWindows(k==='alt-tab-reverse');if(k==='alt-release'){finishWindowSwitch(true);return}if(k==='screenshot-full')return void captureShot(false);if(k==='screenshot-region')return void captureShot(true);if(k==='lp')return launchpad();if(k==='k'||k===' ')return spot(!sp.classList.contains('on'));const finder=curApp==='finder'&&wins.finder;if(finder&&k==='f')return void finder._focusSearch?.();if(finder&&k==='r')return void finder._refresh?.();if(finder&&k==='w')return closeWindow('finder');const b=curApp==='browser'&&wins.browser&&wins.browser._b;if(!b)return;
  if(k==='t')b.add('');else if(k==='w')b.closeCur();else if(k==='l')b.addr();else if(k==='r')b.reload();else if(k==='f')b.find();else if(k==='d')b.addBm()}
 if(window.silk&&silk.onShortcut)silk.onShortcut(shortcut);
-document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','f','k','d',' '].includes(e.key.toLowerCase())){e.preventDefault();shortcut(e.key.toLowerCase())}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Enter'&&switchState){e.preventDefault();finishWindowSwitch(true)}else if(e.key==='Escape'){if(desktopExposed)restoreDesktop();if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false);const bf=curApp==='browser'&&wins.browser&&wins.browser._b;if(bf)bf.findOff()}});
+document.addEventListener('keydown',e=>{const key=e.key.toLowerCase();if(e.ctrlKey&&e.altKey&&e.key==='ArrowLeft'){e.preventDefault();shortcut('space-left')}else if(e.ctrlKey&&e.altKey&&e.key==='ArrowRight'){e.preventDefault();shortcut('space-right')}else if(e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey&&key==='d'){e.preventDefault();showDesktop()}else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['t','l','w','r','f','k','d',' '].includes(key)){e.preventDefault();shortcut(key)}else if(e.key==='F4'){e.preventDefault();launchpad(true)}else if(e.key==='Enter'&&switchState){e.preventDefault();finishWindowSwitch(true)}else if(e.key==='Escape'){if(desktopExposed)restoreDesktop();if(switchState)finishWindowSwitch(false);closeDd();spot(false);launchpad(false);const bf=curApp==='browser'&&wins.browser&&wins.browser._b;if(bf)bf.findOff()}});
 if(!window.silk){
  document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='Tab'){e.preventDefault();cycleWindows(e.shiftKey)}else if(e.key==='Escape'&&switchState){e.preventDefault();finishWindowSwitch(false)}});
  document.addEventListener('keyup',e=>{if(e.key==='Alt'||e.key==='AltGraph')finishWindowSwitch(true)});
