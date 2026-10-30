@@ -186,7 +186,25 @@ function browserInit(el){
   url.value=t.url||'';dom(t);showFail();t.loading?prog(1):(bar.style.transition='none',bar.style.width='0',bar.style.opacity=0);
   if(t.v)requestAnimationFrame(()=>{if(cur===t&&!t.loading)cacheThumb(t)})}
  function go(t,u){u=norm(u);t.url=u;
-  if(!t.v){const v=document.createElement('webview');v.setAttribute('allowpopups','');t.v=v;
+  if(!t.v){const v=document.createElement('webview');v.setAttribute('allowpopups','');v.setAttribute('zoomfactor','1');t.v=v;
+   /* Pinch-to-zoom: macOS-style smooth acceleration. Trackpad pinches send ctrl+wheel events. */
+   let zoomLevel=1,zoomTarget=1,zoomRaf=0,zoomVelocity=0;
+   const ZOOM_MIN=0.5,ZOOM_MAX=3,ZOOM_ACCEL=0.008,ZOOM_DAMP=0.85,ZOOM_SNAP=0.01;
+   v.addEventListener('wheel',e=>{
+    if(!e.ctrlKey||!t.tabEl)return;
+    e.preventDefault();
+    const delta=-e.deltaY*ZOOM_ACCEL;
+    zoomVelocity+=delta;
+    zoomTarget=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,zoomTarget+delta));
+    if(!zoomRaf)zoomRaf=requestAnimationFrame(function animate(){
+     const diff=zoomTarget-zoomLevel;
+     if(Math.abs(diff)<ZOOM_SNAP&&Math.abs(zoomVelocity)<ZOOM_SNAP){zoomLevel=zoomTarget;zoomVelocity=0;zoomRaf=0;v.style.transform=zoomLevel===1?'':`scale(${zoomLevel})`;v.style.transformOrigin='center center';try{v.setZoomFactor(zoomLevel)}catch(err){}return}
+     zoomVelocity*=ZOOM_DAMP;zoomLevel+=diff*0.18+zoomVelocity*0.08;zoomLevel=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,zoomLevel));
+     v.style.transform=zoomLevel===1?'':`scale(${zoomLevel})`;v.style.transformOrigin='center center';
+     zoomRaf=requestAnimationFrame(animate);
+    });
+   },{passive:false});
+   v.addEventListener('dom-ready',()=>{try{v.setZoomFactor(zoomLevel)}catch(err){}});
    const nv=e=>{if(!e.url)return;
     if(hostOf(e.url)!==hostOf(t.url)){t.icon='';t.fail='';tabIcon(t)}
     t.url=e.url;logHist(e.url);
