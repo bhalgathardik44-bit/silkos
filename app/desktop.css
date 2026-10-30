@@ -77,6 +77,9 @@ body.lite #menubar{backdrop-filter:none;background:var(--win)}
 .side>div{width:210px;padding:12px 8px}.side h5{font-size:11px;opacity:.5;margin:2px 8px 8px;text-transform:uppercase}
 .si{padding:7px 10px;border-radius:7px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.si.on{background:var(--sfield)}
 .pages{flex:1;position:relative;min-width:0}.pages webview{position:absolute;inset:0;display:none}.pages webview.on{display:flex}
+/* Pinch-to-zoom: the transform is applied to the webview element itself, so the scaled content stays
+   centred and the address bar does not move. will-change keeps the compositor on the GPU path. */
+.pages webview{transform-origin:center center;will-change:transform;transition:transform .08s cubic-bezier(.32,.72,0,1)}
 .start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding-top:80px;overflow:auto;color:#333;background:linear-gradient(160deg,#cfd9ff,#f3d6ff 55%,#ffe2c9)}
 @media (prefers-color-scheme:dark){.start{color:#eee;background:linear-gradient(160deg,#1c2340,#2d1f3f 55%,#3a2a24)}}
 .start h4{font-size:20px;font-weight:600;margin-bottom:24px}.fav{display:grid;grid-template-columns:repeat(4,92px);gap:24px 20px}
