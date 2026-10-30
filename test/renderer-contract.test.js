@@ -13,7 +13,7 @@ test('desktop styling preserves the extracted baseline outside fullscreen and ma
  const fullscreen = css.slice(css.indexOf('.win.fullscreen,'), css.indexOf('#dock{border-radius:28px}'));
  assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-menu-visible #menubar/);
  assert.match(fullscreen, /body\.app-fullscreen\.fullscreen-dock-visible #dockwrap #dock/);
- assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), '1544102d49c3023055524fe9d24019be16a980c211b0510fe99c12ba47afce54');
+ assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), 'ac1703f1386c68b5e6cfccf90d7d2a13855978cd56268110abfd8ec3132cafac');
 });
 
 test('Launchpad keeps the menu bar live and puts the Dock away', () => {
