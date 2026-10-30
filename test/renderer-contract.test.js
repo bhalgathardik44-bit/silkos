@@ -16,15 +16,30 @@ test('desktop styling preserves the extracted baseline outside fullscreen and ma
  assert.equal(crypto.createHash('sha256').update(css.replace(fullscreen, '')).digest('hex'), '88c8ce5e7bd885e119147b6608dfd09fe58f6e3604c463a32e908e44d5898ff1');
 });
 
-test('light materials cover app surfaces with opaque accessibility fallbacks', () => {
+test('materials stay translucent in both schemes without per-window blur layers', () => {
  const css = read('app/desktop.css');
  const materials = css.slice(css.indexOf(':root{--material-window:'));
  assert.match(materials, /@media\(prefers-color-scheme:light\)\{:root:not\(\[data-theme\]\)/);
+ assert.match(materials, /@media\(prefers-color-scheme:dark\)\{:root:not\(\[data-theme\]\)/);
  assert.match(materials, /:root\[data-theme=light\]\{--material-window:rgba\(255,255,255,\.38\)/);
- assert.match(materials, /\.win\{background:var\(--material-window\);-webkit-backdrop-filter:var\(--material-blur\);backdrop-filter:var\(--material-blur\)/);
+ assert.match(materials, /:root\[data-theme=dark\]\{--material-window:rgba\(22,23,29,\.62\)/);
+ // Window glass comes from a viewport-anchored wallpaper copy; a live blur per window is what caused
+ // multi-window stutter, so .win must stay free of backdrop-filter.
+ assert.match(materials, /\.win\{background-color:var\(--material-base\);background-image:linear-gradient\(var\(--material-window\),var\(--material-window\)\),var\(--material-vibrancy\);background-attachment:fixed;[^}]*backdrop-filter:none/);
+ assert.doesNotMatch(materials, /\.win\{[^}]*backdrop-filter:var\(--material-blur\)/);
  for (const selector of ['.win.safari .tb', '.sbn', '.notes-folders', '.notes-list', '.notes-editor-pane', '.store-side', '.store-content', '.fsb', '.fls', '.rescontent']) assert.ok(materials.includes(selector), selector);
- assert.match(materials, /body\.lite,body\.high-contrast\{[^}]*--material-window:var\(--win\)[^}]*--material-blur:none;--material-panel-blur:none/);
+ assert.match(materials, /body\.lite,body\.high-contrast\{[^}]*--material-window:var\(--win\)[^}]*--material-vibrancy:none;--material-base:var\(--win\)/);
  assert.doesNotMatch(materials, /\.pages webview/);
+});
+
+test('the shell derives window vibrancy from the painted wallpaper whenever configuration is applied', () => {
+ const shell = read('app/shell.js');
+ assert.match(shell, /function applyWindowVibrancy\(wall\)/);
+ assert.match(shell, /R\.style\.setProperty\('--material-vibrancy',painted\.backgroundImage\)/);
+ assert.match(shell, /setProperty\('--material-vibrancy-size',cfg\.wallpaperImage\?'cover':'120% 120%'\)/);
+ assert.match(shell, /classList\.toggle\('photo-wallpaper',!!cfg\.wallpaperImage\)/);
+ const applyCfg = shell.slice(shell.indexOf('function applyCfg('));
+ assert.ok(applyCfg.slice(0, applyCfg.indexOf('\nfunction ')).includes('applyWindowVibrancy(wall)'), 'applyCfg refreshes window vibrancy');
 });
 
 test('renderer assets exist, parse as classic scripts, and are included in production packaging', () => {

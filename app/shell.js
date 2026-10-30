@@ -924,8 +924,16 @@ const save=()=>{try{localStorage.setItem('silk.cfg',JSON.stringify(cfg))}catch(e
 const ENG={google:{n:'Google',u:'https://www.google.com/search?q='},ddg:{n:'DuckDuckGo',u:'https://duckduckgo.com/?q='},bing:{n:'Bing',u:'https://www.bing.com/search?q='}};
 function searchURL(v){return(ENG[cfg.engine]||ENG.google).u+encodeURIComponent(v)}
 const WALLS=[['Aurora','radial-gradient(60% 60% at 20% 20%,#7aa7ff,transparent),radial-gradient(50% 50% at 80% 30%,#ff8fc7,transparent),radial-gradient(60% 60% at 60% 90%,#ffc27a,transparent),#3b3b8f'],['Sunset','radial-gradient(70% 60% at 30% 100%,#ff5e62,transparent),radial-gradient(60% 60% at 80% 20%,#ffc371,transparent),#5b2a86'],['Ocean','radial-gradient(60% 60% at 20% 30%,#4facfe,transparent),radial-gradient(60% 70% at 85% 80%,#00f2c3,transparent),#0b2a5b'],['Forest','radial-gradient(60% 60% at 25% 25%,#9be15d,transparent),radial-gradient(60% 60% at 80% 80%,#00a99d,transparent),#0f3d2e'],['Graphite','radial-gradient(60% 60% at 30% 20%,#6b7280,transparent),radial-gradient(60% 60% at 80% 90%,#374151,transparent),#111827']];
+// Windows paint a viewport-anchored copy of the wallpaper rather than a live backdrop-filter:
+// one blur layer per window measured ~21fps with seven windows open, against the display's 57fps cap.
+function applyWindowVibrancy(wall){const painted=getComputedStyle(wall),R=document.documentElement,base=painted.backgroundColor;
+ R.style.setProperty('--material-vibrancy',painted.backgroundImage);
+ R.style.setProperty('--material-base',/,\s*0\)$/.test(base)?'var(--win)':base);
+ R.style.setProperty('--material-vibrancy-size',cfg.wallpaperImage?'cover':'120% 120%');
+ document.body.classList.toggle('photo-wallpaper',!!cfg.wallpaperImage)}
 function applyCfg(){const R=document.documentElement,dark=cfg.theme==='dark'||(cfg.theme==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);cfg.theme==='auto'?R.removeAttribute('data-theme'):R.setAttribute('data-theme',cfg.theme);R.style.setProperty('--accent',cfg.accent);updateCursorSize();
  const wall=$('#wall');wall.style.background=cfg.wallpaperImage?`center / cover no-repeat url("${cfg.wallpaperImage}")`:WALLS[cfg.wall]?WALLS[cfg.wall][1]:WALLS[0][1];document.body.classList.toggle('static-wallpaper',!cfg.wallpaperMotion);document.body.classList.toggle('lite',!!cfg.lite);
+ applyWindowVibrancy(wall);
  document.body.classList.toggle('reduce-motion',!!cfg.reduceMotion);document.body.classList.toggle('high-contrast',!!cfg.highContrast);document.body.classList.toggle('high-contrast-dark',!!cfg.highContrast&&dark);
  const dockWrap=$('#dockwrap');dockWrap.classList.remove('pos-left','pos-right');if(cfg.dockPosition!=='bottom')dockWrap.classList.add('pos-'+cfg.dockPosition);
  baseWanted=cfg.dock;measureDock();dockWrap.classList.toggle('ah',!!cfg.hide);bri=cfg.bri;dim.style.opacity=hardwareBrightness?'0':(100-bri)/100*.85;clk()}
