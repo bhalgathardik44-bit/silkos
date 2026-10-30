@@ -88,13 +88,23 @@ test('right-click opens a menu on every shell and app surface', () => {
 test('the tab overview paints cached previews and a title instead of blank space', () => {
  const browser = read('app/apps/browser.js'), css = read('app/desktop.css');
  assert.match(browser, /function cacheThumb\(t\)\{/);
- assert.match(browser, /t\.thumb=url;return url/);
+ assert.match(browser, /t\.thumb=url;t\.thumbAt=Date\.now\(\);return url/);
  assert.match(browser, /if\(cur===t\)\{prog\(0\);navState\(\);if\(fin\.classList\.contains\('on'\)\)findStep\(\);cacheThumb\(t\)\}/);
  assert.match(browser, /if\(t\.v\)requestAnimationFrame\(\(\)=>\{if\(cur===t&&!t\.loading\)cacheThumb\(t\)\}\)/);
  assert.match(browser, /class="ov-fallback"/);
- assert.match(browser, /cacheThumb\(active\)\.then\(url=>\{/);
+ assert.match(browser, /cacheThumb\(active\)\.then\(src=>paintCard\(active,src\)\)/);
  assert.match(css, /\.thumb img\{width:100%;height:100%;object-fit:cover;object-position:top center;display:block\}/);
  assert.match(css, /\.thumb \.ov-fallback\{[^}]*text-overflow:ellipsis/);
+});
+
+test('every tab gets a preview, not only the one on screen', () => {
+ const browser = read('app/apps/browser.js');
+ // the page being covered is photographed while it still holds real pixels
+ assert.match(browser, /const prev=cur;if\(prev&&prev!==t&&prev\.v\)cacheThumb\(prev\)/);
+ // and a guest left in the overview is brought back transparent rather than blank
+ assert.match(browser, /v\.style\.transition='none';v\.style\.visibility='visible';v\.style\.opacity='0'/);
+ assert.match(browser, /if\(t\.v&&t!==cur&&!t\.thumb\)await captureBehind\(t\)/);
+ assert.match(browser, /buildOv\(\);ov\.classList\.add\('open'\);fillOverview\(\)/);
 });
 
 test('a Store action names its stage and leaves a failure on screen', () => {

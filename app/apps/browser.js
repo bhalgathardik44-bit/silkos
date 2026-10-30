@@ -1,3 +1,4 @@
+let browserMediaSeq=0;
 function browserInit(el){
  el.classList.add('safari');
  el.querySelector('.tb').innerHTML=`<div class="tl"><div class="lights"><button class="dot r"></button><button class="dot y"></button><button class="dot g"></button></div><button class="sb" data-a="side" title="Show tabs and bookmarks" aria-label="Show tabs and bookmarks">${I.side}</button><button class="sb" data-a="b" title="Back" aria-label="Back">${I.back}</button><button class="sb" data-a="f" title="Forward" aria-label="Forward">${I.fwd}</button></div><div class="addr"><div class="prog"></div><input class="url" spellcheck="false" autocomplete="off" aria-label="Address or search"><div class="dom"></div><button class="sb rl" data-a="r" title="Reload this page" aria-label="Reload this page">${I.rl}</button></div><div class="tr"><button class="sb" data-a="share" title="Copy the page address" aria-label="Copy the page address">${I.share}</button><button class="sb" data-a="n" title="New tab" aria-label="New tab">${I.plus}</button><button class="sb" data-a="ov" title="All tabs" aria-label="All tabs">${I.tabs}</button></div>`;
@@ -109,14 +110,63 @@ function browserInit(el){
  /* The slot stays in the tab even before an icon arrives, so titles do not jump when a site reports one. */
  const tabIcon=t=>{const slot=t.tabEl&&t.tabEl.querySelector('.tf');if(!slot||slot.dataset.src===(t.icon||''))return;
   slot.dataset.src=t.icon||'';slot.innerHTML=t.icon?`<img src="${esc(t.icon)}" alt="" onerror="this.remove()">`:''};
+ /* The Control Center reports MPRIS players only, so a tab that is playing sound publishes itself to the
+    shell instead. Chromium's media events fire for muted autoplay previews too, so the guest is asked
+    what it actually holds rather than trusting the event. */
+ const GUEST_STATE="(()=>{const els=[...document.querySelectorAll('video,audio')];if(!els.length)return 'none';return els.some(e=>!e.paused&&!e.ended&&!e.muted)?'playing':'paused'})()";
+ const GUEST_TOGGLE="(()=>{const els=[...document.querySelectorAll('video,audio')];const el=els.find(e=>!e.paused&&!e.ended)||els[0];if(!el)return 'none';el.paused?el.play().catch(()=>{}):el.pause();return el.paused?'paused':'playing'})()";
+ const mediaTitle=t=>String(t.title||'').replace(/\s+[|–-]\s*(YouTube|Netflix|Vimeo|Twitch|Spotify)\s*$/i,'').trim()||hostOf(t.url)||'Untitled';
+ async function reportMedia(t){
+  if(!t.v||!window.silkNowPlaying)return;
+  let state=null;
+  try{state=await t.v.executeJavaScript(GUEST_STATE)}catch(error){return}
+  if(state==='playing'||state==='paused'){
+   t.media=state;
+   window.silkNowPlaying.publish(t.mid,{title:mediaTitle(t),subtitle:hostOf(t.url)||'Silk Browser',playing:state==='playing',control:action=>controlMedia(t,action)})
+  }else if(t.media){t.media='';window.silkNowPlaying.forget(t.mid)}
+ }
+ function controlMedia(t,action){
+  if(!t.v||action!=='play-pause')return Promise.resolve(false);
+  return t.v.executeJavaScript(GUEST_TOGGLE).then(async state=>{
+   if(state!=='playing'&&state!=='paused')return false;
+   await reportMedia(t);
+   return true
+  }).catch(()=>false)
+ }
  /* A hidden webview captures as blank, so every tab keeps the last picture taken while its page was
     on screen and the overview paints from that instead of asking hidden guests for a blank frame. */
  function cacheThumb(t){
   if(!t||!t.v)return Promise.resolve(null);
   try{return t.v.capturePage().then(img=>{
    const size=img&&img.getSize?img.getSize():{width:0,height:0};
-   if(img&&!(img.isEmpty&&img.isEmpty())&&size.width>1&&size.height>1){const url=img.toDataURL();if(url){t.thumb=url;return url}}
+   if(img&&!(img.isEmpty&&img.isEmpty())&&size.width>1&&size.height>1){const url=img.toDataURL();if(url){t.thumb=url;t.thumbAt=Date.now();return url}}
    return t.thumb||null}).catch(()=>t.thumb||null)}catch(error){return Promise.resolve(t.thumb||null)}
+ }
+ /* A guest hidden with `visibility` stops painting, so the overview brings each one back fully
+    transparent: the guest renders again, while nothing can bleed through the cards covering it. */
+ function captureBehind(t){
+  if(!t||!t.v||t===cur)return Promise.resolve(t.thumb||null);
+  const v=t.v;
+  v.style.transition='none';v.style.visibility='visible';v.style.opacity='0';
+  return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   cacheThumb(t).then(thumb=>{
+    v.style.visibility='';v.style.opacity='';v.style.transition='';
+    if(ov.classList.contains('open'))paintCard(t,thumb);
+    resolve(thumb)
+   })
+  })))
+ }
+ function paintCard(t,src){
+  if(!src||!ov.classList.contains('open'))return;
+  const card=ov.querySelector(`.card[data-i="${list.indexOf(t)}"]`);
+  if(card)card.querySelector('.thumb').innerHTML=`<img src="${src}" alt="Preview of ${esc(t.title)}">`
+ }
+ async function fillOverview(){
+  for(const t of list){
+   /* Closing the overview mid-pass stops paying for cards nobody can see. */
+   if(!ov.classList.contains('open'))return;
+   if(t.v&&t!==cur&&!t.thumb)await captureBehind(t)
+  }
  }
  function refresh(){
   list.forEach(t=>{if(!t.tabEl)mkTab(t);t.tabEl.classList.toggle('on',t===cur);t.tabEl.querySelector('span').textContent=t.title;tabIcon(t)});
@@ -129,7 +179,9 @@ function browserInit(el){
   n.onmousedown=e=>{if(e.button===1)e.preventDefault()};
   n.onauxclick=e=>{if(e.button===1){e.preventDefault();close(list.indexOf(t))}};
   stabs.appendChild(n);void n.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>n.classList.add('in')))}
- function sel(t){if(t!==cur)hideFind(cur);cur=t;ov.classList.remove('open');navState();refresh();
+ /* The page about to be covered still has real pixels on screen, so it is photographed first: a guest
+    stops painting the moment the tab strip moves away from it. */
+ function sel(t){const prev=cur;if(prev&&prev!==t&&prev.v)cacheThumb(prev);if(t!==prev)hideFind(prev);cur=t;ov.classList.remove('open');navState();refresh();
   start.style.display=t.v?'none':'flex';if(!t.v){start.classList.remove('enter');void start.offsetWidth;start.classList.add('enter')}list.forEach(x=>x.v&&x.v.classList.toggle('on',x===t));
   url.value=t.url||'';dom(t);showFail();t.loading?prog(1):(bar.style.transition='none',bar.style.width='0',bar.style.opacity=0);
   if(t.v)requestAnimationFrame(()=>{if(cur===t&&!t.loading)cacheThumb(t)})}
@@ -141,10 +193,12 @@ function browserInit(el){
     if(cur===t){url.value=e.url;dom(t);navState();showFail()}};
    v.addEventListener('did-navigate',nv);v.addEventListener('did-navigate-in-page',nv);
    v.addEventListener('page-favicon-updated',e=>{const icon=favOf(e.favicons);if(icon){t.icon=icon;tabIcon(t)}});
-   v.addEventListener('page-title-updated',e=>{t.title=e.title;logHist(t.url,e.title);refresh()});
+   v.addEventListener('page-title-updated',e=>{t.title=e.title;logHist(t.url,e.title);refresh();if(t.media)reportMedia(t)});
+   v.addEventListener('media-started-playing',()=>reportMedia(t));
+   v.addEventListener('media-paused',()=>reportMedia(t));
    v.addEventListener('did-start-loading',()=>{t.loading=1;t.fail='';if(cur===t){prog(1);navState();showFail()}});
    /* A finished load drops the page highlight, so re-run the query rather than leave a stale match count showing. */
-   v.addEventListener('did-stop-loading',()=>{t.loading=0;if(cur===t){prog(0);navState();if(fin.classList.contains('on'))findStep();cacheThumb(t)}});
+   v.addEventListener('did-stop-loading',()=>{t.loading=0;if(cur===t){prog(0);navState();if(fin.classList.contains('on'))findStep();cacheThumb(t)}reportMedia(t)});
    v.addEventListener('did-fail-load',e=>{if(!e.isMainFrame)return;
     const note=failNote(e.errorCode,hostOf(e.validatedURL||t.url));
     if(!note)return;
@@ -166,11 +220,10 @@ function browserInit(el){
     );
     showContextMenu(items,rect.left+(p.x||0),rect.top+(p.y||0))
    });
-   v.addEventListener('dom-ready',()=>applyWebCursor(t));v.src=u;pages.appendChild(v)}
-  else{try{t.v.loadURL(u)}catch(e){t.v.src=u}}
+   v.addEventListener('dom-ready',()=>applyWebCursor(t));v.src=u;pages.appendChild(v)}  else{try{t.v.loadURL(u)}catch(e){t.v.src=u}}
   sel(t)}
- function add(u){const t={v:null,url:'',title:'Start Page',isNew:true};list.push(t);if(u)go(t,u);else{sel(t);url.focus()}}
- function close(i){const t=list[i];list.splice(i,1);clearTimeout(t.cursorCssTimer);t.v&&t.v.remove();if(t.tabEl){t.tabEl.classList.remove('in');t.tabEl.style.pointerEvents='none';setTimeout(()=>t.tabEl.remove(),520)}
+ function add(u){const t={v:null,mid:++browserMediaSeq,url:'',title:'Start Page',isNew:true};list.push(t);if(u)go(t,u);else{sel(t);url.focus()}}
+ function close(i){const t=list[i];list.splice(i,1);clearTimeout(t.cursorCssTimer);t.media='';window.silkNowPlaying?.forget(t.mid);t.v&&t.v.remove();if(t.tabEl){t.tabEl.classList.remove('in');t.tabEl.style.pointerEvents='none';setTimeout(()=>t.tabEl.remove(),520)}
   if(!list.length){add('');return}
   if(cur===t)sel(list[Math.min(i,list.length-1)]);else refresh();
   if(ov.classList.contains('open'))buildOv()}
@@ -179,11 +232,7 @@ function browserInit(el){
   ov.innerHTML=list.map((t,i)=>`<div class="card" data-i="${i}"><div class="thumb">${thumb(t)}</div><div class="ct"><span>${esc(t.title)}</span><b>✕</b></div></div>`).join('');
   ov.querySelectorAll('.card').forEach(n=>{const i=+n.dataset.i,t=list[i];n.onclick=()=>sel(t);n.querySelector('b').onclick=e=>{e.stopPropagation();close(i)}});
   const active=list.find(t=>t===cur);
-  if(active&&active.v)cacheThumb(active).then(url=>{
-   if(!url||!ov.classList.contains('open'))return;
-   const card=ov.querySelector(`.card[data-i="${list.indexOf(active)}"]`);
-   if(card)card.querySelector('.thumb').innerHTML=`<img src="${url}" alt="Preview of ${esc(active.title)}">`
-  })
+  if(active&&active.v)cacheThumb(active).then(src=>paintCard(active,src))
  }
  /* Right-click belongs to the tab strip, the address field and the page itself, so each offers the
     actions that make sense there; the rest of the window falls through to the shared window menu. */
@@ -269,10 +318,10 @@ function browserInit(el){
   if(e.key==='Escape'){sugHide();url.value=cur?cur.url||'':'';url.blur()}};
  el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
   try{if(a==='n')add('');else if(a==='side')main.classList.toggle('sidebar');
-  else if(a==='ov'){if(ov.classList.contains('open'))ov.classList.remove('open');else{buildOv();ov.classList.add('open')}}
+  else if(a==='ov'){if(ov.classList.contains('open'))ov.classList.remove('open');else{buildOv();ov.classList.add('open');fillOverview()}}
   else if(a==='share'){if(cur&&cur.url){navigator.clipboard.writeText(cur.url);toast('Link copied')}}
   else if(a==='r'){if(cur&&cur.v){if(cur.loading)cur.v.stop();else cur.v.reload()}}
   else if(a==='f'){if(cur&&cur.v)cur.v.canGoForward()&&cur.v.goForward()}
   else if(cur&&cur.v&&a==='b')cur.v.canGoBack()&&cur.v.goBack()}catch(e){}});
- el._dispose=()=>{hideFind();clearTimeout(tm);rid++;list.forEach(t=>clearTimeout(t.cursorCssTimer));sug.remove();if(openTab===add)openTab=null};
+ el._dispose=()=>{hideFind();clearTimeout(tm);rid++;list.forEach(t=>{clearTimeout(t.cursorCssTimer);t.media='';window.silkNowPlaying?.forget(t.mid)});sug.remove();if(openTab===add)openTab=null};
  openTab=add;el._b={add,closeCur:()=>close(list.indexOf(cur)),reload:()=>{try{cur&&cur.v&&cur.v.reload()}catch(e){}},addr:()=>url.focus(),impBm:()=>importFile('bm'),impHist:()=>importFile('hist'),addBm,parse:parseAny,merge,rebuild:()=>{buildStart();refresh()},updateCursor:()=>list.forEach(applyWebCursor),ov:()=>q('[data-a=ov]').click(),side:()=>q('[data-a=side]').click(),find:showFind,findOff:()=>{if(fin.classList.contains('on'))hideFind()}};add('');url.blur()}

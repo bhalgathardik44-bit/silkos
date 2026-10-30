@@ -2,6 +2,7 @@ function finderInit(el){
  const body=el.querySelector('.body'),F=window.silk&&silk.files;
  body.innerHTML='<div class="fnd"><aside class="fsb"><div class="fsb-head">Favorites</div><div class="fsb-empty">Loading…</div></aside><div class="fmn"><div class="ftb"><div class="fnav"><button type="button" class="fup fback" aria-label="Back" disabled>‹</button><button type="button" class="fup ffwd" aria-label="Forward" disabled>›</button></div><b class="fpt"></b><label class="fsearch"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search" aria-label="Search this folder" spellcheck="false" autocomplete="off"></label><button type="button" class="fnew" aria-label="New Folder" title="New Folder (Shift+Ctrl+N)">＋</button><button type="button" class="fsort" aria-label="Sort options" title="Sort options">⇅</button></div><div class="fhead"><span class="ficon"></span><span class="fh" data-sort="name"><span>Name</span><i class="fcar"></i></span><span class="fh" data-sort="size"><span>Size</span><i class="fcar"></i></span><span class="fh" data-sort="date"><span>Date Modified</span><i class="fcar"></i></span></div><div class="fls" role="listbox" aria-label="Files" tabindex="0"><div class="frows"></div></div><div class="fstatus"><span class="fcount"></span><span class="fmsg" role="status" aria-live="polite"></span><span class="fsel"></span></div></div></div>';
  const sb=body.querySelector('.fsb'),ls=body.querySelector('.fls'),rows=body.querySelector('.frows'),pt=body.querySelector('.fpt'),search=body.querySelector('.fsearch input'),fback=body.querySelector('.fback'),ffwd=body.querySelector('.ffwd'),fhead=body.querySelector('.fhead'),countEl=body.querySelector('.fcount'),selEl=body.querySelector('.fsel'),msgEl=body.querySelector('.fmsg'),newBtn=body.querySelector('.fnew'),sortBtn=body.querySelector('.fsort');
+ fback.innerHTML=uiIcon('chevronLeft');ffwd.innerHTML=uiIcon('chevronRight');body.querySelector('.fsearch>span').innerHTML=uiIcon('search');newBtn.innerHTML=uiIcon('folderPlus');sortBtn.innerHTML=uiIcon('sort');
  if(!F){rows.innerHTML='<div class="stm">Finder works when SilkOS runs on Linux.</div>';return}
  const join=(dir,name)=>(dir.endsWith('/')?dir:dir+'/')+name;
  let cur='',locations={},items=[],details=new Map(),selected=new Set(),lastIndex=-1,navToken=0,renderToken=0,searchQuery='',hist=[],histIndex=-1,dragNames=null,messageTimer=null;
@@ -9,7 +10,21 @@ function finderInit(el){
  const displayPath=path=>locations.home&&(path===locations.home||path.startsWith(locations.home+'/'))?'~'+path.slice(locations.home.length):path;
  const detailOf=name=>details.get(name);
  const writable=()=>!!locations.home&&(cur===locations.home||cur.startsWith(locations.home+'/'));
- const fileIcon=name=>/\.(png|jpe?g|gif|webp|bmp|svg|avif|ico|heic)$/i.test(name)?'🖼️':/\.(mp3|wav|flac|ogg|m4a|aac|opus)$/i.test(name)?'🎵':/\.(mp4|mkv|webm|mov|avi)$/i.test(name)?'🎬':/\.(zip|tar|gz|xz|7z|rar|deb|flatpak)$/i.test(name)?'📦':/\.(txt|md|pdf|js|json|css|html|sh|py|yml|yaml|toml)$/i.test(name)?'📝':/\.exe$/i.test(name)?'🪟':'📄';
+ /* Drawn document icons keep their shape on every font stack; emoji changed style between machines. */
+ const fileArt={
+  image:'<rect x="3.5" y="7.6" width="7.6" height="4.9" rx=".9" fill="#e7f2ff"/><path d="m4 11.9 2-2.2 1.6 1.6 1.2-1.2 1.5 1.8" fill="none" stroke="#3b9bf5" stroke-width=".75" stroke-linejoin="round"/><circle cx="5.3" cy="8.8" r=".55" fill="#ffc53d"/>',
+  audio:'<path d="M9.9 7.1v4.2a1.3 1.3 0 1 1-.7-1.2V8L6 8.7v3.6a1.3 1.3 0 1 1-.7-1.2V7.8l4.6-1Z" fill="#fc5c8a"/>',
+  video:'<rect x="3.4" y="7.3" width="8.6" height="5.1" rx=".9" fill="#eceef3" stroke="#b9bdc7" stroke-width=".6"/><path d="m6.6 8.5 2.8 1.35-2.8 1.35Z" fill="#7e848f"/>',
+  archive:'<path d="M6.3 7h2.8v1.1H6.3zm0 1.9h2.8v1.1H6.3zm0 1.9h2.8v1.2H6.3z" fill="#aeb3be"/>',
+  app:'<rect x="3.7" y="7.4" width="8" height="5" rx=".9" fill="#eef0f4" stroke="#b9bdc7" stroke-width=".6"/><path d="M3.7 9h8" stroke="#b9bdc7" stroke-width=".6"/><circle cx="4.8" cy="8.2" r=".3" fill="#ff6b5e"/><circle cx="5.8" cy="8.2" r=".3" fill="#ffc53d"/>',
+  text:'<path d="M4.3 8h5.4M4.3 9.5h5.4M4.3 11h3.6" stroke="#b9bdc7" stroke-width=".8" stroke-linecap="round"/>'
+ };
+ const fileBody=art=>`<svg class="fgi" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.1 1.7h5.8l3.8 3.8v8.2a1 1 0 0 1-1 1H3.1a1 1 0 0 1-1-1V2.7a1 1 0 0 1 1-1Z" fill="#fff" stroke="#c6c9d1" stroke-width=".7"/><path d="M8.9 1.7v3.2a.6.6 0 0 0 .6.6h3.2" fill="#eef0f4" stroke="#c6c9d1" stroke-width=".7"/>${art}</svg>`;
+ const folderIcon='<svg class="fgi" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.1a1.2 1.2 0 0 1 1.2-1.2h3.3l1.4 1.6h5.7a1.2 1.2 0 0 1 1.2 1.2v6.9a1.2 1.2 0 0 1-1.2 1.2H2.8a1.2 1.2 0 0 1-1.2-1.2V4.1Z" fill="#51a5f5"/><path d="M1.6 6.2h12.8v6.4a1.2 1.2 0 0 1-1.2 1.2H2.8a1.2 1.2 0 0 1-1.2-1.2V6.2Z" fill="#7cc6ff"/></svg>';
+ const fileIcon=name=>{
+  const kind=/\.(png|jpe?g|gif|webp|bmp|svg|avif|ico|heic)$/i.test(name)?'image':/\.(mp3|wav|flac|ogg|m4a|aac|opus)$/i.test(name)?'audio':/\.(mp4|mkv|webm|mov|avi)$/i.test(name)?'video':/\.(zip|tar|gz|xz|7z|rar|deb|flatpak)$/i.test(name)?'archive':/\.(txt|md|pdf|js|json|css|html|sh|py|yml|yaml|toml)$/i.test(name)?'text':/\.exe$/i.test(name)?'app':'plain';
+  return fileBody(fileArt[kind]||'')
+ };
  const shownName=name=>cfg.hideFileExtensions&&!name.startsWith('.')?name.replace(/\.[^.]+$/,'')||name:name;
  const fmtSize=bytes=>{
   if(!Number.isFinite(bytes))return '';
@@ -99,7 +114,7 @@ function finderInit(el){
   const token=++renderToken,visible=displayed(),scrollTop=ls.scrollTop;
   rows.innerHTML=visible.length?visible.map((item,index)=>{
    const name=item.name,on=selected.has(name);
-   return `<div class="fit${on?' sel':''}" data-n="${esc(name)}" data-d="${item.dir?1:''}" role="option" aria-selected="${on}" draggable="true" style="--row:${Math.min(index,10)}" title="${esc(name)}"><span class="ficon">${item.dir?'📁':fileIcon(name)}</span><span class="fname">${markName(shownName(name),searchQuery)}</span><span class="fsize">${item.dir?'—':detailOf(name)?fmtSize(detailOf(name).size):''}</span><span class="fdate">${detailOf(name)?fmtDate(detailOf(name).mtime):''}</span></div>`
+   return `<div class="fit${on?' sel':''}" data-n="${esc(name)}" data-d="${item.dir?1:''}" role="option" aria-selected="${on}" draggable="true" style="--row:${Math.min(index,10)}" title="${esc(name)}"><span class="ficon">${item.dir?folderIcon:fileIcon(name)}</span><span class="fname">${markName(shownName(name),searchQuery)}</span><span class="fsize">${item.dir?'—':detailOf(name)?fmtSize(detailOf(name).size):''}</span><span class="fdate">${detailOf(name)?fmtDate(detailOf(name).mtime):''}</span></div>`
   }).join(''):`<div class="stm fempty">${searchQuery?`No items match “${esc(searchQuery)}”.`:'This folder is empty.'}</div>`;
   ls.scrollTop=scrollTop;
   pt.textContent=displayPath(cur);pt.title=cur;
@@ -144,8 +159,8 @@ function finderInit(el){
   fhead.querySelectorAll('.fh').forEach(cell=>{
    const key=cell.dataset.sort,on=key==='name'?(mode==='name'||mode==='folders'||mode==='name-desc'):key===mode;
    cell.classList.toggle('on',on);
-   const car=cell.querySelector('.fcar');
-   if(car)car.textContent=on?(key==='name'&&mode==='name-desc'?'▼':key==='name'?'▲':key==='date'||key==='size'?'▼':''):''
+   const car=cell.querySelector('.fcar'),down=on&&(key!=='name'||mode==='name-desc');
+   if(car){car.innerHTML=on?uiIcon('chevron'):'';car.classList.toggle('down',on&&down);car.classList.toggle('up',on&&!down)}
   })
  }
  const backgroundMenu=(x,y)=>[
@@ -405,8 +420,8 @@ function finderInit(el){
  paintSortHeader();
  F.home().then(home=>{
   locations={home,desktop:join(home,'Desktop'),documents:join(home,'Documents'),downloads:join(home,'Downloads'),pictures:join(home,'Pictures')};
-  const places=[['🏠','Home',locations.home],['🖥️','Desktop',locations.desktop],['📄','Documents',locations.documents],['⬇️','Downloads',locations.downloads],['🖼️','Pictures',locations.pictures]];
-  sb.innerHTML='<div class="fsb-head">Favorites</div>'+places.map(([icon,label,path])=>`<div data-p="${esc(path)}"><span class="fsb-ico">${icon}</span><span class="fsb-label">${label}</span></div>`).join('')+'<div class="fsb-head">Locations</div><div data-p="/"><span class="fsb-ico">💽</span><span class="fsb-label">Computer</span></div>';
+  const places=[['home','Home',locations.home],['display','Desktop',locations.desktop],['notes','Documents',locations.documents],['download','Downloads',locations.downloads],['picture','Pictures',locations.pictures]];
+  sb.innerHTML='<div class="fsb-head">Favorites</div>'+places.map(([icon,label,path])=>`<div data-p="${esc(path)}"><span class="fsb-ico">${uiIcon(icon)}</span><span class="fsb-label">${label}</span></div>`).join('')+'<div class="fsb-head">Locations</div><div data-p="/"><span class="fsb-ico">'+uiIcon('drive')+'</span><span class="fsb-label">Computer</span></div>';
   sb.onclick=e=>{const place=e.target.closest('[data-p]');if(place)void go(place.dataset.p)};
   void go(configuredLocation())
  }).catch(error=>{

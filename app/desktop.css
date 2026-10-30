@@ -753,7 +753,7 @@ body.lite :is(#menubar,#dock,.ic .tip,.switcher),body.high-contrast :is(#menubar
 .cc-portal[hidden]{display:none}
 .cc-portal span{flex:1;min-width:0}
 .cc-portal .cc-chip{flex:none;background:var(--accent);color:#fff}
-.cc-net-other{margin-top:3px;padding:5px 6px;border:1px dashed color-mix(in srgb,var(--text) 18%,transparent);background:transparent;opacity:.85}
+.cc-net-other{margin-top:3px;padding:5px 6px;border:0;background:transparent;opacity:.85}
 .cc-net-other:hover{background:var(--cc-hover);opacity:1}
 .cc-net-other .cc-net-mark{color:inherit;opacity:.6}
 .cc-net-other .cc-net-mark svg{width:12px;height:12px}
@@ -833,3 +833,164 @@ body.lite :is(#menubar,#dock,.ic .tip,.switcher),body.high-contrast :is(#menubar
 .cc-join .cc-chip[type="submit"]{background:var(--accent);color:#fff}
 .cc-join .cc-chip[type="submit"]:hover{filter:brightness(1.08)}
 .cc-join.manual[hidden]{display:none}
+/* A video tab is a different kind of source than a native player, so the tile art changes with it and
+   lifts slightly while something is actually playing. */
+.cc-media-art{transition:transform var(--t-pop) var(--ease),background var(--t-pop) var(--ease)}
+.cc-media[data-via="browser"] .cc-media-art{background:linear-gradient(145deg,#5ac8fa,#0a60ff)}
+.cc-media.playing .cc-media-art{transform:scale(1.05)}
+/* Notes is laid out like the macOS app: one unified tool strip across the whole window, then the folder
+   sidebar, the note list and the document. The strip is a grid item, so it needs its own row. */
+.notes-app{grid-template-columns:180px 268px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+.notes-app>.notes-toolbar{grid-column:1/-1;grid-row:1}
+.notes-app>.notes-folders,.notes-app>.notes-list,.notes-app>.notes-editor-pane{grid-row:2}
+.notes-toolbar{min-height:50px;gap:3px;padding:9px 13px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);background:color-mix(in srgb,var(--material-chrome) 62%,var(--material-container))}
+.notes-bar-group{display:flex;align-items:center;gap:2px}
+.notes-bar-sep{width:1px;height:21px;background:var(--line);margin:0 8px}
+.notes-tool{min-width:32px;height:32px;border-radius:8px;display:grid;place-items:center;transition:background var(--t-ui) var(--ease),color var(--t-ui) var(--ease),transform var(--t-tap) var(--spring),opacity var(--t-ui)}
+.notes-tool svg{width:17px;height:17px}
+.notes-tool:hover:not(:disabled){background:color-mix(in srgb,var(--sfield) 80%,transparent)}
+.notes-tool:active:not(:disabled){transform:scale(.9)}
+.notes-tool.active{color:var(--accent);background:color-mix(in srgb,var(--sfield) 85%,transparent)}
+.notes-tool-text{font-size:14px}
+.notes-tool-text>b,.notes-tool-text>i,.notes-tool-text>u{line-height:1}
+/* The macOS style menu is a text pill; the real select sits invisible on top so the native popup still works. */
+.notes-style-menu{position:relative;display:flex;align-items:center;gap:3px;height:32px;padding:0 8px;border-radius:8px;cursor:pointer;transition:background var(--t-ui) var(--ease),opacity var(--t-ui)}
+.notes-style-menu:hover{background:color-mix(in srgb,var(--sfield) 80%,transparent)}
+.notes-style-menu>svg{width:11px;height:11px;opacity:.45}
+.notes-style-mark{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.notes-style-menu .notes-format-select{position:absolute;inset:0;width:100%;max-width:none;height:100%;opacity:0;cursor:pointer}
+.notes-style-menu:has(.notes-format-select:disabled){opacity:.35;pointer-events:none}
+.notes-toolbar .notes-search{margin:0 0 0 auto;width:min(232px,34%);height:31px;border-radius:9px;background:color-mix(in srgb,var(--sfield) 62%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 75%,transparent);transition:box-shadow var(--t-pop) var(--ease),background var(--t-pop) var(--ease)}
+.notes-toolbar .notes-search:focus-within{background:var(--material-card);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 75%,transparent),0 0 0 3.5px color-mix(in srgb,var(--accent) 16%,transparent)}
+.notes-toolbar .notes-search input{font-size:12px}
+.notes-folders{padding:6px 8px 9px;gap:6px}
+.notes-folder-scroll{gap:1px}
+.notes-folder{font-size:12.5px;gap:9px;padding:6px 8px;border-radius:7px;transition:background var(--t-ui) var(--ease),color var(--t-ui) var(--ease)}
+.notes-folder-icon{width:17px;height:16px;display:grid;place-items:center;opacity:.9;flex:none}
+.notes-folder-icon svg{width:15px;height:15px}
+.notes-folder.active{background:color-mix(in srgb,var(--accent) 17%,transparent);color:var(--accent);font-weight:600}
+.notes-folder-count{font-size:11.5px;opacity:.42;font-variant-numeric:tabular-nums}
+.notes-folder-actions{padding-top:7px;margin-top:auto;border-top:1px solid color-mix(in srgb,var(--line) 65%,transparent)}
+.notes-folder-actions .notes-quiet-button{display:flex;align-items:center;gap:7px;width:100%;padding:6px 8px;font-size:12px;opacity:.72;border-radius:7px;transition:background var(--t-ui) var(--ease),opacity var(--t-ui) var(--ease)}
+.notes-folder-actions .notes-quiet-button:hover{opacity:1}
+.notes-folder-actions .notes-quiet-button svg{width:15px;height:15px}
+.notes-list-head{padding:10px 14px 7px}
+.notes-list-head h2{font-size:12.5px;font-weight:650;letter-spacing:-.005em;opacity:.5}
+.notes-items{padding:0 8px 10px}
+.notes-item{margin:2px 0;padding:9px 11px;border-radius:9px;transition:background var(--t-pop) var(--ease),color var(--t-pop) var(--ease),box-shadow var(--t-pop) var(--ease)}
+.notes-item-top{font-size:11px;gap:6px;opacity:.5;font-weight:500}
+.notes-pin{display:grid;place-items:center;color:var(--accent);opacity:.9}
+.notes-pin svg{width:11px;height:11px}
+.notes-item h3{margin:3px 0 2px;font-size:13px;font-weight:650;letter-spacing:-.012em}
+.notes-item p{font-size:11.5px;line-height:1.4;opacity:.52;-webkit-line-clamp:2}
+/* macOS fills the selected row with the accent and reverses the text, which no amount of tinting approximates. */
+.notes-item.active{background:var(--accent);color:#fff;border-color:transparent}
+.notes-item.active .notes-item-top,.notes-item.active p{opacity:.82}
+.notes-item.active .notes-pin{color:#fff}
+.notes-editor-scroll{padding:34px clamp(24px,6vw,64px) 54px}
+.notes-doc{width:100%;max-width:780px;margin:0 auto}
+.notes-title{font-size:26px;letter-spacing:-.022em;font-weight:600}
+.notes-meta{justify-content:center;gap:7px;margin:8px 0 26px;font-size:11.5px;opacity:.42;font-variant-numeric:tabular-nums}
+.notes-editor-pane.no-note .notes-doc{display:none}
+.notes-editor-empty{opacity:1;gap:6px}
+.notes-editor-empty h2{font-size:27px;font-weight:600;letter-spacing:-.022em;opacity:.26}
+.notes-footer{min-height:24px;font-size:10px;opacity:.4}
+@media(max-width:760px){.notes-app{grid-template-columns:142px 214px minmax(240px,1fr)}.notes-toolbar{padding-inline:9px}.notes-toolbar .notes-search{width:38%}}
+@media(max-width:560px){.notes-app{grid-template-columns:minmax(96px,26%) minmax(0,1fr)}.notes-app>.notes-editor-pane{grid-column:2}.notes-bar-sep,.notes-style-menu,.notes-tool[data-format=underline]{display:none}}
+/* The height probe switches the popover into a layout mode that turns transitions off. That mode also
+   flattened the pane's own transform, which then became the start value of the opening transition, so the
+   slide ran from where it was already going to and only the way back animated. Measuring a height does
+   not need the element moved, so the probe leaves the slide alone while the pane is still closed. */
+.cc.measuring:not(.detail-open) .cc-detail{transform:translateX(100%)}
+/* Control Centre changes settle instead of snapping: a list arrives row by row, the join form lifts in
+   under the network you picked, chips dip when pressed and spin while a scan or a connection runs. */
+@keyframes cc-spin{to{transform:rotate(1turn)}}
+@keyframes cc-row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes cc-join-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+@keyframes cc-soft-in{from{opacity:0}to{opacity:1}}
+.cc-chip{transition:background var(--t-ui) var(--ease),filter var(--t-tap) var(--ease),transform var(--t-tap) var(--ease),opacity var(--t-ui) var(--ease)}
+.cc-chip:active{transform:scale(.94);filter:brightness(.9)}
+.cc-chip.busy{pointer-events:none;opacity:.72}
+.cc-chip.busy::before{content:"";display:inline-block;width:8px;height:8px;margin-right:5px;vertical-align:-1px;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:cc-spin .7s linear infinite}
+/* The staggering index is set by the loader, so a rescan fans the rows in instead of dumping them. */
+.cc-pane-list>.cc-net,.cc-pane-body>.cc-net-other{animation:cc-row-in .26s var(--ease) both;animation-delay:calc(var(--cc-i,0)*18ms)}
+.cc-empty-row{animation:cc-soft-in var(--t-ui) var(--ease) both}
+.cc-portal:not([hidden]){animation:cc-row-in .26s var(--ease) both}
+.cc-net{transition:background var(--t-tap) var(--ease),opacity var(--t-ui) var(--ease),filter var(--t-tap) var(--ease)}
+.cc-net:active{filter:brightness(.96)}
+/* A row that is connecting swaps its signal bars (or its Connect label) for a spinner in place. */
+.cc-net.busy{pointer-events:none;opacity:.62}
+.cc-net.busy .cc-bars,.cc-net.busy small{display:none}
+.cc-net.busy .cc-net-side::before{content:"";width:9px;height:9px;flex:none;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;animation:cc-spin .7s linear infinite}
+.cc-net:disabled:not(.busy){opacity:.55}
+/* Deliberately no fill mode: the finished animation must not outrank the closing class, or the form could
+   fade in but never fade out. */
+.cc-join:not([hidden]){animation:cc-join-in var(--t-space) var(--ease)}
+.cc-join{transition:opacity var(--t-ui) var(--ease),transform var(--t-ui) var(--ease)}
+.cc-join.closing{opacity:0;transform:translateY(-4px)}
+.cc-join input{transition:background var(--t-ui) var(--ease),opacity var(--t-ui) var(--ease)}
+/* Chromium painted the blurred backdrop of the rounded popover as a ghost strip beside it. Moving the blur
+   onto a clipped pseudo-element, the way the Launchpad does, keeps it inside the popover's own rounded box. */
+.cc{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
+.cc::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);pointer-events:none}
+body.lite .cc::before,body.high-contrast .cc::before{background:var(--win);-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* Finder draws its own file and toolbar art so every file type keeps the same silhouette no matter
+   which emoji font a machine happens to ship. */
+.fnd .fup svg{width:14px;height:14px;display:block}
+.fsearch>span{display:grid;place-items:center}
+.fsearch>span svg{width:12px;height:12px;display:block}
+.fnew svg,.fsort svg{width:14px;height:14px;display:block}
+.fsb-ico{display:grid;place-items:center}
+.fsb-ico svg{width:14px;height:14px;display:block;opacity:.82}
+.fnd .ficon{display:grid;place-items:center}
+.fgi{width:15px;height:15px;display:block;flex:none}
+.fcar{display:grid;place-items:center}
+.fcar svg{width:9px;height:9px;display:block}
+.fcar.up svg{transform:rotate(180deg)}
+/* Spotlight lists the real app icons instead of the emoji fallbacks the app table carries. */
+.sr i{display:grid;place-items:center}
+.sr i svg{width:21px;height:21px;display:block;border-radius:5px}
+
+/* System Settings selects a pane with one flat accent pill; the gradient, outer glow and tilting icon
+   read as decoration rather than a selection, so they go. */
+.sbn .it{max-height:44px;overflow:hidden;transition:background var(--t-ui) var(--ease),color var(--t-ui) var(--ease),filter var(--t-tap) var(--ease),max-height var(--t-ui) var(--ease),padding var(--t-ui) var(--ease),margin var(--t-ui) var(--ease),opacity var(--t-ui) var(--ease)}
+/* Filtering collapses rows instead of dropping them between frames, so the list keeps its rhythm. */
+.sbn .it.filtered{opacity:0;max-height:0;margin-bottom:0;padding-top:0;padding-bottom:0;pointer-events:none}
+.sbn .it:hover{background:color-mix(in srgb,var(--text) 6%,transparent);transform:none}
+.sbn .it:active{filter:brightness(.95)}
+.sbn .it.on{background:var(--accent);box-shadow:none}
+.sbn .it:hover b{transform:none}
+.sbn .it.on b{background:transparent!important;color:#fff;box-shadow:none}
+.ac:active,.wp:active,.tl2:active{transform:scale(.94)}
+
+/* Store pages lift into place when the section or an app changes, and the back chip draws its chevron. */
+@keyframes store-swap{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.store-content>*{animation:store-swap .24s var(--ease) both}
+.store-back svg{width:12px;height:12px;display:block}
+/* The author display rule outranks the hidden attribute, so an unopened detail page needs it back. */
+.store-back[hidden]{display:none}
+
+/* The Monitor swaps tabs with the same short rise the rest of the system uses. */
+@keyframes res-panel-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.respanel.active{animation:res-panel-in .22s var(--ease) both}
+.restab{transition:opacity var(--t-ui) var(--ease),color var(--t-ui) var(--ease)}
+.resbadge svg{width:21px;height:21px;display:block}
+.resrefresh{display:grid;place-items:center;transition:background var(--t-ui) var(--ease),transform var(--t-tap) var(--ease)}
+.resrefresh:active{transform:scale(.9)}
+.resrefresh.busy svg{animation:cc-spin .7s linear infinite}
+
+/* Switching notes fades the page instead of swapping the text under the pointer. */
+@keyframes note-swap{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.notes-doc.note-swap{animation:note-swap .22s var(--ease) both}
+.ck{display:grid;place-items:center}
+.ck svg{width:13px;height:13px;display:block}
+
+/* Finder and System Settings name their sections in sentence case; tracked capitals read as a dashboard. */
+.fsb-head{font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;opacity:.5}
+.fnd .fhead{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none}
+.pane h3{font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;opacity:.6}
+.store-side h5{font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;opacity:.5}
+.cc-group>h6{font-size:11px;font-weight:600;letter-spacing:0;text-transform:none}
+.side h5{font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;opacity:.5}
+@media(max-width:620px){.pane h3{font-size:11px}}
